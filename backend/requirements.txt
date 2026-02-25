@@ -1,0 +1,5 @@
+# No Python dependencies detected in this project.
+# This backend uses Node.js. Please use npm to install dependencies:
+# npm install
+
+# If you add Python scripts in the future, list their dependencies here.
