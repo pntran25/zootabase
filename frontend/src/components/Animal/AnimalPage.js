@@ -2,7 +2,7 @@
 import React from 'react';
 
 const AnimalPage = () => {
-  return <div>Animal Page</div>;
+  return <div>these are animals</div>;
 };
 
 export default AnimalPage;
