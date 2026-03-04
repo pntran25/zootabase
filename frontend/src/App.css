@@ -1,38 +1,174 @@
-.App {
-  text-align: center;
-}
-
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
+.app-shell {
   min-height: 100vh;
+  background: #0d0d0d;
+  color: #f3f3ee;
+}
+
+.app-content {
+  padding: 0;
+}
+
+.zoo-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 28px 24px 40px;
+}
+
+.zoo-page-title {
+  font-size: 3rem;
+  margin: 0 0 8px;
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.zoo-page-subtitle {
+  color: #d8d8d2;
+  margin-bottom: 24px;
+  font-size: 1.2rem;
+}
+
+.zoo-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.zoo-card {
+  background: linear-gradient(160deg, rgba(18, 18, 18, 0.94), rgba(14, 24, 18, 0.9));
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 4px;
+  padding: 18px;
+}
+
+.zoo-card h3 {
+  margin: 0 0 8px;
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 0.9px;
+}
+
+.zoo-card p {
+  margin: 0;
+  color: #dbdcd5;
+}
+
+.zoo-actions {
   display: flex;
-  flex-direction: column;
+  gap: 12px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.zoo-btn {
+  border: 1px solid #ffffff;
+  background: #ffffff;
+  color: #111111;
+  padding: 10px 16px;
+  border-radius: 0;
+  font-weight: 600;
+  font-size: 0.92rem;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.zoo-btn.secondary {
+  background: transparent;
+  color: #ffffff;
+}
+
+.zoo-badge {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+  border-radius: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border: 1px solid #90dcb6;
+  background: transparent;
+  color: #b9f0d4;
+  text-transform: uppercase;
 }
 
-.App-link {
-  color: #61dafb;
+.zoo-badge.closed {
+  border-color: #ffaea8;
+  color: #ffb7b1;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
+.zoo-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: rgba(13, 13, 13, 0.85);
+  border-radius: 0;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.zoo-table th,
+.zoo-table td {
+  text-align: left;
+  padding: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ecece8;
+}
+
+.zoo-table th {
+  background: #090909;
+  color: #f2f2f2;
+  font-size: 0.84rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.zoo-table tr:last-child td {
+  border-bottom: none;
+}
+
+.zoo-highlight {
+  border-radius: 0;
+  padding: 18px;
+  color: #f6f8f7;
+  background-image:
+    linear-gradient(130deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.85)),
+    radial-gradient(circle at 15% 30%, rgba(56, 92, 45, 0.55), transparent 50%),
+    radial-gradient(circle at 70% 60%, rgba(29, 57, 22, 0.45), transparent 50%),
+    linear-gradient(110deg, #152513, #1b2e18 45%, #101810);
+}
+
+.zoo-highlight h2 {
+  margin: 0 0 8px;
+  font-size: 4.2rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.zoo-highlight p {
+  margin: 0;
+  color: #d8ddd7;
+  font-size: 1.2rem;
+}
+
+.zoo-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.zoo-link:hover {
+  text-decoration: none;
+}
+
+@media (max-width: 700px) {
+  .zoo-page {
+    padding: 18px 14px 28px;
   }
-  to {
-    transform: rotate(360deg);
+
+  .zoo-highlight h2 {
+    font-size: 2.3rem;
+  }
+
+  .zoo-page-title {
+    font-size: 2rem;
   }
 }
