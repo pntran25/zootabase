@@ -1,0 +1,24 @@
+{
+  "files": {
+    "main.css": "/static/css/main.0ee6c980.css",
+    "main.js": "/static/js/main.040b4baf.js",
+    "static/js/453.20359781.chunk.js": "/static/js/453.20359781.chunk.js",
+    "static/media/tiger.jpg": "/static/media/tiger.20ea19fa8c7ac67ab869.jpg",
+    "static/media/panda.jpg": "/static/media/panda.922ab9ce7558f25c0cfb.jpg",
+    "static/media/lion.jpg": "/static/media/lion.3f27ce47b3ae602079d5.jpg",
+    "static/media/capy.jpg": "/static/media/capy.24dacfb3e74c56e72398.jpg",
+    "static/media/redpanda.jpg": "/static/media/redpanda.2a8f75639bf1407b0735.jpg",
+    "static/media/AppleGaramond.ttf": "/static/media/AppleGaramond.0ae25b7cfb9d8a1385d4.ttf",
+    "static/media/AppleGaramond-Bold.ttf": "/static/media/AppleGaramond-Bold.f39aff89cda1a68cae06.ttf",
+    "static/media/AppleGaramond-Italic.ttf": "/static/media/AppleGaramond-Italic.1544e40873b51450ee55.ttf",
+    "static/media/giraffe.jpg": "/static/media/giraffe.d1684c6a9677def14354.jpg",
+    "index.html": "/index.html",
+    "main.0ee6c980.css.map": "/static/css/main.0ee6c980.css.map",
+    "main.040b4baf.js.map": "/static/js/main.040b4baf.js.map",
+    "453.20359781.chunk.js.map": "/static/js/453.20359781.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.0ee6c980.css",
+    "static/js/main.040b4baf.js"
+  ]
+}
