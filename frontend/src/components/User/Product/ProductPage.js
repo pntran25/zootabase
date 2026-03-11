@@ -1,6 +1,6 @@
 // Product main page component
 import React, { useEffect, useState } from 'react';
-import { getProducts } from '../../services/productService';
+import { getProducts } from '../../../services/productService';
 
 const fallbackProducts = [
   { id: 1, name: 'Safari Hat', category: 'Apparel', price: '$24.99', stock: 54 },

@@ -1,8 +1,8 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import './Header.css';
+import './UserLayout.css';
 
-const Header = () => (
+const UserLayout = () => (
   <header className="header">
     <NavLink to="/" className="header-brand-link">
       <div className="header-brand-mark">ZOOTABASE</div>
@@ -25,4 +25,4 @@ const Header = () => (
   </header>
 );
 
-export default Header;
+export default UserLayout;

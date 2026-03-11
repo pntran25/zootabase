@@ -1,0 +1,235 @@
+.exhibit-page {
+  padding: 40px 5%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.exhibit-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.exhibit-page-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #166534; /* Dark green theme color based on mockup */
+  margin-bottom: 8px;
+}
+
+.exhibit-page-subtitle {
+  font-size: 1.1rem;
+  color: #64748b;
+  max-width: 700px;
+  margin-bottom: 24px;
+  line-height: 1.6;
+}
+
+/* Controls (Search & Filters) */
+.exhibit-controls {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 32px;
+  align-items: center;
+}
+
+.search-bar-container {
+  display: flex;
+  align-items: center;
+  background-color: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0 16px;
+  flex-grow: 1;
+  max-width: 400px;
+  height: 48px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.search-bar-container:focus-within {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.search-icon {
+  color: #94a3b8;
+  margin-right: 12px;
+}
+
+.search-input {
+  border: none;
+  outline: none;
+  width: 100%;
+  font-size: 1rem;
+  color: #334155;
+  background: transparent;
+}
+
+.search-input::placeholder {
+  color: #94a3b8;
+}
+
+.exhibit-filters-scroll {
+  flex-grow: 1;
+  overflow-x: auto;
+  scrollbar-width: none; /* Firefox */
+}
+
+.exhibit-filters-scroll::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+.exhibit-filters {
+  display: flex;
+  gap: 12px;
+}
+
+.exhibit-filter-btn {
+  padding: 8px 20px;
+  border-radius: 20px;
+  background-color: #f1f5f9;
+  color: #475569;
+  border: none;
+  font-weight: 500;
+  font-size: 0.95rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.exhibit-filter-btn:hover {
+  background-color: #e2e8f0;
+}
+
+.exhibit-filter-btn.active {
+  background-color: #10b981; /* Green color for active filter */
+  color: white;
+}
+
+/* Grid Layout */
+.exhibit-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 32px;
+}
+
+/* Card Styling */
+.exhibit-card {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+}
+
+.exhibit-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+}
+
+.exhibit-image-container {
+  height: 200px;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 16px;
+}
+
+.exhibit-image-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(to top, rgba(15, 23, 42, 0.8), transparent);
+}
+
+.exhibit-badges {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  width: 100%;
+}
+
+.zone-badge {
+  background-color: #10b981;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.animal-count-badge {
+  background-color: rgba(30, 41, 59, 0.8);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  backdrop-filter: blur(4px);
+}
+
+.exhibit-card-content {
+  padding: 24px;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.exhibit-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 12px;
+}
+
+.exhibit-description {
+  font-size: 0.95rem;
+  color: #64748b;
+  line-height: 1.5;
+  margin-bottom: 24px;
+  flex-grow: 1;
+}
+
+.exhibit-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.biome-icon {
+  color: #94a3b8;
+}
+
+/* Responsiveness */
+@media (max-width: 900px) {
+  .exhibit-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .search-bar-container {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  .exhibit-grid {
+    grid-template-columns: 1fr;
+  }
+}

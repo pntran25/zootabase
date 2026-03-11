@@ -1,0 +1,162 @@
+.attraction-page {
+  padding: 40px 5%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.attraction-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.attraction-page-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #653612; /* Brown color from mockup */
+  margin-bottom: 8px;
+}
+
+.attraction-page-subtitle {
+  font-size: 1.1rem;
+  color: #64748b;
+  max-width: 700px;
+  margin-bottom: 16px;
+  line-height: 1.6;
+}
+
+/* Filters */
+.attraction-filters {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.filter-btn {
+  padding: 8px 20px;
+  border-radius: 20px;
+  border: 1px solid #e2e8f0;
+  background-color: white;
+  color: #333;
+  font-weight: 500;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-btn:hover {
+  background-color: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.filter-btn.active {
+  background-color: #b06518; /* Active brown from mockup */
+  color: white;
+  border-color: #b06518;
+}
+
+/* Grid Layout */
+.attraction-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 24px;
+}
+
+/* Card Styling */
+.attraction-card {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.attraction-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.type-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.type-ride {
+  border: 1px solid #fca5a5;
+  color: #991b1b;
+  background-color: #fef2f2;
+}
+
+.type-experience {
+  border: 1px solid #fdba74;
+  color: #9a3412;
+  background-color: #fff7ed;
+}
+
+.price-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border: 1px solid #86efac;
+  color: #166534;
+  background-color: #f0fdf4;
+}
+
+.card-body {
+  flex-grow: 1;
+  margin-bottom: 24px;
+}
+
+.card-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 12px;
+}
+
+.card-description {
+  font-size: 0.95rem;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.card-footer {
+  display: flex;
+  gap: 24px;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 16px;
+}
+
+.footer-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Responsiveness */
+@media (max-width: 768px) {
+  .attraction-grid {
+    grid-template-columns: 1fr;
+  }
+}

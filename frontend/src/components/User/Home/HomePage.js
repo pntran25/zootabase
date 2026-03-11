@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import './HomePage.css';
-import lionImage from '../../assets/images/lion.jpg';
-import tigerImage from '../../assets/images/tiger.jpg';
-import giraffeImage from '../../assets/images/giraffe.jpg';
-import pandaImage from '../../assets/images/panda.jpg';
-import capyImage from '../../assets/images/capy.jpg';
-import redPandaImage from '../../assets/images/redpanda.jpg';
+import lionImage from '../../../assets/images/lion.jpg';
+import tigerImage from '../../../assets/images/tiger.jpg';
+import giraffeImage from '../../../assets/images/giraffe.jpg';
+import pandaImage from '../../../assets/images/panda.jpg';
+import capyImage from '../../../assets/images/capy.jpg';
+import redPandaImage from '../../../assets/images/redpanda.jpg';
 
 const heroSlides = [
   {
@@ -17,7 +17,7 @@ const heroSlides = [
     image: tigerImage,
   },
   {
-    title: 'Meet the Big Cats',
+    title: 'Meet the Big Cat',
     description: 'Step into our savanna and jungle zones to see lions and tigers up close.',
     cta: 'Explore Attractions',
     to: '/attractions',
