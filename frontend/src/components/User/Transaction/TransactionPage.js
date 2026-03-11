@@ -1,6 +1,6 @@
 // Transaction main page component
 import React, { useEffect, useState } from 'react';
-import { getTransactions } from '../../services/transactionService';
+import { getTransactions } from '../../../services/transactionService';
 
 const fallbackTransactions = [
   { id: 'TX-8801', channel: 'Online', amount: '$145.00', state: 'Completed' },

@@ -1,0 +1,252 @@
+.admin-page-header {
+  margin-bottom: 32px;
+}
+
+.admin-page-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.admin-page-subtitle {
+  color: #64748b;
+  font-size: 0.95rem;
+}
+
+/* Stats Grid */
+.admin-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid #f1f5f9;
+}
+
+.stat-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.stat-icon-wrapper {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stat-icon-wrapper.green {
+  background-color: #dcfce7;
+  color: #16a34a;
+}
+
+.stat-icon-wrapper.blue {
+  background-color: #dbeafe;
+  color: #2563eb;
+}
+
+.stat-icon-wrapper.orange {
+  background-color: #ffedd5;
+  color: #ea580c;
+}
+
+.stat-icon-wrapper.purple {
+  background-color: #f3e8ff;
+  color: #9333ea;
+}
+
+.stat-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.stat-badge.positive {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.stat-badge.warning {
+  background-color: #fef9c3;
+  color: #854d0e;
+}
+
+.stat-label-small {
+  font-size: 0.8rem;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.stat-label {
+  color: #64748b;
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1;
+}
+
+/* Dashboard Content */
+.dashboard-content-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+}
+
+.dashboard-panel {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid #f1f5f9;
+}
+
+.panel-header-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 32px;
+}
+
+.panel-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.panel-subtitle {
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.trend-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background-color: white;
+  border: 1px solid #cbd5e1;
+  color: #0f172a;
+}
+
+/* Mock Chart */
+.mock-bar-chart {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  height: 250px;
+  padding-bottom: 30px;
+  position: relative;
+  background: repeating-linear-gradient(to bottom,
+      transparent,
+      transparent 19%,
+      #f1f5f9 20%,
+      #f1f5f9 20.5%);
+}
+
+.bar-wrapper {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  height: 100%;
+  width: 10%;
+  position: relative;
+}
+
+.bar {
+  width: 100%;
+  background-color: #22c55e;
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
+  transition: opacity 0.2s;
+}
+
+.bar:hover {
+  opacity: 0.8;
+}
+
+.bar-label {
+  position: absolute;
+  bottom: -25px;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+/* Feedback List */
+.feedback-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.feedback-panel .panel-subtitle {
+  margin-bottom: 24px;
+}
+
+.feedback-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.feedback-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stars {
+  color: #eab308;
+  letter-spacing: 2px;
+}
+
+.feedback-date {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.feedback-text {
+  font-size: 0.95rem;
+  color: #334155;
+  font-style: italic;
+  line-height: 1.5;
+  border-left: 3px solid #e2e8f0;
+  padding-left: 12px;
+  margin: 8px 0;
+}
+
+.feedback-tag {
+  align-self: flex-end;
+  font-size: 0.75rem;
+  background-color: #f1f5f9;
+  color: #64748b;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.feedback-divider {
+  height: 1px;
+  background-color: #f1f5f9;
+  margin: 20px 0;
+}

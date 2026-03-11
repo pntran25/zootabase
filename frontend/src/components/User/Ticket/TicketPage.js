@@ -1,6 +1,6 @@
 // Ticket main page component
 import React, { useEffect, useState } from 'react';
-import { getTickets } from '../../services/ticketService';
+import { getTickets } from '../../../services/ticketService';
 
 const fallbackTickets = [
   { id: 'T-1001', type: 'Adult Day Pass', price: '$35.00', availability: 'Available' },
