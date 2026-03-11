@@ -1,7 +1,7 @@
 .app-shell {
   min-height: 100vh;
-  background: #0d0d0d;
-  color: #f3f3ee;
+  background: #ffffff;
+  color: #222222;
 }
 
 .app-content {
@@ -17,13 +17,13 @@
 .zoo-page-title {
   font-size: 3rem;
   margin: 0 0 8px;
-  color: #ffffff;
+  color: #222222;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
 
 .zoo-page-subtitle {
-  color: #d8d8d2;
+  color: #666666;
   margin-bottom: 24px;
   font-size: 1.2rem;
 }
@@ -35,22 +35,29 @@
 }
 
 .zoo-card {
-  background: linear-gradient(160deg, rgba(18, 18, 18, 0.94), rgba(14, 24, 18, 0.9));
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 4px;
+  background: #ffffff;
+  border: 1px solid #ebebeb;
+  border-radius: 8px;
   padding: 18px;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.07);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.zoo-card:hover {
+  box-shadow: 0 6px 28px rgba(232, 97, 26, 0.14);
+  transform: translateY(-2px);
 }
 
 .zoo-card h3 {
   margin: 0 0 8px;
-  color: #ffffff;
+  color: #222222;
   text-transform: uppercase;
   letter-spacing: 0.9px;
 }
 
 .zoo-card p {
   margin: 0;
-  color: #dbdcd5;
+  color: #555555;
 }
 
 .zoo-actions {
@@ -61,20 +68,32 @@
 }
 
 .zoo-btn {
-  border: 1px solid #ffffff;
-  background: #ffffff;
-  color: #111111;
-  padding: 10px 16px;
-  border-radius: 0;
-  font-weight: 600;
+  border: 2px solid #e8611a;
+  background: #e8611a;
+  color: #ffffff;
+  padding: 10px 20px;
+  border-radius: 4px;
+  font-weight: 700;
   font-size: 0.92rem;
   cursor: pointer;
   text-transform: uppercase;
   letter-spacing: 0.8px;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.zoo-btn:hover {
+  background: #cf5316;
+  border-color: #cf5316;
 }
 
 .zoo-btn.secondary {
   background: transparent;
+  color: #e8611a;
+  border-color: #e8611a;
+}
+
+.zoo-btn.secondary:hover {
+  background: #e8611a;
   color: #ffffff;
 }
 
@@ -82,44 +101,50 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 0;
+  border-radius: 4px;
   font-size: 0.72rem;
   font-weight: 700;
-  padding: 3px 8px;
-  border: 1px solid #90dcb6;
-  background: transparent;
-  color: #b9f0d4;
+  padding: 3px 10px;
+  border: 1px solid #2cb5a0;
+  background: #e6f9f6;
+  color: #1f8a78;
   text-transform: uppercase;
 }
 
 .zoo-badge.closed {
-  border-color: #ffaea8;
-  color: #ffb7b1;
+  border-color: #e8611a;
+  background: #fdf0ea;
+  color: #c04d0f;
 }
 
 .zoo-table {
   width: 100%;
   border-collapse: collapse;
-  background: rgba(13, 13, 13, 0.85);
-  border-radius: 0;
+  background: #ffffff;
+  border-radius: 8px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid #ebebeb;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
 }
 
 .zoo-table th,
 .zoo-table td {
   text-align: left;
-  padding: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  color: #ecece8;
+  padding: 13px 14px;
+  border-bottom: 1px solid #f0f0f0;
+  color: #333333;
 }
 
 .zoo-table th {
-  background: #090909;
-  color: #f2f2f2;
+  background: #e8611a;
+  color: #ffffff;
   font-size: 0.84rem;
   letter-spacing: 1px;
   text-transform: uppercase;
+}
+
+.zoo-table tr:hover td {
+  background: #fff8f5;
 }
 
 .zoo-table tr:last-child td {
@@ -127,14 +152,11 @@
 }
 
 .zoo-highlight {
-  border-radius: 0;
+  border-radius: 8px;
   padding: 18px;
-  color: #f6f8f7;
-  background-image:
-    linear-gradient(130deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.85)),
-    radial-gradient(circle at 15% 30%, rgba(56, 92, 45, 0.55), transparent 50%),
-    radial-gradient(circle at 70% 60%, rgba(29, 57, 22, 0.45), transparent 50%),
-    linear-gradient(110deg, #152513, #1b2e18 45%, #101810);
+  color: #ffffff;
+  background: linear-gradient(135deg, #e8611a 0%, #cf5316 45%, #2cb5a0 100%);
+  box-shadow: 0 4px 20px rgba(232, 97, 26, 0.3);
 }
 
 .zoo-highlight h2 {
@@ -146,7 +168,7 @@
 
 .zoo-highlight p {
   margin: 0;
-  color: #d8ddd7;
+  color: rgba(255, 255, 255, 0.88);
   font-size: 1.2rem;
 }
 
