@@ -22,8 +22,8 @@
 body {
   margin: 0;
   font-family: 'Apple Garamond', Georgia, 'Times New Roman', serif;
-  background: #0d0d0d;
-  color: #f7f7f1;
+  background: #ffffff;
+  color: #222222;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
