@@ -1,5 +1,5 @@
 import './App.css';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom';
 import UserLayout from './layout/UserLayout';
 import HomePage from './components/User/Home/HomePage';
 import AttractionPage from './components/User/Attraction/AttractionPage';
@@ -27,23 +27,23 @@ function App() {
       <div className="app-shell">
         <Routes>
           {/* User Routes */}
-          <Route path="/" element={
+          <Route element={
             <>
               <UserLayout />
               <div className="app-content">
-                <Routes>
-                  <Route path="/" element={<HomePage />} />
-                  <Route path="/attractions" element={<AttractionPage />} />
-                  <Route path="/exhibits" element={<ExhibitPage />} />
-                  <Route path="/products" element={<ProductPage />} />
-                  <Route path="/ticketing" element={<TicketingPage />} />
-                  <Route path="/tickets" element={<TicketPage />} />
-                  <Route path="/transactions" element={<TransactionPage />} />
-                  <Route path="*" element={<HomePage />} />
-                </Routes>
+                <Outlet />
               </div>
             </>
-          } />
+          }>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/attractions" element={<AttractionPage />} />
+            <Route path="/exhibits" element={<ExhibitPage />} />
+            <Route path="/products" element={<ProductPage />} />
+            <Route path="/ticketing" element={<TicketingPage />} />
+            <Route path="/tickets" element={<TicketPage />} />
+            <Route path="/transactions" element={<TransactionPage />} />
+            <Route path="*" element={<HomePage />} />
+          </Route>
 
           {/* Admin Routes */}
           <Route path="/admin" element={<AdminLayout />}>
