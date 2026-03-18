@@ -7,6 +7,8 @@ import TicketPage from './components/Ticket/TicketPage';
 import ProductPage from './components/Product/ProductPage';
 import TransactionPage from './components/Transaction/TransactionPage';
 import TicketingPage from './components/Ticketing/TicketingPage';
+import Login from "./components/Auth/Login";
+import SignUp from "./components/Auth/SignUp";
 
 function App() {
   return (
@@ -21,6 +23,8 @@ function App() {
             <Route path="/ticketing" element={<TicketingPage />} />
             <Route path="/tickets" element={<TicketPage />} />
             <Route path="/transactions" element={<TransactionPage />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<SignUp />} />
             <Route path="*" element={<HomePage />} />
           </Routes>
         </div>

@@ -21,6 +21,13 @@ const Header = () => (
       <NavLink to="/ticketing" className={({ isActive }) => `header-link ${isActive ? 'active' : ''}`}>
         Tickets
       </NavLink>
+
+      <NavLink to="/login" className={({ isActive }) => `header-link ${isActive ? 'active' : ''}`}>
+        Login
+      </NavLink>
+      <NavLink to="/signup" className={({ isActive }) => `header-link ${isActive ? 'active' : ''}`}>
+        Sign Up
+      </NavLink>
     </nav>
   </header>
 );

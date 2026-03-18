@@ -35,4 +35,5 @@ async function startServer() {
 	});
 }
 
-startServer();
+const authRoutes = require("./Auth");
+app.use("/auth", authRoutes);
