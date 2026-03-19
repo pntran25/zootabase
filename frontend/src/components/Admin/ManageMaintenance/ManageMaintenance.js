@@ -1,31 +1,53 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import '../AdminTable.css';
-import { Wrench, Search, Plus, CheckCircle } from 'lucide-react';
-
+import { Wrench, Search, Plus, CheckCircle, Edit2, Trash2 } from 'lucide-react';
 import AdminModalForm from '../AdminModalForm';
-
-// Mapping to MaintenanceRequest Schema: RequestID, ExhibitID (Location string here for simplicity), Description (mapped from IssueType), RequestDate, Status, StaffID (ignored for UI for now)
-const initialLogs = [
-  { id: '1', issueType: 'Turnstile Jam', location: 'Entrance A', status: 'Open', date: '2023-11-01', priority: 'Medium' },
-  { id: '2', issueType: 'Fencing Repair', location: 'Primate Forest', status: 'In Progress', date: '2023-11-02', priority: 'High' },
-];
+import maintenanceService from '../../../services/maintenanceService';
 
 const ManageMaintenance = () => {
-  const [logs, setLogs] = useState(initialLogs);
+  const [logs, setLogs] = useState([]);
   const [search, setSearch] = useState('');
-
+  
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLog, setEditingLog] = useState(null);
   
+  const [isLoading, setIsLoading] = useState(true);
+
   // Form State aligned with MaintenanceRequest Schema
   const [formData, setFormData] = useState({
     issueType: '', // Maps to Description in Schema
     location: '', // Maps to ExhibitID context
-    status: 'Open', 
+    status: 'Pending', 
     date: new Date().toISOString().split('T')[0],
     priority: 'Low' // UI extra
   });
+
+  const loadData = async () => {
+    try {
+      setIsLoading(true);
+      const data = await maintenanceService.getAllMaintenance();
+      // Map API Response to UI expected format
+      const mapped = data.map(log => ({
+        id: log.id,
+        issueType: log.description,
+        location: log.exhibit,
+        date: log.dateSubmitted,
+        status: log.status,
+        reportedBy: log.reportedBy,
+        priority: 'Medium' // DB schema does not have priority, using default Medium for UI
+      }));
+      setLogs(mapped);
+    } catch (err) {
+      console.error('Failed to load maintenance logs:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const filteredLogs = logs.filter(log => 
     log.issueType.toLowerCase().includes(search.toLowerCase()) || 
@@ -35,34 +57,73 @@ const ManageMaintenance = () => {
   const handleOpenModal = (log = null) => {
     if (log) {
       setEditingLog(log);
-      setFormData({ ...log });
+      setFormData({ 
+        issueType: log.issueType, 
+        location: log.location, 
+        status: log.status, 
+        date: log.date, 
+        priority: log.priority 
+      });
     } else {
       setEditingLog(null);
-      setFormData({ issueType: '', location: '', status: 'Open', date: new Date().toISOString().split('T')[0], priority: 'Low' });
+      setFormData({ issueType: '', location: '', status: 'Pending', date: new Date().toISOString().split('T')[0], priority: 'Medium' });
     }
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this maintenance record?')) {
-      setLogs(logs.filter(l => l.id !== id));
+      try {
+        await maintenanceService.deleteMaintenance(id);
+        setLogs(logs.filter(l => l.id !== id));
+      } catch (err) {
+        alert('Failed to delete maintenance log.');
+      }
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (editingLog) {
-      setLogs(logs.map(l => l.id === editingLog.id ? { ...formData, id: l.id } : l));
-    } else {
-      const newLog = { ...formData, id: Date.now().toString() };
-      setLogs([...logs, newLog]);
+    try {
+      const payload = {
+        exhibit: formData.location,
+        description: formData.issueType,
+        dateSubmitted: formData.date,
+        status: formData.status,
+        reportedBy: 'Admin User'
+      };
+
+      if (editingLog) {
+        await maintenanceService.updateMaintenance(editingLog.id, payload);
+      } else {
+        await maintenanceService.createMaintenance(payload);
+      }
+      await loadData();
+      setIsModalOpen(false);
+    } catch (err) {
+      alert('Failed to save maintenance log.');
+      console.error(err);
     }
-    setIsModalOpen(false);
   };
 
-  const handleToggleStatus = (id, currentStatus) => {
-    const newStatus = currentStatus === 'Open' ? 'In Progress' : (currentStatus === 'In Progress' ? 'Resolved' : 'Open');
-    setLogs(logs.map(l => l.id === id ? { ...l, status: newStatus } : l));
+  const handleToggleStatus = async (id, currentStatus) => {
+    const newStatus = currentStatus === 'Pending' ? 'In Progress' : (currentStatus === 'In Progress' ? 'Completed' : 'Pending');
+    const log = logs.find(l => l.id === id);
+    if (!log) return;
+    
+    try {
+      const payload = {
+        exhibit: log.location,
+        description: log.issueType,
+        dateSubmitted: log.date,
+        status: newStatus,
+        reportedBy: log.reportedBy || 'Admin User'
+      };
+      await maintenanceService.updateMaintenance(id, payload);
+      setLogs(logs.map(l => l.id === id ? { ...l, status: newStatus } : l));
+    } catch (err) {
+      alert('Failed to update status.');
+    }
   };
 
   return (
@@ -104,7 +165,9 @@ const ManageMaintenance = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredLogs.map((log) => (
+            {isLoading ? (
+               <tr><td colSpan="5" style={{textAlign: 'center', padding: '32px'}}>Loading...</td></tr>
+            ) : filteredLogs.map((log) => (
               <tr key={log.id}>
                 <td>
                   <div style={{display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start'}}>
@@ -118,16 +181,17 @@ const ManageMaintenance = () => {
                 <td>
                   <span className={`pill-badge outline`} 
                         style={log.priority === 'High' ? {color: '#ef4444', backgroundColor: '#fef2f2', borderColor: '#fca5a5'} : 
-                               {color: '#d97706', backgroundColor: '#fef3c7', borderColor: '#fde68a'}}>
+                               log.priority === 'Medium' ? {color: '#d97706', backgroundColor: '#fef3c7', borderColor: '#fde68a'} : 
+                               {color: '#059669', backgroundColor: '#d1fae5', borderColor: '#6ee7b7'}}>
                     {log.priority}
                   </span>
                 </td>
                 <td>
-                  <span className={`status-badge ${log.status === 'Open' ? 'open' : log.status === 'In Progress' ? 'in progress' : 'resolved'}`}
-                        style={log.status === 'Open' ? {backgroundColor: '#1e293b', color: 'white'} : log.status === 'Resolved' ? {backgroundColor: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0'} : {backgroundColor: '#fef9c3', color: '#854d0e', border: '1px solid #fef08a'}}>
-                    {log.status === 'Open' && <span className="status-indicator-dot" style={{backgroundColor: '#cbd5e1'}}></span>}
+                  <span className={`status-badge ${log.status === 'Pending' ? 'open' : log.status === 'In Progress' ? 'in progress' : 'resolved'}`}
+                        style={log.status === 'Pending' ? {backgroundColor: '#1e293b', color: 'white'} : log.status === 'Completed' ? {backgroundColor: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0'} : {backgroundColor: '#fef9c3', color: '#854d0e', border: '1px solid #fef08a'}}>
+                    {log.status === 'Pending' && <span className="status-indicator-dot" style={{backgroundColor: '#cbd5e1'}}></span>}
                     {log.status === 'In Progress' && <span className="status-indicator-dot" style={{backgroundColor: '#eab308'}}></span>}
-                    {log.status === 'Resolved' && <span className="status-indicator-dot" style={{backgroundColor: '#22c55e'}}></span>}
+                    {log.status === 'Completed' && <span className="status-indicator-dot" style={{backgroundColor: '#22c55e'}}></span>}
                     {log.status}
                   </span>
                 </td>
@@ -136,11 +200,13 @@ const ManageMaintenance = () => {
                     <button className="action-btn" onClick={() => handleToggleStatus(log.id, log.status)} style={{display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: '#10b981', padding: '6px 12px', border: '1px solid #10b981', borderRadius: '4px'}}>
                       <CheckCircle size={14} /> Toggle Status
                     </button>
+                    <button className="action-btn edit" onClick={() => handleOpenModal(log)}><Edit2 size={16} /></button>
+                    <button className="action-btn delete" onClick={() => handleDelete(log.id)}><Trash2 size={16} /></button>
                   </div>
                 </td>
               </tr>
             ))}
-            {filteredLogs.length === 0 && (
+            {!isLoading && filteredLogs.length === 0 && (
               <tr>
                 <td colSpan="5" style={{textAlign: 'center', padding: '32px', color: '#64748b'}}>
                   No maintenance logs found matching your search.
@@ -186,9 +252,10 @@ const ManageMaintenance = () => {
           <div className="form-group">
             <label>Status</label>
             <select value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})}>
-              <option value="Open">Open</option>
+              <option value="Pending">Pending</option>
               <option value="In Progress">In Progress</option>
-              <option value="Resolved">Resolved</option>
+              <option value="Completed">Completed</option>
+              <option value="Cancelled">Cancelled</option>
             </select>
           </div>
         </div>

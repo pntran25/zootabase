@@ -1,7 +1,7 @@
 // Attraction main page component
 import React, { useEffect, useState } from 'react';
 import './AttractionPage.css';
-import { getAttractions } from '../../../services/attractionService';
+import { getAllAttractions } from '../../../services/attractionService';
 import { Clock, MapPin } from 'lucide-react';
 
 const mockAttractions = [
@@ -37,7 +37,7 @@ const AttractionPage = () => {
     const loadAttractions = async () => {
       try {
         // We'll still call the service to keep the structure similar, but use our mock data
-        const data = await getAttractions();
+        const data = await getAllAttractions();
         // If data from backend doesn't have the properties we need for the new UI, fallback
         const hasRequiredProps = data && data.length > 0 && data[0].price !== undefined;
         setAttractions(hasRequiredProps ? data : mockAttractions);

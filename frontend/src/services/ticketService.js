@@ -1,4 +1,13 @@
-// Service for Ticket entity API calls
-import { apiGet } from './apiClient';
+import { apiGet, apiPost, apiPut, apiDelete } from './apiClient';
 
-export const getTickets = async () => apiGet('/api/tickets');
+export const getAllTickets = () => apiGet('/api/tickets');
+export const createTicket = (data) => apiPost('/api/tickets', data);
+export const updateTicket = (id, data) => apiPut(`/api/tickets/${id}`, data);
+export const deleteTicket = (id) => apiDelete(`/api/tickets/${id}`);
+
+export default {
+    getAllTickets,
+    createTicket,
+    updateTicket,
+    deleteTicket
+};

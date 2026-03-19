@@ -1,24 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import '../AdminTable.css';
 import { Ticket, Info, Plus, Edit2, Trash2 } from 'lucide-react';
 import AdminModalForm from '../AdminModalForm';
-
-// Mapping to TicketType Schema: TicketTypeID, TypeName (Enum: General | Child | VIP | Event)
-// Plus a mock "Price" and "Description" field for UI purposes as needed by the prompt
-const initialTickets = [
-  { id: '1', type: 'General Admission - Adult', category: 'General', desc: 'Single day access for guests 13-64', price: 25.00 },
-  { id: '2', type: 'General Admission - Child', category: 'Child', desc: 'Single day access for guests 3-12', price: 15.00 },
-  { id: '3', type: 'VIP Early Access', category: 'VIP', desc: 'Includes early morning entry', price: 50.00 },
-  { id: '4', type: 'Special Event Access', category: 'Event', desc: 'Entry for specific scheduled events', price: 35.00 },
-];
+import ticketService from '../../../services/ticketService';
 
 const ManageTickets = () => {
-  const [tickets, setTickets] = useState(initialTickets);
+  const [tickets, setTickets] = useState([]);
   
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTicket, setEditingTicket] = useState(null);
   
+  const [isLoading, setIsLoading] = useState(true);
+
   // Form State aligned with TicketType Schema
   const [formData, setFormData] = useState({
     type: '',
@@ -26,6 +20,22 @@ const ManageTickets = () => {
     desc: '',
     price: 0
   });
+
+  const loadData = async () => {
+    try {
+      setIsLoading(true);
+      const data = await ticketService.getAllTickets();
+      setTickets(data);
+    } catch (err) {
+      console.error('Failed to load tickets:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const handleOpenModal = (ticket = null) => {
     if (ticket) {
@@ -38,21 +48,31 @@ const ManageTickets = () => {
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this ticket type?')) {
-      setTickets(tickets.filter(t => t.id !== id));
+      try {
+        await ticketService.deleteTicket(id);
+        setTickets(tickets.filter(t => t.id !== id));
+      } catch (err) {
+        alert('Failed to delete ticket.');
+      }
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (editingTicket) {
-      setTickets(tickets.map(t => t.id === editingTicket.id ? { ...formData, id: t.id } : t));
-    } else {
-      const newTicket = { ...formData, id: Date.now().toString() };
-      setTickets([...tickets, newTicket]);
+    try {
+      if (editingTicket) {
+        await ticketService.updateTicket(editingTicket.id, formData);
+      } else {
+        await ticketService.createTicket(formData);
+      }
+      await loadData();
+      setIsModalOpen(false);
+    } catch (err) {
+      alert('Failed to save ticket type.');
+      console.error(err);
     }
-    setIsModalOpen(false);
   };
 
   return (
@@ -83,7 +103,6 @@ const ManageTickets = () => {
         <table className="admin-table">
           <thead>
             <tr>
-              <th>Ticket ID</th>
               <th>Ticket Name</th>
               <th>Category Type</th>
               <th>Description</th>
@@ -92,9 +111,10 @@ const ManageTickets = () => {
             </tr>
           </thead>
           <tbody>
-            {tickets.map((ticket) => (
+            {isLoading ? (
+              <tr><td colSpan="5" style={{textAlign: 'center', padding: '32px'}}>Loading...</td></tr>
+            ) : tickets.map((ticket) => (
               <tr key={ticket.id}>
-                <td className="text-secondary">{ticket.id}</td>
                 <td className="font-medium text-dark">{ticket.type}</td>
                 <td>
                   <span className={`pill-badge ${ticket.category === 'VIP' ? '' : 'outline'}`} 
@@ -103,7 +123,7 @@ const ManageTickets = () => {
                   </span>
                 </td>
                 <td className="text-secondary">{ticket.desc}</td>
-                <td className="font-medium text-dark" style={{textAlign: 'right'}}>${Number(ticket.price).toFixed(2)}</td>
+                <td className="font-medium text-dark" style={{textAlign: 'right'}}>${Number(ticket.price || 0).toFixed(2)}</td>
                 <td>
                   <div className="action-buttons">
                     <button className="action-btn edit" onClick={() => handleOpenModal(ticket)}><Edit2 size={16} /></button>
@@ -112,9 +132,9 @@ const ManageTickets = () => {
                 </td>
               </tr>
             ))}
-            {tickets.length === 0 && (
+            {!isLoading && tickets.length === 0 && (
               <tr>
-                <td colSpan="6" style={{textAlign: 'center', padding: '32px', color: '#64748b'}}>
+                <td colSpan="5" style={{textAlign: 'center', padding: '32px', color: '#64748b'}}>
                   No tickets configured.
                 </td>
               </tr>

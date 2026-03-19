@@ -1,25 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import '../AdminTable.css';
 import { ShoppingBag, Search, Plus, Edit2, Trash2 } from 'lucide-react';
 
 import AdminModalForm from '../AdminModalForm';
-
-// Mapping to Product Schema: ProductID, ProductName, Category, Price, StockQuantity
-const initialProducts = [
-  { id: '1', name: 'Leo the Lion Plushie', sku: 'SKU-0001', category: 'Plushies', price: 24.99, stockQuantity: 50 },
-  { id: '2', name: 'WildHaven Zoo T-Shirt', sku: 'SKU-0002', category: 'Apparel', price: 19.99, stockQuantity: 120 },
-  { id: '3', name: 'Animals of the World Coloring Book', sku: 'SKU-0003', category: 'Books', price: 12.50, stockQuantity: 85 },
-  { id: '4', name: 'Penguin Coast Mug', sku: 'SKU-0004', category: 'Souvenirs', price: 14.99, stockQuantity: 0 },
-];
+import productService from '../../../services/productService';
 
 const ManageShop = () => {
-  const [products, setProducts] = useState(initialProducts);
+  const [products, setProducts] = useState([]);
   const [search, setSearch] = useState('');
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
-  
+  const [isLoading, setIsLoading] = useState(true);
+
   // Form State aligned with Product Schema
   const [formData, setFormData] = useState({
     name: '',
@@ -28,6 +22,22 @@ const ManageShop = () => {
     price: 0,
     stockQuantity: 0
   });
+
+  const loadData = async () => {
+    try {
+      setIsLoading(true);
+      const data = await productService.getAllProducts();
+      setProducts(data);
+    } catch (err) {
+      console.error('Failed to load products:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const filteredProducts = products.filter(prod => 
     prod.name.toLowerCase().includes(search.toLowerCase()) || 
@@ -45,21 +55,31 @@ const ManageShop = () => {
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this product?')) {
-      setProducts(products.filter(p => p.id !== id));
+      try {
+        await productService.deleteProduct(id);
+        setProducts(products.filter(p => p.id !== id));
+      } catch(err) {
+        alert('Failed to delete product.');
+      }
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (editingProduct) {
-      setProducts(products.map(p => p.id === editingProduct.id ? { ...formData, id: p.id } : p));
-    } else {
-      const newProduct = { ...formData, id: Date.now().toString() };
-      setProducts([...products, newProduct]);
+    try {
+      if (editingProduct) {
+        await productService.updateProduct(editingProduct.id, formData);
+      } else {
+        await productService.createProduct(formData);
+      }
+      await loadData();
+      setIsModalOpen(false);
+    } catch (err) {
+      alert('Failed to save product.');
+      console.error(err);
     }
-    setIsModalOpen(false);
   };
 
   return (
@@ -106,7 +126,9 @@ const ManageShop = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredProducts.map((prod) => {
+            {isLoading ? (
+              <tr><td colSpan="6" style={{textAlign: 'center', padding: '32px'}}>Loading...</td></tr>
+            ) : filteredProducts.map((prod) => {
               const stockStatus = prod.stockQuantity > 0 ? 'In Stock' : 'Out of Stock';
               return (
               <tr key={prod.id}>
@@ -140,7 +162,7 @@ const ManageShop = () => {
                 </td>
               </tr>
             )})}
-            {filteredProducts.length === 0 && (
+            {!isLoading && filteredProducts.length === 0 && (
               <tr>
                 <td colSpan="6" style={{textAlign: 'center', padding: '32px', color: '#64748b'}}>
                   No products found matching your search.
@@ -169,7 +191,12 @@ const ManageShop = () => {
           </div>
           <div className="form-group">
             <label>Category</label>
-            <input type="text" placeholder="e.g. Plushies, Apparel" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} required />
+            <select value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} required>
+              <option value="" disabled>Select Category</option>
+              <option value="Gift Shop">Gift Shop</option>
+              <option value="Beverage">Beverage</option>
+              <option value="Food">Food</option>
+            </select>
           </div>
         </div>
         

@@ -1,6 +1,6 @@
 // Ticket main page component
 import React, { useEffect, useState } from 'react';
-import { getTickets } from '../../../services/ticketService';
+import { getAllTickets } from '../../../services/ticketService';
 
 const fallbackTickets = [
   { id: 'T-1001', type: 'Adult Day Pass', price: '$35.00', availability: 'Available' },
@@ -14,7 +14,7 @@ const TicketPage = () => {
   useEffect(() => {
     const loadTickets = async () => {
       try {
-        const data = await getTickets();
+        const data = await getAllTickets();
         setTickets(Array.isArray(data) && data.length ? data : fallbackTickets);
       } catch (error) {
         setTickets(fallbackTickets);

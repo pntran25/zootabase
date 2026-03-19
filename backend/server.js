@@ -10,6 +10,28 @@ const PORT = parseInt(process.env.PORT, 10) || 5000;
 app.use(cors());
 app.use(express.json());
 
+const exhibitsRouter = require('./routes/exhibits');
+const animalsRouter = require('./routes/animals');
+const attractionsRouter = require('./routes/attractions');
+const eventsRouter = require('./routes/events');
+const productsRouter = require('./routes/products');
+const ticketsRouter = require('./routes/tickets');
+const maintenanceRouter = require('./routes/maintenance');
+const feedbackRouter = require('./routes/feedback');
+const path = require('path');
+
+app.use('/api/exhibits', exhibitsRouter);
+app.use('/api/animals', animalsRouter);
+app.use('/', attractionsRouter);
+app.use('/', eventsRouter);
+app.use('/', productsRouter);
+app.use('/', ticketsRouter);
+app.use('/', maintenanceRouter);
+app.use('/', feedbackRouter);
+
+// Serve images from the frontend assets folder dynamically
+app.use('/images', express.static(path.join(__dirname, '../frontend/src/assets/images')));
+
 let isDatabaseConnected = false;
 
 app.get('/health', (req, res) => {
