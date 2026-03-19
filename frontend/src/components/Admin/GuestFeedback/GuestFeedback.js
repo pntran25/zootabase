@@ -1,13 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import '../AdminTable.css';
 import { MessageSquare, Plus, Trash2 } from 'lucide-react';
 import AdminModalForm from '../AdminModalForm';
-
-// Mocked Feedback Schema: ID, Rating, Comment, Location, Date
-const initialFeedback = [
-  { id: '1', rating: 5, comment: '"The giraffe feeding was the best part of our day!"', location: 'African Savanna', date: '2023-11-05' },
-  { id: '2', rating: 4, comment: '"Loved the penguins, but it was too crowded."', location: 'Penguin Coast', date: '2023-11-06' },
-];
+import feedbackService from '../../../services/feedbackService';
 
 const renderStars = (rating) => {
   return (
@@ -18,11 +13,12 @@ const renderStars = (rating) => {
 };
 
 const GuestFeedback = () => {
-  const [feedbackList, setFeedbackList] = useState(initialFeedback);
+  const [feedbackList, setFeedbackList] = useState([]);
   const [filterRating, setFilterRating] = useState('All');
   
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Form State aligned with Mock Schema
   const [formData, setFormData] = useState({
@@ -31,6 +27,22 @@ const GuestFeedback = () => {
     location: '',
     date: new Date().toISOString().split('T')[0]
   });
+
+  const loadData = async () => {
+    try {
+      setIsLoading(true);
+      const data = await feedbackService.getAllFeedback();
+      setFeedbackList(data);
+    } catch (err) {
+      console.error('Failed to load feedback:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const filteredFeedback = feedbackList.filter(f => {
     if (filterRating === 'All') return true;
@@ -44,17 +56,26 @@ const GuestFeedback = () => {
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this feedback record?')) {
-      setFeedbackList(feedbackList.filter(f => f.id !== id));
+      try {
+        await feedbackService.deleteFeedback(id);
+        setFeedbackList(feedbackList.filter(f => f.id !== id));
+      } catch (err) {
+        alert('Failed to delete feedback.');
+      }
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const newFeedback = { ...formData, id: Date.now().toString() };
-    setFeedbackList([newFeedback, ...feedbackList]);
-    setIsModalOpen(false);
+    try {
+      await feedbackService.createFeedback(formData);
+      await loadData();
+      setIsModalOpen(false);
+    } catch (err) {
+      alert('Failed to save feedback.');
+    }
   };
 
   const averageRating = feedbackList.length > 0 
@@ -113,7 +134,9 @@ const GuestFeedback = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredFeedback.map((feedback) => (
+            {isLoading ? (
+               <tr><td colSpan="5" style={{textAlign: 'center', padding: '32px'}}>Loading...</td></tr>
+            ) : filteredFeedback.map((feedback) => (
               <tr key={feedback.id}>
                 <td>{renderStars(feedback.rating)}</td>
                 <td className="text-dark" style={{ fontStyle: 'italic' }}>{feedback.comment}</td>
@@ -128,7 +151,7 @@ const GuestFeedback = () => {
                 </td>
               </tr>
             ))}
-            {filteredFeedback.length === 0 && (
+            {!isLoading && filteredFeedback.length === 0 && (
               <tr>
                 <td colSpan="5" style={{textAlign: 'center', padding: '32px', color: '#64748b'}}>
                   No feedback found matching the current filter.

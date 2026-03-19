@@ -1,20 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import '../AdminTable.css';
-import { PawPrint, Search, Plus, Edit2, Trash2 } from 'lucide-react';
+import { PawPrint, Search, Plus, Edit2, Trash2, Image as ImageIcon } from 'lucide-react';
 
 import AdminModalForm from '../AdminModalForm';
-
-const initialAnimals = [
-  { id: '1', name: 'Leo', species: 'African Lion', exhibit: 'African Savanna', diet: 'Carnivore', age: 6, health: 'Excellent', gender: 'Male', dateArrived: '2020-05-12' },
-  { id: '2', name: 'Gerry', species: 'Reticulated Giraffe', exhibit: 'African Savanna', diet: 'Herbivore', age: 4, health: 'Good', gender: 'Male', dateArrived: '2022-08-01' },
-  { id: '3', name: 'Zara', species: 'Plains Zebra', exhibit: 'African Savanna', diet: 'Herbivore', age: 3, health: 'Excellent', gender: 'Female', dateArrived: '2023-01-15' },
-  { id: '4', name: 'Kong', species: 'Silverback Gorilla', exhibit: 'Primate Forest', diet: 'Omnivore', age: 12, health: 'Fair', gender: 'Male', dateArrived: '2016-11-20' },
-  { id: '5', name: 'Mimi', species: 'Chimpanzee', exhibit: 'Primate Forest', diet: 'Omnivore', age: 8, health: 'Good', gender: 'Female', dateArrived: '2019-03-10' },
-  { id: '6', name: 'Pingu', species: 'Emperor Penguin', exhibit: 'Penguin Coast', diet: 'Carnivore', age: 5, health: 'Excellent', gender: 'Male', dateArrived: '2021-09-05' },
-];
+import animalService from '../../../services/animalService';
+import { API_BASE_URL } from '../../../services/apiClient';
 
 const ManageAnimals = () => {
-  const [animals, setAnimals] = useState(initialAnimals);
+  const [animals, setAnimals] = useState([]);
   const [search, setSearch] = useState('');
   
   // Modal State
@@ -30,8 +23,34 @@ const ManageAnimals = () => {
     gender: 'Unknown',
     diet: '',
     health: 'Good',
-    dateArrived: ''
+    dateArrived: '',
+    lifespan: '',
+    weight: '',
+    region: '',
+    funFact: ''
   });
+  const [imageFile, setImageFile] = useState(null);
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const loadData = async () => {
+    try {
+      setIsLoading(true);
+      const data = await animalService.getAllAnimals();
+      setAnimals(data);
+      setError(null);
+    } catch (err) {
+      console.error('Failed to load animals:', err);
+      setError('Failed to load animals. Please try again later.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const filteredAnimals = animals.filter(animal => 
     animal.name.toLowerCase().includes(search.toLowerCase()) || 
@@ -52,29 +71,65 @@ const ManageAnimals = () => {
   const handleOpenModal = (animal = null) => {
     if (animal) {
       setEditingAnimal(animal);
-      setFormData({ ...animal });
+      setFormData({ 
+        name: animal.name || '', 
+        species: animal.species || '', 
+        exhibit: animal.exhibit || '', 
+        age: animal.age || 0, 
+        gender: animal.gender || 'Unknown', 
+        diet: animal.diet || '', 
+        health: animal.health || 'Good', 
+        dateArrived: animal.dateArrived ? animal.dateArrived.split('T')[0] : '',
+        lifespan: animal.lifespan || '',
+        weight: animal.weight || '',
+        region: animal.region || '',
+        funFact: animal.funFact || ''
+      });
+      setImageFile(null);
     } else {
       setEditingAnimal(null);
-      setFormData({ name: '', species: '', exhibit: '', age: '', gender: 'Unknown', diet: '', health: 'Good', dateArrived: '' });
+      setFormData({ name: '', species: '', exhibit: '', age: '', gender: 'Unknown', diet: '', health: 'Good', dateArrived: '', lifespan: '', weight: '', region: '', funFact: '' });
+      setImageFile(null);
     }
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this animal?')) {
-      setAnimals(animals.filter(a => a.id !== id));
+      try {
+        await animalService.deleteAnimal(id);
+        setAnimals(animals.filter(a => a.id !== id));
+      } catch (err) {
+        alert('Failed to delete animal');
+      }
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (editingAnimal) {
-      setAnimals(animals.map(a => a.id === editingAnimal.id ? { ...formData, id: a.id } : a));
-    } else {
-      const newAnimal = { ...formData, id: Date.now().toString() };
-      setAnimals([...animals, newAnimal]);
+    const payload = { ...formData };
+
+    try {
+      let savedAnimalId = null;
+
+      if (editingAnimal) {
+        await animalService.updateAnimal(editingAnimal.id, payload);
+        savedAnimalId = editingAnimal.id;
+      } else {
+        const result = await animalService.createAnimal(payload);
+        savedAnimalId = result.id;
+      }
+
+      if (imageFile && savedAnimalId) {
+        await animalService.uploadAnimalImage(savedAnimalId, imageFile);
+      }
+
+      await loadData();
+      setIsModalOpen(false);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to save animal. Please check your inputs and try again.');
     }
-    setIsModalOpen(false);
   };
 
   return (
@@ -105,47 +160,74 @@ const ManageAnimals = () => {
       </div>
 
       <div className="admin-table-container">
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Species</th>
-              <th>Exhibit</th>
-              <th>Diet / Age</th>
-              <th>Health</th>
-              <th className="align-center">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredAnimals.map((animal) => {
-              const colors = getHealthColor(animal.health);
-              return (
-              <tr key={animal.id}>
-                <td className="font-medium text-dark">{animal.name}</td>
-                <td className="text-secondary">{animal.species}</td>
-                <td><span className="pill-badge outline">{animal.exhibit}</span></td>
-                <td>
-                    <div style={{display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.85rem'}}>
-                      <span className="text-secondary">Diet: <span className="text-dark font-medium">{animal.diet}</span></span>
-                      <span className="text-secondary">Age: <span className="text-dark font-medium">{animal.age} yrs</span> ({animal.gender})</span>
-                    </div>
-                </td>
-                <td>
-                  <span className="status-badge" style={{backgroundColor: colors.bg, color: colors.text}}>
-                      <span className="status-indicator-dot" style={{backgroundColor: colors.dot}}></span>
-                      {animal.health}
-                  </span>
-                </td>
-                <td>
-                  <div className="action-buttons">
-                    <button className="action-btn edit" onClick={() => handleOpenModal(animal)}><Edit2 size={16} /></button>
-                    <button className="action-btn delete" onClick={() => handleDelete(animal.id)}><Trash2 size={16} /></button>
-                  </div>
-                </td>
+        {isLoading ? (
+          <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Loading animals...</div>
+        ) : error ? (
+          <div style={{ padding: '40px', textAlign: 'center', color: '#ef4444' }}>{error}</div>
+        ) : (
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th style={{width: '60px'}}>Image</th>
+                <th>Name</th>
+                <th>Species</th>
+                <th>Exhibit</th>
+                <th>Diet / Age</th>
+                <th>Health</th>
+                <th className="align-center">Actions</th>
               </tr>
-            )})}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filteredAnimals.map((animal) => {
+                const colors = getHealthColor(animal.health);
+                return (
+                <tr key={animal.id}>
+                  <td>
+                    {animal.imageUrl ? (
+                      <img 
+                        src={`${API_BASE_URL}${animal.imageUrl}`} 
+                        alt={animal.name} 
+                        style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} 
+                      />
+                    ) : (
+                      <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
+                        <ImageIcon size={20} />
+                      </div>
+                    )}
+                  </td>
+                  <td className="font-medium text-dark">{animal.name}</td>
+                  <td className="text-secondary">{animal.species}</td>
+                  <td><span className="pill-badge outline">{animal.exhibit}</span></td>
+                  <td>
+                      <div style={{display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.85rem'}}>
+                        <span className="text-secondary">Diet: <span className="text-dark font-medium">{animal.diet || 'Unknown'}</span></span>
+                        <span className="text-secondary">Age: <span className="text-dark font-medium">{animal.age} yrs</span> ({animal.gender})</span>
+                      </div>
+                  </td>
+                  <td>
+                    <span className="status-badge" style={{backgroundColor: colors.bg, color: colors.text}}>
+                        <span className="status-indicator-dot" style={{backgroundColor: colors.dot}}></span>
+                        {animal.health}
+                    </span>
+                  </td>
+                  <td>
+                    <div className="action-buttons">
+                      <button className="action-btn edit" onClick={() => handleOpenModal(animal)}><Edit2 size={16} /></button>
+                      <button className="action-btn delete" onClick={() => handleDelete(animal.id)}><Trash2 size={16} /></button>
+                    </div>
+                  </td>
+                </tr>
+              )})}
+              {filteredAnimals.length === 0 && (
+                <tr>
+                  <td colSpan="7" style={{textAlign: 'center', padding: '32px', color: '#64748b'}}>
+                    No animals found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )}
       </div>
 
       <AdminModalForm 
@@ -205,6 +287,40 @@ const ManageAnimals = () => {
               <option value="Needs Checkup">Needs Checkup</option>
               <option value="Critical">Critical</option>
             </select>
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label>Profile Image</label>
+          <input 
+             type="file" 
+             accept="image/*" 
+             onChange={e => setImageFile(e.target.files[0])} 
+             style={{display: 'block', marginTop: '8px'}}
+          />
+          <small className="text-secondary">If no image is provided, a placeholder will be used.</small>
+        </div>
+
+        {/* Quick Facts Section */}
+        <h4 style={{margin: '18px 0 8px', color: '#374151', fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', borderTop: '1px solid #e5e7eb', paddingTop: '14px'}}>Quick Facts (Hover Info)</h4>
+        <div className="form-row">
+          <div className="form-group">
+            <label>Lifespan</label>
+            <input type="text" placeholder="e.g. 10-14 years" value={formData.lifespan} onChange={e => setFormData({...formData, lifespan: e.target.value})} />
+          </div>
+          <div className="form-group">
+            <label>Weight</label>
+            <input type="text" placeholder="e.g. 265-420 lbs" value={formData.weight} onChange={e => setFormData({...formData, weight: e.target.value})} />
+          </div>
+        </div>
+        <div className="form-row">
+          <div className="form-group">
+            <label>Region</label>
+            <input type="text" placeholder="e.g. Africa" value={formData.region} onChange={e => setFormData({...formData, region: e.target.value})} />
+          </div>
+          <div className="form-group">
+            <label>Interesting Fact</label>
+            <input type="text" placeholder="Short fun fact" value={formData.funFact} onChange={e => setFormData({...formData, funFact: e.target.value})} />
           </div>
         </div>
       </AdminModalForm>

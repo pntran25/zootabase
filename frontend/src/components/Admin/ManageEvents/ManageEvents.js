@@ -1,25 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import '../AdminTable.css';
 import { CalendarDays, Search, Plus, Edit2, Trash2 } from 'lucide-react';
 
 import AdminModalForm from '../AdminModalForm';
-
-// Mapping to Event Schema: EventID, EventName, EventDate, StartTime, EndTime, ExhibitID, Capacity
-const initialEvents = [
-  { id: '1', name: 'Lion Keeper Talk', date: '2023-10-25', startTime: '10:30', endTime: '11:00', exhibit: 'African Savanna', capacity: 50 },
-  { id: '2', name: 'Penguin Feeding', date: '2023-10-25', startTime: '14:00', endTime: '14:30', exhibit: 'Penguin Coast', capacity: 100 },
-  { id: '3', name: 'Meet the Keeper: Gorillas', date: '2023-10-28', startTime: '11:00', endTime: '11:45', exhibit: 'Primate Forest', capacity: 30 },
-  { id: '4', name: 'Twilight Safari Tour', date: '2023-10-27', startTime: '18:30', endTime: '20:00', exhibit: 'Main Entrance', capacity: 20 },
-];
+import eventService from '../../../services/eventService';
 
 const ManageEvents = () => {
-  const [events, setEvents] = useState(initialEvents);
+  const [events, setEvents] = useState([]);
   const [search, setSearch] = useState('');
-
+  
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   
+  const [isLoading, setIsLoading] = useState(true);
+
   // Form State aligned with Event Schema
   const [formData, setFormData] = useState({
     name: '',
@@ -29,6 +24,22 @@ const ManageEvents = () => {
     exhibit: '',
     capacity: 0
   });
+
+  const loadData = async () => {
+    try {
+      setIsLoading(true);
+      const data = await eventService.getAllEvents();
+      setEvents(data);
+    } catch (err) {
+      console.error('Failed to load events:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const filteredEvents = events.filter(event => 
     event.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -46,21 +57,36 @@ const ManageEvents = () => {
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this event?')) {
-      setEvents(events.filter(e => e.id !== id));
+      try {
+        await eventService.deleteEvent(id);
+        setEvents(events.filter(e => e.id !== id));
+      } catch (err) {
+        alert('Failed to delete event.');
+      }
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (editingEvent) {
-      setEvents(events.map(e => e.id === editingEvent.id ? { ...formData, id: e.id } : e));
-    } else {
-      const newEvent = { ...formData, id: Date.now().toString() };
-      setEvents([...events, newEvent]);
+    try {
+      const startStr = formData.startTime.length === 5 ? `${formData.startTime}:00` : formData.startTime;
+      const endStr = formData.endTime.length === 5 ? `${formData.endTime}:00` : formData.endTime;
+      
+      const payload = { ...formData, startTime: startStr, endTime: endStr };
+
+      if (editingEvent) {
+        await eventService.updateEvent(editingEvent.id, payload);
+      } else {
+        await eventService.createEvent(payload);
+      }
+      await loadData();
+      setIsModalOpen(false);
+    } catch (err) {
+      alert('Failed to save event.');
+      console.error(err);
     }
-    setIsModalOpen(false);
   };
 
   return (
@@ -103,7 +129,9 @@ const ManageEvents = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredEvents.map((evt) => (
+            {isLoading ? (
+              <tr><td colSpan="6" style={{textAlign: 'center', padding: '32px'}}>Loading...</td></tr>
+            ) : filteredEvents.map((evt) => (
               <tr key={evt.id}>
                 <td className="font-medium text-dark">{evt.name}</td>
                 <td className="text-secondary">{evt.date}</td>
@@ -118,7 +146,7 @@ const ManageEvents = () => {
                 </td>
               </tr>
             ))}
-            {filteredEvents.length === 0 && (
+            {!isLoading && filteredEvents.length === 0 && (
               <tr>
                 <td colSpan="6" style={{textAlign: 'center', padding: '32px', color: '#64748b'}}>
                   No events found matching your search.

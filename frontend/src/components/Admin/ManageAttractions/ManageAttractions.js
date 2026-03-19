@@ -1,23 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import '../AdminTable.css';
 import { TicketCheck, Search, Plus, Edit2, Trash2 } from 'lucide-react';
 
 import AdminModalForm from '../AdminModalForm';
-
-// Mapping to Attraction Schema: AttractionID, AttractionName, AttractionType, LocationDesc, CapacityVisitor, ActiveFlag
-const initialAttractions = [
-  { id: '1', name: 'Safari Jeeps', type: 'Ride', location: 'Near Entrance A', duration: '25 min', price: 15.00, capacity: 40, active: true },
-  { id: '2', name: 'Giraffe Feeding Station', type: 'Experience', location: 'African Savanna Deck', duration: '10 min', price: 5.00, capacity: 15, active: true }
-];
+import attractionService from '../../../services/attractionService';
 
 const ManageAttractions = () => {
-  const [attractions, setAttractions] = useState(initialAttractions);
+  const [attractions, setAttractions] = useState([]);
   const [search, setSearch] = useState('');
-
+  
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAttraction, setEditingAttraction] = useState(null);
   
+  const [isLoading, setIsLoading] = useState(true);
+
   // Form State aligned with Attraction Schema + UI fields
   const [formData, setFormData] = useState({
     name: '',
@@ -28,6 +25,28 @@ const ManageAttractions = () => {
     capacity: 0,
     active: true
   });
+
+  const loadData = async () => {
+    try {
+      setIsLoading(true);
+      const data = await attractionService.getAllAttractions();
+      // Map DB ActiveFlag string back to boolean for the checkbox
+      const mapped = data.map(item => ({
+        ...item,
+        active: item.status === 'Open',
+        duration: item.duration || 'N/A' // backend schema doesn't have duration currently
+      }));
+      setAttractions(mapped);
+    } catch (err) {
+      console.error('Failed to load attractions:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const filteredAttractions = attractions.filter(attr => 
     attr.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -45,21 +64,37 @@ const ManageAttractions = () => {
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this attraction?')) {
-      setAttractions(attractions.filter(a => a.id !== id));
+      try {
+        await attractionService.deleteAttraction(id);
+        setAttractions(attractions.filter(a => a.id !== id));
+      } catch (err) {
+        alert('Failed to delete attraction.');
+      }
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (editingAttraction) {
-      setAttractions(attractions.map(a => a.id === editingAttraction.id ? { ...formData, id: a.id } : a));
-    } else {
-      const newAttraction = { ...formData, id: Date.now().toString() };
-      setAttractions([...attractions, newAttraction]);
+    try {
+      // Map UI active boolean back to DB status string
+      const payload = {
+        ...formData,
+        status: formData.active ? 'Open' : 'Closed'
+      };
+      
+      if (editingAttraction) {
+        await attractionService.updateAttraction(editingAttraction.id, payload);
+      } else {
+        await attractionService.createAttraction(payload);
+      }
+      await loadData();
+      setIsModalOpen(false);
+    } catch (err) {
+      alert('Failed to save attraction.');
+      console.error(err);
     }
-    setIsModalOpen(false);
   };
 
   return (
@@ -101,7 +136,9 @@ const ManageAttractions = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredAttractions.map((attr) => (
+            {isLoading ? (
+              <tr><td colSpan="5" style={{textAlign: 'center', padding: '32px'}}>Loading...</td></tr>
+            ) : filteredAttractions.map((attr) => (
               <tr key={attr.id} style={{ opacity: attr.active ? 1 : 0.6 }}>
                 <td className="font-medium text-dark">{attr.name}</td>
                 <td><span className="pill-badge outline" style={{color: '#9a3412', borderColor: '#fdba74', backgroundColor: '#fff7ed'}}>{attr.type}</span></td>
@@ -111,7 +148,7 @@ const ManageAttractions = () => {
                     <span className="text-secondary">{attr.duration} &bull; Cap: {attr.capacity}</span>
                   </div>
                 </td>
-                <td className="font-medium" style={{color: '#16a34a'}}>${Number(attr.price).toFixed(2)}</td>
+                <td className="font-medium" style={{color: '#16a34a'}}>${Number(attr.price || 0).toFixed(2)}</td>
                 <td>
                   <div className="action-buttons">
                     <button className="action-btn edit" onClick={() => handleOpenModal(attr)}><Edit2 size={16} /></button>
@@ -120,7 +157,7 @@ const ManageAttractions = () => {
                 </td>
               </tr>
             ))}
-            {filteredAttractions.length === 0 && (
+            {!isLoading && filteredAttractions.length === 0 && (
               <tr>
                 <td colSpan="5" style={{textAlign: 'center', padding: '32px', color: '#64748b'}}>
                   No attractions found matching your search.

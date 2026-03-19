@@ -1,21 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import '../AdminTable.css';
 import { Map, Search, Plus, Edit2, Trash2 } from 'lucide-react';
 
 import AdminModalForm from '../AdminModalForm';
-
-// Mapping to Exhibit Schema: ExhibitID, ExhibitName, AreaID(Name), Capacity, OpeningHours, HabitatType
-const initialExhibits = [
-  { id: '1', name: 'African Savanna', area: 'Africa', habitat: 'Grassland', capacity: 500, openingHours: '09:00-17:00' },
-  { id: '2', name: 'Primate Forest', area: 'Jungle', habitat: 'Rainforest', capacity: 250, openingHours: '09:00-17:00' },
-  { id: '3', name: 'Penguin Coast', area: 'Arctic', habitat: 'Tundra / Aquatic', capacity: 150, openingHours: '09:00-16:30' },
-  { id: '4', name: 'Asian Highlands', area: 'Asia', habitat: 'Mountain Forest', capacity: 300, openingHours: '09:00-17:00' },
-  { id: '5', name: 'Outback Adventure', area: 'Australia', habitat: 'Desert Scrub', capacity: 400, openingHours: '09:00-18:00' },
-  { id: '6', name: 'Reptile House', area: 'Reptiles', habitat: 'Indoor Terrarium', capacity: 100, openingHours: '10:00-16:00' },
-];
+import { getExhibits, createExhibit, updateExhibit, deleteExhibit, uploadExhibitImage } from '../../../services/exhibitService';
 
 const ManageExhibits = () => {
-  const [exhibits, setExhibits] = useState(initialExhibits);
+  const [exhibits, setExhibits] = useState([]);
   const [search, setSearch] = useState('');
 
   // Modal State
@@ -30,6 +21,37 @@ const ManageExhibits = () => {
     capacity: 0,
     openingHours: ''
   });
+  const [imageFile, setImageFile] = useState(null);
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const loadData = async () => {
+    try {
+      setIsLoading(true);
+      const data = await getExhibits();
+      // Map backend fields to frontend format
+      const mappedData = data.map(item => ({
+        id: item.ExhibitID,
+        name: item.ExhibitName,
+        area: item.AreaName || '',
+        habitat: item.HabitatType || '',
+        capacity: item.Capacity,
+        openingHours: item.OpeningHours
+      }));
+      setExhibits(mappedData);
+      setError(null);
+    } catch (err) {
+      console.error('Failed to load exhibits:', err);
+      setError('Failed to load exhibits. Please try again later.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const filteredExhibits = exhibits.filter(exhibit => 
     exhibit.name.toLowerCase().includes(search.toLowerCase()) || 
@@ -40,28 +62,58 @@ const ManageExhibits = () => {
     if (exhibit) {
       setEditingExhibit(exhibit);
       setFormData({ ...exhibit });
+      setImageFile(null);
     } else {
       setEditingExhibit(null);
       setFormData({ name: '', area: '', habitat: '', capacity: 0, openingHours: '' });
+      setImageFile(null);
     }
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this exhibit?')) {
-      setExhibits(exhibits.filter(e => e.id !== id));
+      try {
+        await deleteExhibit(id);
+        setExhibits(exhibits.filter(e => e.id !== id));
+      } catch (err) {
+        alert('Failed to delete exhibit');
+      }
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (editingExhibit) {
-      setExhibits(exhibits.map(ex => ex.id === editingExhibit.id ? { ...formData, id: ex.id } : ex));
-    } else {
-      const newExhibit = { ...formData, id: Date.now().toString() };
-      setExhibits([...exhibits, newExhibit]);
+    const payload = {
+      ExhibitName: formData.name,
+      AreaName: formData.area,
+      HabitatType: formData.habitat,
+      Capacity: formData.capacity,
+      OpeningHours: formData.openingHours
+    };
+
+    try {
+      let savedExhibitId = null;
+
+      if (editingExhibit) {
+        await updateExhibit(editingExhibit.id, payload);
+        savedExhibitId = editingExhibit.id;
+      } else {
+        const result = await createExhibit(payload);
+        savedExhibitId = result.ExhibitID;
+      }
+
+      // If there's an image to upload, upload it now
+      if (imageFile && savedExhibitId) {
+        await uploadExhibitImage(savedExhibitId, imageFile);
+      }
+
+      await loadData();
+      setIsModalOpen(false);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to save exhibit. Please check your inputs and try again.');
     }
-    setIsModalOpen(false);
   };
 
   return (
@@ -164,6 +216,17 @@ const ManageExhibits = () => {
             <label>Opening Hours</label>
             <input type="text" placeholder="e.g. 09:00-17:00" value={formData.openingHours} onChange={e => setFormData({...formData, openingHours: e.target.value})} required />
           </div>
+        </div>
+
+        <div className="form-group">
+          <label>Exhibit Image</label>
+          <input 
+             type="file" 
+             accept="image/*" 
+             onChange={e => setImageFile(e.target.files[0])} 
+             style={{display: 'block', marginTop: '8px'}}
+          />
+          <small className="text-secondary">If no image is provided, a placeholder will be used.</small>
         </div>
       </AdminModalForm>
 
