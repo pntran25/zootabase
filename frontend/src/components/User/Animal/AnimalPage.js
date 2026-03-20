@@ -2,27 +2,66 @@ import React, { useState, useEffect, useCallback } from 'react';
 import animalService from '../../../services/animalService';
 import './AnimalPage.css';
 import { API_BASE_URL } from '../../../services/apiClient';
-import { ArrowRight, Info, Heart, MapPin, Clock } from 'lucide-react';
+import { ArrowRight, Info, Heart, MapPin, Clock, Search, Filter, Grid3X3, List } from 'lucide-react';
+import placeholderImg from '../../../assets/images/Exhibits_Images/ExhibitsComingSoon.png';
 
-// Map health status to badge style
+// Custom cn utility for Tailwind
+const cn = (...classes) => classes.filter(Boolean).join(' ');
+
+// status utility from reference
+const statusColors = {
+  "Critically Endangered": "bg-red-500/10 text-red-600 border-red-200",
+  "Endangered": "bg-orange-500/10 text-orange-600 border-orange-200",
+  "Vulnerable": "bg-amber-500/10 text-amber-600 border-amber-200",
+  "Near Threatened": "bg-yellow-500/10 text-yellow-600 border-yellow-200",
+  "Least Concern": "bg-green-500/10 text-green-600 border-green-200",
+  "Default": "bg-gray-500/10 text-gray-600 border-gray-200",
+}
+
 function getStatusBadge(health) {
   const h = (health || '').toLowerCase();
   if (h.includes('critical') || h.includes('endangered'))
-    return { label: 'Endangered',       cls: 'ww-status-endangered' };
+    return { label: 'Endangered',       cls: statusColors['Endangered'] };
   if (h.includes('fair') || h.includes('vulnerable') || h.includes('checkup'))
-    return { label: 'Vulnerable',       cls: 'ww-status-vulnerable' };
+    return { label: 'Vulnerable',       cls: statusColors['Vulnerable'] };
   if (h.includes('near'))
-    return { label: 'Near Threatened',  cls: 'ww-status-near-threatened' };
+    return { label: 'Near Threatened',  cls: statusColors['Near Threatened'] };
   if (h.includes('good') || h.includes('excellent'))
-    return { label: 'Least Concern',    cls: 'ww-status-least-concern' };
-  return { label: health || 'Unknown',  cls: 'ww-status-default' };
+    return { label: 'Least Concern',    cls: statusColors['Least Concern'] };
+  return { label: health || 'Unknown',  cls: statusColors['Default'] };
 }
+
+// Minimal generic components to mimic shadcn/ui
+const Button = ({ children, variant = 'default', size = 'default', className, ...props }) => {
+  const base = "inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:pointer-events-none ring-offset-background cursor-pointer";
+  const variants = {
+    default: "bg-primary text-primary-foreground hover:bg-primary/90",
+    outline: "border border-border bg-background hover:bg-secondary hover:text-foreground",
+    secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+  };
+  const sizes = {
+    default: "h-10 py-2 px-4",
+    sm: "h-9 px-3 rounded-md text-sm",
+    icon: "h-10 w-10",
+  };
+  return <button className={cn(base, variants[variant], sizes[size], className)} {...props}>{children}</button>;
+};
+
+const Input = ({ className, ...props }) => {
+  return <input className={cn("flex h-10 w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50", className)} {...props} />;
+};
 
 const AnimalPage = () => {
   const [animals, setAnimals] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState(null);
-  const [liked,   setLiked]   = useState({});
+  const [error, setError] = useState(null);
+  const [liked, setLiked] = useState({});
+
+  const [selectedCategory, setSelectedCategory] = useState("All Animals");
+  const [selectedStatus, setSelectedStatus] = useState("All");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [viewMode, setViewMode] = useState("grid");
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -42,107 +81,298 @@ const AnimalPage = () => {
     setLiked(prev => ({ ...prev, [id]: !prev[id] }));
   }, []);
 
-  if (loading) return <div className="ww-animal-loading">Loading animals...</div>;
-  if (error)   return <div className="ww-animal-error">{error}</div>;
+  if (loading) return <div className="flex h-screen items-center justify-center text-lg text-muted-foreground">Loading animals...</div>;
+  if (error) return <div className="flex h-screen items-center justify-center text-red-500">{error}</div>;
+
+  const dynamicCategories = ["All Animals", ...Array.from(new Set(animals.map(a => a.species).filter(Boolean)))];
+  const conservationStatuses = ["All", "Critically Endangered", "Endangered", "Vulnerable", "Near Threatened", "Least Concern"];
+
+  const filteredAnimals = animals.filter(animal => {
+    const badge = getStatusBadge(animal.health);
+    const matchesCategory = selectedCategory === "All Animals" || animal.species === selectedCategory;
+    const matchesStatus = selectedStatus === "All" || badge.label === selectedStatus;
+    const searchPart = searchQuery.toLowerCase();
+    const matchesSearch = 
+      (animal.name || "").toLowerCase().includes(searchPart) ||
+      (animal.species || "").toLowerCase().includes(searchPart) ||
+      (animal.exhibit || "").toLowerCase().includes(searchPart);
+    return matchesCategory && matchesStatus && matchesSearch;
+  });
 
   return (
-    <div className="ww-animal-page">
-      <header className="ww-animal-header">
-        <h1>Meet Our Animals</h1>
-        <p>Discover the incredible species entrusted to our care.</p>
-      </header>
-
-      <div className="ww-animal-grid">
-        {animals.map(animal => {
-          const badge   = getStatusBadge(animal.health);
-          const isLiked = liked[animal.id];
-
-          return (
-            <div className="ww-animal-card" key={animal.id}>
-              {/* Background image */}
-              {animal.imageUrl ? (
-                <img
-                  src={`${API_BASE_URL}${animal.imageUrl}`}
-                  alt={animal.name}
-                  className="ww-animal-card-bg"
-                />
-              ) : (
-                <div className="ww-animal-card-placeholder-bg">🐾</div>
-              )}
-
-              {/* Gradient for text legibility */}
-              <div className="ww-animal-card-gradient" />
-
-              {/* Top row — status badge + heart */}
-              <div className="ww-card-top-row">
-                <span className={`ww-status-badge ${badge.cls}`}>
-                  {badge.label}
-                </span>
-                <button
-                  className={`ww-heart-btn ${isLiked ? 'liked' : ''}`}
-                  onClick={(e) => { e.stopPropagation(); toggleLike(animal.id); }}
-                >
-                  <Heart size={15} fill={isLiked ? '#ef4444' : 'none'} />
-                </button>
-              </div>
-
-              {/* Bottom info — normal state */}
-              <div className="ww-card-bottom-info">
-                <p className="ww-card-species">{animal.species}</p>
-                <h3 className="ww-card-name">{animal.name}</h3>
-                <div className="ww-card-meta-row">
-                  <span className="ww-card-meta-item">
-                    <MapPin size={12} /> {animal.exhibit || 'Zoo-wide'}
-                  </span>
-                  <span className="ww-card-meta-item">
-                    <Clock size={12} /> {animal.age ? `${animal.age} yrs` : 'N/A'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Quick Facts overlay — hover state */}
-              <div className="ww-quick-facts-overlay">
-                <h4 className="ww-quick-facts-title">Quick Facts</h4>
-                <div className="ww-quick-facts-list">
-                  <div className="ww-quick-fact-item">
-                    <strong>Diet:</strong> {animal.diet || 'Unknown'}
-                  </div>
-                  <div className="ww-quick-fact-item">
-                    <strong>Lifespan:</strong> {animal.lifespan || 'Unknown'}
-                  </div>
-                  <div className="ww-quick-fact-item">
-                    <strong>Weight:</strong> {animal.weight || 'Unknown'}
-                  </div>
-                  <div className="ww-quick-fact-item">
-                    <strong>Region:</strong> {animal.region || 'Unknown'}
-                  </div>
-                </div>
-
-                {animal.funFact && (
-                  <div className="ww-fun-fact">
-                    <Info className="ww-fun-fact-icon" size={14} />
-                    {animal.funFact}
-                  </div>
-                )}
-
-                <button className="ww-learn-more-btn">
-                  Learn More <ArrowRight size={14} />
-                </button>
-              </div>
-
-              {/* Bottom meta — stays visible on hover too */}
-              <div className="ww-card-bottom-meta-hover">
-                <span className="ww-card-meta-item">
-                  <MapPin size={11} /> {animal.exhibit || 'Zoo-wide'}
-                </span>
-                <span className="ww-card-meta-item">
-                  <Clock size={11} /> {animal.age ? `${animal.age} yrs` : 'N/A'}
-                </span>
-              </div>
+    <div className="min-h-screen bg-background pb-12">
+      <section className="relative">
+        <div className="relative h-[45vh] min-h-[360px] overflow-hidden">
+          <img
+            src="https://images.unsplash.com/photo-1549366021-9f761d450615?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"
+            alt="Zoo animals"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-[rgba(0,0,0,0.6)] via-[rgba(0,0,0,0.4)] to-background" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center px-4 mt-8">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white tracking-tight text-balance m-0">
+                Meet Our Animals
+              </h1>
+              <p className="mt-4 text-lg md:text-xl text-white/80 max-w-2xl mx-auto text-balance">
+                Discover incredible species entrusted to our care from every corner of the globe
+              </p>
             </div>
-          );
-        })}
-      </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="sticky top-[4rem] z-40 bg-card border-b border-border" style={{ boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.07)' }}>
+        <div className="mx-auto max-w-7xl px-4 py-4 lg:px-8">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            {/* LEFT: Search + Filter */}
+            <div className="flex items-center gap-3 shrink-0">
+              <div className="relative w-full min-w-0 md:min-w-[336px] md:max-w-[480px]">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" style={{ width: '1.125rem', height: '1.125rem' }} />
+                <input
+                  type="text"
+                  placeholder="Search animals by name or exhibit..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
+                  style={{
+                    height: '2.75rem',
+                    paddingLeft: '2.75rem',
+                    paddingRight: '1rem',
+                    fontSize: '0.9375rem',
+                    boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.06)',
+                    transition: 'border-color 0.2s, box-shadow 0.2s',
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+              <button
+                className="inline-flex items-center justify-center shrink-0 rounded-xl border border-border bg-background text-foreground cursor-pointer hover:bg-secondary transition-colors"
+                style={{
+                  height: '2.75rem',
+                  width: '2.75rem',
+                  boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.06)',
+                }}
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                <Filter style={{ width: '1rem', height: '1rem' }} />
+              </button>
+            </div>
+
+            {/* RIGHT: Category Filters */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+              <style>{`.flex.items-center.gap-2.overflow-x-auto::-webkit-scrollbar { display: none; }`}</style>
+              {dynamicCategories.map((category) => (
+                <button
+                  key={category}
+                  className={cn(
+                    "inline-flex whitespace-nowrap items-center shrink-0 rounded-lg border cursor-pointer transition-all text-sm font-medium",
+                    selectedCategory === category
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-background text-foreground border-border hover:bg-secondary"
+                  )}
+                  style={{ height: '2.25rem', padding: '0 0.875rem' }}
+                  onClick={() => setSelectedCategory(category)}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {showFilters && (
+            <div className="flex items-center gap-2 overflow-x-auto pt-3 mt-3 border-t border-border" style={{ scrollbarWidth: 'none' }}>
+              <span className="text-sm font-medium text-muted-foreground shrink-0">Health Status:</span>
+              {conservationStatuses.map((status) => (
+                <button
+                  key={status}
+                  className={cn(
+                    "inline-flex whitespace-nowrap items-center shrink-0 rounded-lg border cursor-pointer transition-all text-sm font-medium",
+                    selectedStatus === status
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-background text-foreground border-border hover:bg-secondary"
+                  )}
+                  style={{ height: '2.25rem', padding: '0 0.875rem' }}
+                  onClick={() => setSelectedStatus(status)}
+                >
+                  {status}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 pt-8 lg:px-8">
+        <p className="text-sm text-muted-foreground m-0">
+          Showing <span className="font-medium text-foreground">{filteredAnimals.length}</span> animals
+        </p>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 py-8 lg:px-8">
+        {viewMode === "grid" ? (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {filteredAnimals.map((animal) => {
+              const badge = getStatusBadge(animal.health);
+              const isLiked = liked[animal.id];
+              return (
+                <article 
+                  key={animal.id}
+                  className="group relative overflow-hidden rounded-2xl bg-card border border-border transition-all duration-300 hover:shadow-xl hover:border-primary/20 flex flex-col"
+                >
+                  <div className="relative aspect-square overflow-hidden bg-muted">
+                    <img
+                      src={animal.imageUrl ? `${API_BASE_URL}${animal.imageUrl}` : placeholderImg}
+                      alt={animal.name}
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[rgba(0,0,0,0.8)] via-[rgba(0,0,0,0.2)] to-transparent" />
+                    
+                    <div className="absolute top-3 left-3 right-3 flex items-start justify-between z-10">
+                      <span className={cn(
+                        "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium backdrop-blur-sm",
+                        badge.cls
+                      )}>
+                        {badge.label}
+                      </span>
+                      <button 
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleLike(animal.id); }}
+                        className="p-2 rounded-full bg-background/80 backdrop-blur-sm transition-colors text-muted-foreground hover:text-red-500 cursor-pointer border-none"
+                      >
+                        <Heart className="h-4 w-4" fill={isLiked ? "currentColor" : "none"} color={isLiked ? "#ef4444" : "currentColor"} />
+                      </button>
+                    </div>
+
+                    <div className="absolute bottom-0 left-0 right-0 p-4 z-10 w-full box-border">
+                      <p className="text-xs text-white/70 italic m-0">{animal.species}</p>
+                      <h2 className="text-xl font-bold text-white tracking-tight m-0">{animal.name}</h2>
+                      
+                      <div className="flex items-center gap-3 mt-2 text-xs text-white/80">
+                        <span className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {animal.exhibit || "Zoo-wide"}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {animal.age ? `${animal.age} yrs` : "N/A"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="absolute inset-0 bg-[#1e140d]/90 p-4 flex flex-col justify-center transition-opacity duration-300 opacity-0 group-hover:opacity-100 z-20">
+                      <div className="text-white">
+                        <h3 className="font-semibold text-lg mb-3 mt-0 tracking-tight">Quick Facts</h3>
+                        <div className="space-y-2 text-sm text-white/90">
+                          <p className="m-0"><span className="text-white/70">Diet:</span> {animal.diet || 'Unknown'}</p>
+                          <p className="m-0"><span className="text-white/70">Lifespan:</span> {animal.lifespan || 'Unknown'}</p>
+                          <p className="m-0"><span className="text-white/70">Weight:</span> {animal.weight || 'Unknown'}</p>
+                          <p className="m-0"><span className="text-white/70">Region:</span> {animal.region || 'Unknown'}</p>
+                        </div>
+                        <div className="mt-4 p-3 bg-white/10 rounded-xl border border-white/5">
+                          <p className="text-xs text-white/90 flex items-start gap-2 m-0 leading-relaxed tracking-wide">
+                            <Info className="h-4 w-4 shrink-0 mt-[2px]" />
+                            {animal.funFact || "Did you know? A lion's roar can be heard from 5 miles away."}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {filteredAnimals.map((animal) => {
+              const badge = getStatusBadge(animal.health);
+              const isLiked = liked[animal.id];
+              return (
+                <article key={animal.id} className="group flex flex-col md:flex-row overflow-hidden rounded-2xl bg-card border border-border transition-all duration-300 hover:shadow-xl hover:border-primary/20">
+                  <div className="relative w-full md:w-64 shrink-0 aspect-video md:aspect-square overflow-hidden bg-muted">
+                    <img
+                      src={animal.imageUrl ? `${API_BASE_URL}${animal.imageUrl}` : placeholderImg}
+                      alt={animal.name}
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                    <div className="absolute top-3 left-3">
+                      <span className={cn(
+                        "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium backdrop-blur-sm",
+                        badge.cls
+                      )}>
+                        {badge.label}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-1 flex-col p-6">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground italic m-0">{animal.species}</p>
+                        <h2 className="text-2xl font-bold tracking-tight text-foreground m-0">{animal.name}</h2>
+                        <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                          <span className="flex items-center gap-1.5">
+                            <MapPin className="h-4 w-4" />
+                            {animal.exhibit || "Zoo-wide"}
+                          </span>
+                          <span className="flex items-center gap-1.5">
+                            <Clock className="h-4 w-4" />
+                            Age: {animal.age ? `${animal.age} yrs` : "N/A"}
+                          </span>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => toggleLike(animal.id)}
+                        className="p-2 rounded-full bg-secondary text-muted-foreground hover:text-red-500 transition-colors cursor-pointer border-none"
+                      >
+                        <Heart className="h-5 w-5" fill={isLiked ? "currentColor" : "none"} color={isLiked ? "#ef4444" : "currentColor"} />
+                      </button>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap gap-6 text-sm">
+                      <div className="flex flex-col">
+                        <span className="text-xs text-muted-foreground">Diet</span>
+                        <span className="font-medium">{animal.diet || 'Unknown'}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-xs text-muted-foreground">Lifespan</span>
+                        <span className="font-medium">{animal.lifespan || 'Unknown'}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-xs text-muted-foreground">Weight</span>
+                        <span className="font-medium">{animal.weight || 'Unknown'}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-xs text-muted-foreground">Region</span>
+                        <span className="font-medium">{animal.region || 'Unknown'}</span>
+                      </div>
+                    </div>
+
+                    {animal.funFact && (
+                      <div className="mt-4 p-3 bg-secondary/50 rounded-lg">
+                        <p className="text-sm text-muted-foreground flex items-start gap-2 m-0">
+                          <Info className="h-4 w-4 shrink-0 mt-0.5 text-primary" />
+                          <span><strong>Fun Fact:</strong> {animal.funFact}</span>
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
+
+        {filteredAnimals.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
+              <Search className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <h3 className="text-lg font-semibold m-0">No animals found</h3>
+            <p className="text-muted-foreground mt-1">Try adjusting your search or filters</p>
+          </div>
+        )}
+      </section>
+
     </div>
   );
 };

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import './Login.css';
 import { Mail, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import loginImg from '../../../assets/images/login_lion.png';
+import brandLogo from '../../../assets/images/Logo.png';
 
 const Login = () => {
   const [email, setEmail]         = useState('');
@@ -16,134 +17,200 @@ const Login = () => {
   };
 
   return (
-    <div className="login-page">
-      {/* ── LEFT — Animal Photo Panel ── */}
-      <div className="login-left">
-        <div className="login-left-bg" />
-        <div className="login-left-overlay" />
-
-        {/* Logo */}
-        <Link to="/" className="login-logo">
-          <div className="login-logo-icon">W</div>
-          <span className="login-logo-text">WildWoods</span>
-        </Link>
-
-        {/* Caption */}
-        <div className="login-left-caption">
-          <h2 className="login-left-title">Welcome Back to the Wild</h2>
-          <p className="login-left-subtitle">
-            <Link to="/login">Sign in</Link> to access exclusive member benefits, track
-            your visits, and stay connected with our conservation efforts.
-          </p>
+    <div className="min-h-screen flex">
+      {/* Left Side - Image */}
+      <div className="hidden lg:flex lg:w-3/5 xl:w-2/3 relative">
+        <img
+          src={loginImg}
+          alt="Majestic lion"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-black/20" />
+        <div className="absolute inset-0 flex flex-col justify-end p-12">
+          <Link to="/" className="absolute top-8 left-8 flex items-center gap-2">
+            <img src={brandLogo} alt="WildWoods Logo" className="h-14 w-14 object-contain" />
+            <span className="text-xl font-bold tracking-tight text-white">Wildwood Zoo</span>
+          </Link>
+          <div className="max-w-md mt-auto">
+            <h2 className="text-3xl font-bold text-white mb-4 m-0">
+              Welcome Back to the Wild
+            </h2>
+            <p className="text-white/80 text-lg m-0">
+              Sign in to access exclusive member benefits, track your visits, and stay connected with our conservation efforts.
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* ── RIGHT — Sign In Form ── */}
-      <div className="login-right">
-        {/* Back link */}
-        <Link to="/" className="login-back">
-          <ArrowLeft size={14} /> Back to Home
-        </Link>
-
-        <h1 className="login-title">Sign In</h1>
-        <p className="login-subtitle">Enter your credentials to access your account</p>
-
-        <form className="login-form" onSubmit={handleSubmit}>
-          {/* Email */}
-          <div className="login-field">
-            <label className="login-label" htmlFor="login-email">Email Address</label>
-            <div className="login-input-wrapper">
-              <Mail className="login-input-icon" size={15} />
-              <input
-                id="login-email"
-                type="email"
-                className="login-input"
-                placeholder="you@example.com"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
-              />
-            </div>
-          </div>
-
-          {/* Password */}
-          <div className="login-field">
-            <div className="login-label-row">
-              <label className="login-label" htmlFor="login-password">Password</label>
-              <a href="#forgot" className="login-forgot">Forgot password?</a>
-            </div>
-            <div className="login-input-wrapper">
-              <Lock className="login-input-icon" size={15} />
-              <input
-                id="login-password"
-                type={showPass ? 'text' : 'password'}
-                className="login-input"
-                placeholder="Enter your password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                required
-              />
-              <button
-                type="button"
-                className="login-eye-btn"
-                onClick={() => setShowPass(p => !p)}
-                aria-label={showPass ? 'Hide password' : 'Show password'}
-              >
-                {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
-            </div>
-          </div>
-
-          {/* Remember me */}
-          <label className="login-remember">
-            <input
-              type="checkbox"
-              className="login-checkbox"
-              checked={remember}
-              onChange={e => setRemember(e.target.checked)}
-            />
-            Remember me for 30 days
-          </label>
-
-          {/* Submit */}
-          <button type="submit" className="login-btn">Sign In</button>
-        </form>
-
-        {/* OAuth */}
-        <div className="login-divider">Or continue with</div>
-
-        <div className="login-oauth">
-          <button className="login-oauth-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-            </svg>
-            Google
-          </button>
-          <button className="login-oauth-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
-            </svg>
-            GitHub
-          </button>
+      {/* Right Side - Form */}
+      <div className="flex-1 flex flex-col bg-background relative overflow-y-auto">
+        {/* Mobile Header */}
+        <div className="lg:hidden p-4 border-b border-border">
+          <Link to="/" className="flex items-center gap-2 text-decoration-none">
+            <img src={brandLogo} alt="WildWoods Logo" className="h-14 w-14 object-contain" />
+            <span className="text-lg font-bold tracking-tight text-foreground">Wildwood Zoo</span>
+          </Link>
         </div>
 
-        {/* Create account */}
-        <p className="login-create">
-          Don't have an account? <Link to="/signup">Create an account</Link>
-        </p>
+        <div className="flex-1 flex items-center justify-center p-6 lg:p-8">
+          <div className="w-full max-w-md">
+            {/* Back Link */}
+            <Link 
+              to="/" 
+              className="inline-flex flex-row items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors text-decoration-none"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Home
+            </Link>
 
-        {/* Member Benefits */}
-        <div className="login-benefits">
-          <p className="login-benefits-title">Member Benefits</p>
-          <ul className="login-benefits-list">
-            <li>Early access to special events</li>
-            <li>10% discount at the <a href="/products">Gift Shop</a></li>
-            <li>Free parking on all visits</li>
-            <li>Exclusive behind-the-scenes tours</li>
-          </ul>
+            <div className="mb-4">
+              <h1 className="text-3xl font-bold text-foreground mb-1 m-0">Sign In</h1>
+              <p className="text-muted-foreground m-0">
+                Enter your credentials to access your account
+              </p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4 flex flex-col">
+              {/* Email Field */}
+              <div className="space-y-1 flex flex-col items-start relative w-full mb-4">
+                <label className="text-sm font-medium text-foreground mb-1">
+                  Email Address
+                </label>
+                <div className="relative w-full">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <input
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full pl-10 pr-4 h-11 bg-background border border-border rounded-md text-sm outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Password Field */}
+              <div className="space-y-1 flex flex-col relative w-full mb-4">
+                <div className="flex items-center justify-between w-full mb-1">
+                  <label className="text-sm font-medium text-foreground m-0">
+                    Password
+                  </label>
+                  <Link 
+                    to="/forgot-password" 
+                    className="text-sm text-primary hover:text-primary/80 transition-colors text-decoration-none"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
+                <div className="relative w-full">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <input
+                    type={showPass ? "text" : "password"}
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full pl-10 pr-10 h-11 bg-background border border-border rounded-md text-sm outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPass(!showPass)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors bg-transparent border-none p-0 cursor-pointer"
+                  >
+                    {showPass ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Remember Me */}
+              <div className="flex items-center gap-2 mb-4">
+                <input
+                  type="checkbox"
+                  id="remember"
+                  checked={remember}
+                  onChange={(e) => setRemember(e.target.checked)}
+                  className="w-4 h-4 rounded border-gray-300 text-primary cursor-pointer accent-primary"
+                />
+                <label htmlFor="remember" className="text-sm text-muted-foreground cursor-pointer select-none m-0">
+                  Remember me for 30 days
+                </label>
+              </div>
+
+              {/* Submit Button */}
+              <button type="submit" className="w-full h-11 bg-primary border-none cursor-pointer text-primary-foreground font-semibold rounded-md hover:bg-primary/90 transition-colors text-base flex items-center justify-center">
+                Sign In
+              </button>
+
+              {/* Divider */}
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-border" />
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="bg-background px-4 text-muted-foreground">
+                    Or continue with
+                  </span>
+                </div>
+              </div>
+
+              {/* Social Login */}
+              <div className="grid grid-cols-2 gap-4 mb-2">
+                <button type="button" className="h-11 w-full bg-background border border-border rounded-md hover:bg-muted/50 cursor-pointer transition-colors flex items-center justify-center text-sm font-medium text-foreground">
+                  <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24">
+                    <path
+                      fill="#4285F4"
+                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                    />
+                    <path
+                      fill="#EA4335"
+                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                    />
+                  </svg>
+                  Google
+                </button>
+                <button type="button" className="h-11 w-full bg-background border border-border rounded-md hover:bg-muted/50 cursor-pointer transition-colors flex items-center justify-center text-sm font-medium text-foreground">
+                  <svg className="h-5 w-5 mr-2 text-foreground" fill="currentColor" viewBox="0 0 384 512">
+                    <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/>
+                  </svg>
+                  Apple
+                </button>
+              </div>
+            </form>
+
+            {/* Sign Up Link */}
+            <p className="mt-4 text-center text-sm text-muted-foreground mb-4">
+              Don't have an account?{" "}
+              <Link 
+                to="/signup" 
+                className="font-medium text-primary hover:text-primary/80 transition-colors text-decoration-none"
+              >
+                Create an account
+              </Link>
+            </p>
+
+            {/* Member Benefits */}
+            <div className="mt-2 p-3 bg-muted/50 border border-border rounded-lg">
+              <h3 className="text-sm font-medium text-foreground mb-2 m-0">Member Benefits</h3>
+              <ul className="text-sm text-muted-foreground space-y-2 m-0 mt-2 list-none p-0 flex flex-col items-start text-left">
+                <li>• Early access to special events</li>
+                <li>• 10% discount at the Gift Shop</li>
+                <li>• Free parking on all visits</li>
+                <li>• Exclusive behind-the-scenes tours</li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
     </div>

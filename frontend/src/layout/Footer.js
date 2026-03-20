@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Facebook, Instagram, Twitter, Youtube } from 'lucide-react';
 import './Footer.css';
+import brandLogo from '../assets/images/Logo.png';
 
 const Footer = () => {
   return (
@@ -10,7 +11,7 @@ const Footer = () => {
         {/* Brand Column */}
         <div className="ww-footer-brand-col">
           <Link to="/" className="ww-footer-logo">
-            <div className="ww-footer-logo-icon">W</div>
+            <img src={brandLogo} alt="WildWoods Logo" style={{ width: '56px', height: '56px', objectFit: 'contain' }} />
             <span className="ww-footer-logo-text">WildWoods Zoo</span>
           </Link>
           <p className="ww-footer-tagline">
