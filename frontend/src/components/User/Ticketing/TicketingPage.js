@@ -1,406 +1,522 @@
-import React, { useState, useMemo } from 'react';
-import './TicketingPage.css';
-import {
-  CalendarDays, Users, Sparkles, ShieldCheck,
-  CheckCircle2, ShoppingCart, ChevronLeft, ChevronRight,
-  MapPin, Clock, Ticket
+import React, { useState, useEffect } from 'react';
+import { 
+  Calendar, Check, ChevronLeft, ChevronRight, Clock, 
+  Gift, Info, Minus, Plus, ShieldCheck, Star, Ticket, Users, Zap 
 } from 'lucide-react';
 
-/* ─────────────────────────────────
-   Data
-───────────────────────────────── */
+const cn = (...classes) => classes.filter(Boolean).join(' ');
+
+// Data
 const TICKET_TYPES = [
   {
-    id: 'general',
-    name: 'General Admission',
-    desc: 'Full day access to all exhibits and daily shows.',
+    id: "general",
+    name: "General Admission",
+    description: "Full day access to all exhibits and daily shows",
     prices: { adult: 29.99, child: 19.99, senior: 24.99 },
-    popular: false,
-    includes: [],
-  },
-  {
-    id: 'premium',
-    name: 'Premium Experience',
-    desc: 'Skip the line and enjoy exclusive perks.',
-    prices: { adult: 49.99, child: 34.99, senior: 44.99 },
-    popular: true,
-    includes: [
-      'Everything in General Admission',
-      'Skip-the-line access',
-      'Reserved seating at shows',
-      'Free visit & carousel rides',
-      '10% off dining & gifts',
-      'Complimentary parking',
+    features: [
+      "All outdoor and indoor exhibits",
+      "Daily animal shows & talks",
+      "Playground access",
+      "Free zoo map",
     ],
+    popular: false,
   },
   {
-    id: 'vip',
-    name: 'VIP Safari',
-    desc: 'The ultimate zoo experience with behind-the-scenes access.',
-    prices: { adult: 109.99, child: 79.99, senior: 89.99 },
+    id: "premium",
+    name: "Premium Experience",
+    description: "Skip the lines and enjoy exclusive perks",
+    prices: { adult: 49.99, child: 34.99, senior: 44.99 },
+    features: [
+      "Everything in General Admission",
+      "Skip-the-line access",
+      "Reserved seating at shows",
+      "Free train & carousel rides",
+      "10% off dining & gifts",
+      "Complimentary parking",
+    ],
+    popular: true,
+  },
+  {
+    id: "vip",
+    name: "VIP Safari",
+    description: "The ultimate zoo experience with behind-the-scenes access",
+    prices: { adult: 99.99, child: 79.99, senior: 89.99 },
+    features: [
+      "Everything in Premium",
+      "Behind-the-scenes tour",
+      "Animal feeding experience",
+      "Private guide for 2 hours",
+      "$20 food voucher",
+      "Exclusive VIP lounge access",
+      "Souvenir gift bag",
+    ],
     popular: false,
-    includes: [],
   },
 ];
 
 const ADDONS = [
-  { id: 'parking',  name: 'Preferred Parking',  desc: 'Close to entrance',      price: 10 },
-  { id: 'train',    name: 'Train Kids Pass',     desc: '1-day train ride',        price: 8  },
-  { id: 'carousel', name: 'Carousel Ride',       desc: 'Unlimited rides',         price: 6  },
-  { id: 'feeding',  name: 'Animal Feeding',      desc: 'Giraffe & goat feeding',  price: 15 },
-  { id: 'photo',    name: 'Photo Package',       desc: '3 printed photos + digital', price: 25 },
+  { id: "parking", name: "Preferred Parking", price: 10, description: "Close to entrance" },
+  { id: "train", name: "Train Ride Pass", price: 8, description: "Unlimited rides" },
+  { id: "carousel", name: "Carousel Pass", price: 6, description: "Unlimited rides" },
+  { id: "feeding", name: "Animal Feeding", price: 15, description: "Giraffe & goat feeding" },
+  { id: "photo", name: "Photo Package", price: 25, description: "3 printed photos + digital" },
 ];
 
-const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
 
-/* ─────────────────────────────────
-   Helpers
-───────────────────────────────── */
-function getDaysInMonth(year, month) {
+function getDaysInMonth(month, year) {
   return new Date(year, month + 1, 0).getDate();
 }
-function getFirstDayOfMonth(year, month) {
+function getFirstDayOfMonth(month, year) {
   return new Date(year, month, 1).getDay();
 }
-function formatDisplayDate(y, m, d) {
-  return new Date(y, m, d).toLocaleDateString('en-US', {
-    month: 'long', day: 'numeric', year: 'numeric',
-  });
-}
-const MONTH_NAMES = ['January','February','March','April','May','June',
-  'July','August','September','October','November','December'];
 
-/* ─────────────────────────────────
-   Component
-───────────────────────────────── */
 const TicketingPage = () => {
-  const today = new Date();
+  const [selectedTicket, setSelectedTicket] = useState("premium");
+  const [quantities, setQuantities] = useState({ adult: 2, child: 0, senior: 0 });
+  const [selectedAddOns, setSelectedAddOns] = useState([]);
+  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+  const [selectedDate, setSelectedDate] = useState(new Date().getDate() + 1);
+  const [isMounted, setIsMounted] = useState(false);
+  const [todayDate, setTodayDate] = useState({ 
+    year: new Date().getFullYear(), 
+    month: new Date().getMonth(), 
+    day: new Date().getDate() 
+  });
 
-  // Calendar state
-  const [calYear,  setCalYear]  = useState(today.getFullYear());
-  const [calMonth, setCalMonth] = useState(today.getMonth());
-  const [selDay,   setSelDay]   = useState(today.getDate());
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
-  // Ticket selection
-  const [ticketType, setTicketType] = useState('premium');
-
-  // Guests
-  const [guests, setGuests] = useState({ adult: 2, child: 0, senior: 0 });
-
-  // Add-ons
-  const [selectedAddons, setSelectedAddons] = useState({});
-
-  /* ─── Calendar navigation ─── */
-  const prevMonth = () => {
-    if (calMonth === 0) { setCalYear(y => y - 1); setCalMonth(11); }
-    else setCalMonth(m => m - 1);
-  };
-  const nextMonth = () => {
-    if (calMonth === 11) { setCalYear(y => y + 1); setCalMonth(0); }
-    else setCalMonth(m => m + 1);
-  };
-
-  const daysInMonth = getDaysInMonth(calYear, calMonth);
-  const firstDay    = getFirstDayOfMonth(calYear, calMonth);
-
-  /* ─── Totals ─── */
-  const ticket = TICKET_TYPES.find(t => t.id === ticketType);
-
-  const ticketTotal = useMemo(() => {
-    if (!ticket) return 0;
-    return (
-      guests.adult  * ticket.prices.adult  +
-      guests.child  * ticket.prices.child  +
-      guests.senior * ticket.prices.senior
-    );
-  }, [ticket, guests]);
-
-  const addonTotal = useMemo(() => {
-    const totalGuests = guests.adult + guests.child + guests.senior || 1;
-    return Object.entries(selectedAddons)
-      .filter(([, v]) => v)
-      .reduce((sum, [id]) => {
-        const a = ADDONS.find(x => x.id === id);
-        return sum + (a ? a.price * totalGuests : 0);
-      }, 0);
-  }, [selectedAddons, guests]);
-
-  const grandTotal    = ticketTotal + addonTotal;
-  const totalGuests   = guests.adult + guests.child + guests.senior;
-  const selectedDate  = formatDisplayDate(calYear, calMonth, selDay);
-
-  const toggleAddon = (id) =>
-    setSelectedAddons(prev => ({ ...prev, [id]: !prev[id] }));
-
-  const bump = (type, delta) => {
-    setGuests(prev => ({
+  const updateQuantity = (type, delta) => {
+    setQuantities(prev => ({
       ...prev,
-      [type]: Math.max(0, prev[type] + delta),
+      [type]: Math.max(0, prev[type] + delta)
     }));
   };
 
-  /* ─── Build calendar cells ─── */
-  const calCells = [];
-  for (let i = 0; i < firstDay; i++) calCells.push(null);
-  for (let d = 1; d <= daysInMonth; d++) calCells.push(d);
-
-  const isPast = (d) => {
-    const cellDate = new Date(calYear, calMonth, d);
-    const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    return cellDate < todayDate;
+  const toggleAddOn = (id) => {
+    setSelectedAddOns(prev => 
+      prev.includes(id) ? prev.filter(a => a !== id) : [...prev, id]
+    );
   };
 
-  /* ─── Render ─── */
+  const selectedTicketData = TICKET_TYPES.find(t => t.id === selectedTicket);
+  
+  const ticketSubtotal = 
+    quantities.adult * selectedTicketData.prices.adult +
+    quantities.child * selectedTicketData.prices.child +
+    quantities.senior * selectedTicketData.prices.senior;
+
+  const totalGuests = quantities.adult + quantities.child + quantities.senior;
+
+  const addOnsTotal = selectedAddOns.reduce((sum, id) => {
+    const addOn = ADDONS.find(a => a.id === id);
+    return sum + (addOn ? addOn.price * totalGuests : 0);
+  }, 0);
+
+  const total = ticketSubtotal + addOnsTotal;
+
+  const daysInMonth = getDaysInMonth(currentMonth, currentYear);
+  const firstDay = getFirstDayOfMonth(currentMonth, currentYear);
+
   return (
-    <div className="tickets-page">
-      {/* Hero */}
-      <section className="tickets-hero">
-        <div className="tickets-hero-bg" />
-        <div className="tickets-hero-content">
-          <h1 className="tickets-hero-title">Buy Tickets</h1>
-          <p className="tickets-hero-subtitle">Book online and save up to 15% on admission</p>
+    <div className="min-h-screen bg-background">
+      {/* Hero Section */}
+      <section className="relative h-[45vh] min-h-[360px] flex items-center justify-center overflow-hidden">
+        <img
+          src="/images/tickets-hero.png"
+          alt="Zoo Tickets"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
+        <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-4">
+            Buy Tickets
+          </h1>
+          <p className="text-lg md:text-xl text-foreground max-w-2xl mx-auto font-medium">
+            Book online and save up to 15% on admission
+          </p>
         </div>
       </section>
 
-      {/* Body */}
-      <div className="tickets-body">
-        {/* ──── LEFT COLUMN ──── */}
-        <div>
-          {/* 1. Select Date */}
-          <div className="tk-section">
-            <div className="tk-section-header">
-              <CalendarDays className="icon" size={18} />
-              Select Date
-            </div>
-
-            {/* Month nav */}
-            <div className="tk-calendar-nav">
-              <button onClick={prevMonth}><ChevronLeft size={14} /></button>
-              <span className="tk-cal-month">
-                {MONTH_NAMES[calMonth]} {calYear}
-              </span>
-              <button onClick={nextMonth}><ChevronRight size={14} /></button>
-            </div>
-
-            {/* Day names */}
-            <div className="tk-calendar-grid">
-              {DAY_NAMES.map(n => (
-                <div className="tk-cal-day-name" key={n}>{n}</div>
-              ))}
-
-              {/* Empty + day cells */}
-              {calCells.map((d, idx) => {
-                if (d === null) return <div className="tk-cal-day empty" key={`e${idx}`} />;
-                const isToday   = calYear === today.getFullYear() && calMonth === today.getMonth() && d === today.getDate();
-                const isSelected = d === selDay && calYear === today.getFullYear() && calMonth === today.getMonth() + (calYear !== today.getFullYear() ? 0 : 0);
-                const past = isPast(d);
-                return (
-                  <button
-                    key={d}
-                    className={`tk-cal-day${isToday && !isSelected ? ' today' : ''}${isSelected ? ' selected' : ''}${past ? ' disabled' : ''}`}
-                    onClick={() => !past && setSelDay(d)}
-                    disabled={past}
+      {/* Main Content */}
+      <section className="py-12 px-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            {/* Left Column - Ticket Selection */}
+            <div className="lg:col-span-2 space-y-8">
+              
+              {/* Date Selection */}
+              <div className="bg-card rounded-2xl border border-border p-6 shadow-sm">
+                <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-primary" />
+                  Select Date
+                </h2>
+                
+                {/* Month Navigation */}
+                <div className="flex items-center justify-between mb-4">
+                  <button 
+                    onClick={() => {
+                      if (currentMonth === 0) {
+                        setCurrentMonth(11);
+                        setCurrentYear(y => y - 1);
+                      } else {
+                        setCurrentMonth(m => m - 1);
+                      }
+                    }}
+                    className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
                   >
-                    {d}
+                    <ChevronLeft className="h-5 w-5 text-foreground" />
                   </button>
-                );
-              })}
-            </div>
-
-            <div className="tk-zoo-hours">
-              <Clock size={14} />
-              {selectedDate} — Zoo open 9:00 AM – 9:00 PM
-            </div>
-          </div>
-
-          {/* 2. Ticket Type */}
-          <div className="tk-section">
-            <div className="tk-section-header">
-              <Ticket className="icon" size={18} />
-              Choose Ticket Type
-            </div>
-
-            {TICKET_TYPES.map(t => (
-              <div
-                key={t.id}
-                className={`tk-ticket-option${ticketType === t.id ? ' selected' : ''}`}
-                onClick={() => setTicketType(t.id)}
-              >
-                <div className="tk-ticket-header">
-                  <div>
-                    <div className="tk-ticket-title-row">
-                      <span className="tk-ticket-name">{t.name}</span>
-                      {t.popular && (
-                        <span className="tk-most-popular-badge">Most Popular</span>
-                      )}
-                    </div>
-                    <p className="tk-ticket-desc">{t.desc}</p>
-                    <div className="tk-ticket-prices">
-                      <span>Adult: <strong>${t.prices.adult}</strong></span>
-                      <span>Child: <strong>${t.prices.child}</strong></span>
-                      <span>Senior: <strong>${t.prices.senior}</strong></span>
-                    </div>
-                  </div>
-                  <div className="tk-radio">
-                    {ticketType === t.id && <div className="tk-radio-dot" />}
-                  </div>
+                  <span className="font-semibold text-foreground">
+                    {MONTHS[currentMonth]} {currentYear}
+                  </span>
+                  <button 
+                    onClick={() => {
+                      if (currentMonth === 11) {
+                        setCurrentMonth(0);
+                        setCurrentYear(y => y + 1);
+                      } else {
+                        setCurrentMonth(m => m + 1);
+                      }
+                    }}
+                    className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
+                  >
+                    <ChevronRight className="h-5 w-5 text-foreground" />
+                  </button>
                 </div>
 
-                {/* Includes list (only when selected & has items) */}
-                {ticketType === t.id && t.includes.length > 0 && (
-                  <div className="tk-includes">
-                    {t.includes.map(item => (
-                      <div className="tk-include-item" key={item}>
-                        <CheckCircle2 size={13} />
-                        {item}
-                      </div>
-                    ))}
+                {/* Calendar Grid */}
+                <div className="grid grid-cols-7 gap-1 text-center">
+                  {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
+                    <div key={day} className="text-xs font-medium text-muted-foreground py-2">
+                      {day}
+                    </div>
+                  ))}
+                  {Array.from({ length: firstDay }).map((_, i) => (
+                    <div key={`empty-${i}`} />
+                  ))}
+                  {isMounted && Array.from({ length: daysInMonth }).map((_, i) => {
+                    const day = i + 1;
+                    const isPast = currentYear < todayDate.year || 
+                      (currentYear === todayDate.year && currentMonth < todayDate.month) ||
+                      (currentYear === todayDate.year && currentMonth === todayDate.month && day < todayDate.day);
+                    const isSelected = selectedDate === day;
+                    
+                    return (
+                      <button
+                        key={day}
+                        onClick={() => !isPast && setSelectedDate(day)}
+                        disabled={isPast}
+                        className={cn(
+                          "py-2 rounded-lg text-sm transition-colors",
+                          isPast ? "text-muted-foreground/40 cursor-not-allowed border-none bg-transparent" : "cursor-pointer border-none",
+                          !isPast && !isSelected ? "hover:bg-muted text-foreground bg-transparent" : "",
+                          isSelected ? "bg-primary text-primary-foreground font-medium" : ""
+                        )}
+                      >
+                        {day}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {selectedDate && (
+                  <div className="mt-4 p-3 bg-primary/10 rounded-lg flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-primary" />
+                    <span className="text-sm text-foreground">
+                      {MONTHS[currentMonth]} {selectedDate}, {currentYear} - Zoo open 9:00 AM - 5:00 PM
+                    </span>
                   </div>
                 )}
               </div>
-            ))}
-          </div>
 
-          {/* 3. Guests */}
-          <div className="tk-section">
-            <div className="tk-section-header">
-              <Users className="icon" size={18} />
-              Number of Guests
-            </div>
-
-            <div className="tk-guests-list">
-              {[
-                { key: 'adult',  label: 'Adults',   sub: `13-64 · $${ticket?.prices.adult ?? 0}/each`   },
-                { key: 'child',  label: 'Children',  sub: `2-12 · $${ticket?.prices.child ?? 0}/each`   },
-                { key: 'senior', label: 'Seniors',   sub: `65+ · $${ticket?.prices.senior ?? 0}/each`   },
-              ].map(({ key, label, sub }) => (
-                <div className="tk-guest-row" key={key}>
-                  <div className="tk-guest-info">
-                    <div className="tk-guest-label">{label}</div>
-                    <div className="tk-guest-sub">{sub}</div>
-                  </div>
-                  <div className="tk-counter">
+              {/* Ticket Type Selection */}
+              <div className="bg-card rounded-2xl border border-border p-6 shadow-sm">
+                <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <Ticket className="h-5 w-5 text-primary" />
+                  Choose Ticket Type
+                </h2>
+                
+                <div className="space-y-4">
+                  {TICKET_TYPES.map((ticket) => (
                     <button
-                      className="tk-counter-btn"
-                      onClick={() => bump(key, -1)}
-                      disabled={guests[key] === 0}
-                    >−</button>
-                    <span className="tk-counter-val">{guests[key]}</span>
-                    <button
-                      className="tk-counter-btn"
-                      onClick={() => bump(key, 1)}
-                    >+</button>
-                  </div>
+                      key={ticket.id}
+                      onClick={() => setSelectedTicket(ticket.id)}
+                      className={cn(
+                        "w-full p-4 rounded-xl border-2 text-left transition-all cursor-pointer bg-card",
+                        selectedTicket === ticket.id 
+                          ? "border-primary bg-primary/5" 
+                          : "border-border hover:border-[#608B6B]"
+                      )}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold text-foreground m-0">{ticket.name}</h3>
+                            {ticket.popular && (
+                              <span className="px-2 py-0.5 bg-primary/20 text-primary text-xs font-semibold rounded-full flex items-center gap-1">
+                                <Star className="h-3 w-3 fill-primary" />
+                                Most Popular
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-1 m-0">{ticket.description}</p>
+                        </div>
+                        <div className={cn(
+                          "h-6 w-6 rounded-full border-2 flex items-center justify-center shrink-0",
+                          selectedTicket === ticket.id 
+                            ? "border-primary bg-primary" 
+                            : "border-muted-foreground/30 bg-transparent"
+                        )}>
+                          {selectedTicket === ticket.id && (
+                            <Check className="h-4 w-4 text-primary-foreground" />
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="mt-3 flex flex-wrap gap-4 text-sm">
+                        <span className="text-foreground">
+                          Adult: <strong>${ticket.prices.adult}</strong>
+                        </span>
+                        <span className="text-foreground">
+                          Child: <strong>${ticket.prices.child}</strong>
+                        </span>
+                        <span className="text-foreground">
+                          Senior: <strong>${ticket.prices.senior}</strong>
+                        </span>
+                      </div>
+
+                      {selectedTicket === ticket.id && (
+                        <div className="mt-4 pt-4 border-t border-border">
+                          <p className="text-sm font-medium text-foreground mb-2 m-0">Includes:</p>
+                          <ul className="grid grid-cols-1 md:grid-cols-2 gap-1 m-0 p-0 list-none">
+                            {ticket.features.map((feature, i) => (
+                              <li key={i} className="flex items-center gap-2 text-sm text-muted-foreground m-0 mt-1">
+                                <Check className="h-4 w-4 text-primary shrink-0" />
+                                {feature}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </button>
+                  ))}
                 </div>
-              ))}
-            </div>
-            <p className="tk-guest-note">ⓘ Children under 2 are free and don't need a ticket.</p>
-          </div>
-
-          {/* 4. Add-ons */}
-          <div className="tk-section">
-            <div className="tk-section-header">
-              <Sparkles className="icon" size={18} />
-              Enhance Your Visit
-            </div>
-
-            <div className="tk-addons-grid">
-              {ADDONS.map(a => (
-                <div
-                  key={a.id}
-                  className={`tk-addon-card${selectedAddons[a.id] ? ' selected' : ''}`}
-                  onClick={() => toggleAddon(a.id)}
-                >
-                  <div className="tk-addon-info">
-                    <div className="tk-addon-name">{a.name}</div>
-                    <div className="tk-addon-desc">{a.desc}</div>
-                  </div>
-                  <div className="tk-addon-price">+${a.price}</div>
-                </div>
-              ))}
-            </div>
-            <p className="tk-addons-note">Add-on prices are per person.</p>
-          </div>
-        </div>
-
-        {/* ──── RIGHT COLUMN — Order Summary ──── */}
-        <div className="tk-order-summary">
-          <h3 className="tk-order-title">Order Summary</h3>
-
-          {/* Date */}
-          <div className="tk-order-date-box">
-            <div className="tk-order-date-label">Visit Date</div>
-            <div className="tk-order-date-val">{selectedDate}</div>
-          </div>
-
-          {/* Line items */}
-          <div className="tk-order-items">
-            <div className="tk-order-item">
-              <div>
-                <div className="tk-order-item-label">{ticket?.name}</div>
-                {guests.adult  > 0 && <div className="tk-order-item-sub">{guests.adult}× Adult</div>}
-                {guests.child  > 0 && <div className="tk-order-item-sub">{guests.child}× Child</div>}
-                {guests.senior > 0 && <div className="tk-order-item-sub">{guests.senior}× Senior</div>}
               </div>
-              <div className="tk-order-item-price">${ticketTotal.toFixed(2)}</div>
+
+              {/* Guest Quantity */}
+              <div className="bg-card rounded-2xl border border-border p-6 shadow-sm">
+                <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <Users className="h-5 w-5 text-primary" />
+                  Number of Guests
+                </h2>
+                
+                <div className="space-y-4">
+                  {[
+                    { key: "adult", label: "Adults", age: "13-64", price: selectedTicketData.prices.adult },
+                    { key: "child", label: "Children", age: "3-12", price: selectedTicketData.prices.child },
+                    { key: "senior", label: "Seniors", age: "65+", price: selectedTicketData.prices.senior },
+                  ].map((item) => (
+                    <div key={item.key} className="flex items-center justify-between p-4 bg-muted/50 rounded-xl">
+                      <div>
+                        <p className="font-medium text-foreground m-0">{item.label}</p>
+                        <p className="text-sm text-muted-foreground m-0">{item.age} - ${item.price} each</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => updateQuantity(item.key, -1)}
+                          className="h-8 w-8 rounded-full border border-border flex items-center justify-center hover:bg-muted transition-colors cursor-pointer bg-card text-foreground"
+                          disabled={quantities[item.key] === 0}
+                        >
+                          <Minus className="h-4 w-4" />
+                        </button>
+                        <span className="w-8 text-center font-semibold text-foreground">
+                           {quantities[item.key]}
+                        </span>
+                        <button
+                          onClick={() => updateQuantity(item.key, 1)}
+                          className="h-8 w-8 rounded-full border border-border flex items-center justify-center hover:bg-muted transition-colors cursor-pointer bg-card text-foreground"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                <p className="text-xs text-muted-foreground mt-4 flex items-center gap-1 m-0">
+                  <Info className="h-3 w-3" />
+                  Children under 3 are free and don't need a ticket
+                </p>
+              </div>
+
+              {/* Add-ons */}
+              <div className="bg-card rounded-2xl border border-border p-6 shadow-sm">
+                <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <Gift className="h-5 w-5 text-primary" />
+                  Enhance Your Visit
+                </h2>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {ADDONS.map((addOn) => (
+                    <button
+                      key={addOn.id}
+                      onClick={() => toggleAddOn(addOn.id)}
+                      className={cn(
+                        "p-4 rounded-xl border-2 text-left transition-all cursor-pointer bg-card flex flex-col justify-center",
+                        selectedAddOns.includes(addOn.id)
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-[#608B6B]"
+                      )}
+                    >
+                      <div className="flex items-start justify-between w-full">
+                        <div>
+                          <p className="font-medium text-foreground m-0">{addOn.name}</p>
+                          <p className="text-sm text-muted-foreground m-0 mt-1">{addOn.description}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-primary">+${addOn.price}</span>
+                          <div className={cn(
+                            "h-5 w-5 rounded border flex items-center justify-center",
+                            selectedAddOns.includes(addOn.id)
+                              ? "border-primary bg-primary"
+                              : "border-muted-foreground/30 bg-transparent"
+                          )}>
+                            {selectedAddOns.includes(addOn.id) && (
+                              <Check className="h-3 w-3 text-primary-foreground" />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground mt-3 m-0">
+                  Add-on prices are per person
+                </p>
+              </div>
             </div>
 
-            {/* Add-ons */}
-            {Object.entries(selectedAddons).filter(([,v]) => v).map(([id]) => {
-              const a = ADDONS.find(x => x.id === id);
-              const perPerson = (guests.adult + guests.child + guests.senior) || 1;
-              return a ? (
-                <div className="tk-order-item" key={id}>
-                  <div className="tk-order-item-label">{a.name}</div>
-                  <div className="tk-order-item-price">
-                    +${(a.price * perPerson).toFixed(2)}
+            {/* Right Column - Order Summary */}
+            <div className="lg:col-span-1">
+              <div className="sticky top-[5.5rem] bg-card rounded-2xl border border-border p-6 shadow-sm">
+                <h2 className="text-xl font-semibold text-foreground mb-4 m-0">Order Summary</h2>
+                
+                {selectedDate && (
+                  <div className="mb-4 mt-4 p-3 bg-muted/50 rounded-lg">
+                    <p className="text-sm text-muted-foreground m-0">Visit Date</p>
+                    <p className="font-medium text-foreground m-0 mt-1">
+                      {MONTHS[currentMonth]} {selectedDate}, {currentYear}
+                    </p>
+                  </div>
+                )}
+
+                <div className="space-y-3 mb-4 mt-4">
+                  <div className="flex justify-between">
+                    <span className="text-foreground font-medium">{selectedTicketData.name}</span>
+                  </div>
+                  
+                  {quantities.adult > 0 && (
+                    <div className="flex justify-between text-sm mt-2">
+                      <span className="text-muted-foreground">{quantities.adult}x Adult</span>
+                      <span className="text-foreground">${(quantities.adult * selectedTicketData.prices.adult).toFixed(2)}</span>
+                    </div>
+                  )}
+                  {quantities.child > 0 && (
+                    <div className="flex justify-between text-sm mt-2">
+                      <span className="text-muted-foreground">{quantities.child}x Child</span>
+                      <span className="text-foreground">${(quantities.child * selectedTicketData.prices.child).toFixed(2)}</span>
+                    </div>
+                  )}
+                  {quantities.senior > 0 && (
+                    <div className="flex justify-between text-sm mt-2">
+                      <span className="text-muted-foreground">{quantities.senior}x Senior</span>
+                      <span className="text-foreground">${(quantities.senior * selectedTicketData.prices.senior).toFixed(2)}</span>
+                    </div>
+                  )}
+
+                  {selectedAddOns.length > 0 && (
+                    <>
+                      <div className="border-t border-border mt-4 mb-4" />
+                      <p className="text-sm font-medium text-foreground m-0">Add-ons</p>
+                      {selectedAddOns.map(id => {
+                        const addOn = ADDONS.find(a => a.id === id);
+                        return (
+                          <div key={id} className="flex justify-between text-sm mt-2">
+                            <span className="text-muted-foreground">{addOn.name} x{totalGuests}</span>
+                            <span className="text-foreground">${(addOn.price * totalGuests).toFixed(2)}</span>
+                          </div>
+                        )
+                      })}
+                    </>
+                  )}
+                </div>
+
+                <div className="border-t border-border pt-4 mb-4">
+                  <div className="flex justify-between text-lg font-semibold">
+                    <span className="text-foreground">Total</span>
+                    <span className="text-primary">${total.toFixed(2)}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1 text-right m-0">
+                    {totalGuests} guest{totalGuests !== 1 ? "s" : ""}
+                  </p>
+                </div>
+
+                <button 
+                  className={cn(
+                    "w-full flex items-center justify-center gap-2 mb-4 py-3 rounded-xl font-semibold transition-colors border-none",
+                    totalGuests === 0 || !selectedDate
+                      ? "bg-muted text-muted-foreground cursor-not-allowed"
+                      : "bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"
+                  )}
+                  disabled={totalGuests === 0 || !selectedDate}
+                >
+                  <Zap className="h-4 w-4" />
+                  Checkout
+                </button>
+
+                <div className="space-y-3 text-xs text-muted-foreground mt-6">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4 text-primary" />
+                    <span>Secure checkout</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-primary" />
+                    <span>Free rescheduling up to 24h before</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Ticket className="h-4 w-4 text-primary" />
+                    <span>Mobile tickets - no printing needed</span>
                   </div>
                 </div>
-              ) : null;
-            })}
-          </div>
-
-          <hr className="tk-order-divider" />
-
-          <div className="tk-order-total">
-            <span>Total</span>
-            <span>${grandTotal.toFixed(2)}</span>
-          </div>
-          <div className="tk-order-total-sub">
-            {totalGuests} guest{totalGuests !== 1 ? 's' : ''}
-          </div>
-
-          <button className="tk-checkout-btn">
-            <ShoppingCart size={16} />
-            Checkout
-          </button>
-
-          <div className="tk-order-perks">
-            <div className="tk-order-perk">
-              <ShieldCheck size={14} />
-              Secure checkout
-            </div>
-            <div className="tk-order-perk">
-              <CheckCircle2 size={14} />
-              Free email ticketing up to 20 min before
-            </div>
-            <div className="tk-order-perk">
-              <CheckCircle2 size={14} />
-              Mobile tickets — no printing needed
+              </div>
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Membership Banner */}
-      <section className="tickets-membership-banner">
-        <h3>Become a Member</h3>
-        <p>Unlimited visits, exclusive events, and up to 20% off at shops and restaurants</p>
-        <a href="/ticketing" className="tk-membership-btn">
-          🪪 View Membership Options
-        </a>
       </section>
 
+      {/* Member Banner */}
+      <section className="py-12 px-4 bg-[#EBF0EA]">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-2xl font-bold text-foreground mb-2 m-0">Become a Member</h2>
+          <p className="text-muted-foreground mb-6 m-0 mt-2">
+            Unlimited visits, exclusive events, and up to 20% off at shops and restaurants
+          </p>
+          <div className="flex flex-wrap justify-center gap-4 mt-6">
+            <button className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 gap-2 cursor-pointer">
+              <Star className="h-4 w-4 fill-foreground" />
+              View Membership Options
+            </button>
+          </div>
+        </div>
+      </section>
     </div>
   );
 };
