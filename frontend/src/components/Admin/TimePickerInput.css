@@ -1,0 +1,215 @@
+/* =====================================================
+   TimePickerInput.css — 12-hour time picker dropdown
+   Uses --adm-* variables → dark mode automatic
+   ===================================================== */
+
+.tpi-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+/* ── Trigger button ─────────────────────────────── */
+.tpi-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 38px;
+  padding: 0 12px;
+  background: var(--adm-bg-surface);
+  border: 1px solid var(--adm-border);
+  border-radius: var(--adm-radius-md);
+  color: var(--adm-text-primary);
+  font-size: 0.875rem;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tpi-trigger:hover {
+  border-color: var(--adm-accent);
+}
+
+.tpi-trigger:focus {
+  outline: none;
+  border-color: var(--adm-accent);
+}
+
+.tpi-trigger--empty .tpi-placeholder {
+  color: var(--adm-text-muted);
+}
+
+.tpi-clock-icon {
+  color: var(--adm-text-muted);
+  flex-shrink: 0;
+}
+
+.tpi-display {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.tpi-hm {
+  font-weight: 600;
+  font-size: 0.92rem;
+  min-width: 18px;
+  text-align: center;
+}
+
+.tpi-colon {
+  font-weight: 700;
+  color: var(--adm-text-muted);
+}
+
+.tpi-period-badge {
+  margin-left: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: var(--adm-accent-dim);
+  color: var(--adm-accent);
+  padding: 2px 7px;
+  border-radius: 10px;
+}
+
+.tpi-placeholder {
+  flex: 1;
+  font-size: 0.875rem;
+}
+
+.tpi-chevron {
+  color: var(--adm-text-muted);
+  flex-shrink: 0;
+  transition: transform 0.18s ease;
+  margin-left: auto;
+}
+
+.tpi-chevron.open {
+  transform: rotate(180deg);
+}
+
+/* ── Dropdown panel ─────────────────────────────── */
+.tpi-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 300;
+  background: var(--adm-bg-surface);
+  border: 1px solid var(--adm-border);
+  border-radius: var(--adm-radius-md);
+  box-shadow: var(--adm-shadow-md);
+  padding: 14px 14px 10px;
+  min-width: 190px;
+  animation: tpi-fadeIn 0.12s ease;
+}
+
+@keyframes tpi-fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── AM / PM toggle ─────────────────────────────── */
+.tpi-ampm-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.tpi-period-btn {
+  flex: 1;
+  height: 32px;
+  border: 1px solid var(--adm-border);
+  border-radius: var(--adm-radius-sm);
+  background: var(--adm-bg-surface-2);
+  color: var(--adm-text-secondary);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.tpi-period-btn:hover:not(.active) {
+  border-color: var(--adm-accent);
+  color: var(--adm-accent);
+}
+
+.tpi-period-btn.active {
+  background: var(--adm-accent);
+  border-color: var(--adm-accent);
+  color: #fff;
+}
+
+/* ── Hour / Minute columns ──────────────────────── */
+.tpi-columns {
+  display: grid;
+  grid-template-columns: 1fr 20px 1fr;
+  grid-template-rows: auto 1fr;
+  gap: 0 0;
+  align-items: start;
+}
+
+.tpi-col-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--adm-text-muted);
+  text-align: center;
+  margin-bottom: 4px;
+  padding: 0 4px;
+}
+
+.tpi-column {
+  max-height: 168px;
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  border-radius: var(--adm-radius-sm);
+  border: 1px solid var(--adm-border-light);
+  background: var(--adm-bg-surface-2);
+
+  /* Hide scrollbar visually but keep it functional */
+  scrollbar-width: none;
+}
+.tpi-column::-webkit-scrollbar { display: none; }
+
+.tpi-separator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--adm-text-muted);
+  padding-top: 28px;
+}
+
+.tpi-option {
+  scroll-snap-align: center;
+  padding: 7px 0;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  border-radius: 4px;
+  color: var(--adm-text-secondary);
+  transition: background 0.1s ease, color 0.1s ease;
+  user-select: none;
+}
+
+.tpi-option:hover:not(.selected) {
+  background: var(--adm-bg-hover);
+  color: var(--adm-text-primary);
+}
+
+.tpi-option.selected {
+  background: var(--adm-accent);
+  color: #fff;
+  font-weight: 700;
+  border-radius: 4px;
+}

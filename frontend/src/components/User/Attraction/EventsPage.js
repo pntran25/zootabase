@@ -1,10 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import eventService from '../../../services/eventService';
 import './EventsPage.css';
 import { API_BASE_URL } from '../../../services/apiClient';
-import { Calendar, Clock, Filter, Grid3X3, List as ListIcon, MapPin, Search, Star, Tag, Ticket, Users } from 'lucide-react';
-
-const CATEGORIES = ["All Events", "Family", "Education", "Special", "Seasonal", "Members Only"];
+import { Calendar, Clock, Filter, MapPin, Search, Star, Ticket, Users } from 'lucide-react';
+import eventsHeroImg from '../../../assets/images/events-hero.jpg';
 
 // Custom cn utility for Tailwind
 const cn = (...classes) => classes.filter(Boolean).join(' ');
@@ -25,9 +24,6 @@ const Button = ({ children, variant = 'default', size = 'default', className, ..
   return <button className={cn(base, variants[variant], sizes[size], className)} {...props}>{children}</button>;
 };
 
-const Input = ({ className, ...props }) => {
-  return <input className={cn("flex h-10 w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50", className)} {...props} />;
-};
 
 const CATEGORY_EMOJI = {
   'Family':      '🦒',
@@ -37,34 +33,43 @@ const CATEGORY_EMOJI = {
   'Members Only':'🐘',
 };
 
-function enrichEvent(ev, index) {
-  const categories = ['Family', 'Special', 'Seasonal', 'Family', 'Education', 'Members Only'];
-  const spotsLeft  = [12, 48, 500, 6, 80, 22];
-  const spotsTotal = [30, 100, 500, 12, 200, 40];
-  const prices     = [75, 45, 0, 120, 0, 35];
-  const featured   = [true, false, true, false, false, false];
+function enrichEvent(ev) {
+  const seed = parseInt(ev.id, 10) || 1;
+  const capacity = ev.capacity || 50;
+  // Deterministic pseudo-random spotsLeft based on event ID
+  const pseudoRandom = ((seed * 1103515245 + 12345) >>> 0) / 0xFFFFFFFF;
+  const spotsLeft = Math.max(1, Math.floor(pseudoRandom * capacity));
 
   return {
     ...ev,
     title: ev.name || 'Untitled Event',
-    image: ev.imageUrl ? `${ev.imageUrl}` : '',
+    image: ev.imageUrl ? `${API_BASE_URL}${ev.imageUrl}` : '',
     date: ev.date || new Date().toISOString(),
+    endDate: ev.endDate || '',
     time: (ev.startTime || ev.time) ? `${ev.startTime || ev.time}${ev.endTime ? ' - ' + ev.endTime : ''}` : 'TBD',
     location: ev.exhibit || ev.location || 'Zoo-wide',
-    category  : categories[index % categories.length],
-    spotsLeft : spotsLeft[index % spotsLeft.length],
-    totalSpots: spotsTotal[index % spotsTotal.length],
-    price: prices[index % prices.length],
-    featured  : featured[index % featured.length],
-    description: ev.description || `Join us for an unforgettable wildlife experience at the zoo!`,
-    includes: ["Expert guide", "Photo opportunity", "Behind-the-scenes", "Complimentary snack"].slice(0, 2 + (index % 3))
+    category: ev.category || '',
+    spotsLeft,
+    totalSpots: capacity,
+    price: ev.price || 0,
+    featured: ev.isFeatured || false,
+    description: ev.description || '',
   };
 }
 
-const formatDate = (dateStr) => {
-  if (!dateStr) return '';
-  const date = new Date(dateStr)
-  return date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })
+
+const formatDateRange = (startStr, endStr) => {
+  if (!startStr) return '';
+  const start = new Date(startStr);
+  if (!endStr || endStr === startStr) {
+    return start.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  }
+  const end = new Date(endStr);
+  // Same month: "Fri, Mar 21 – 23"
+  if (start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()) {
+    return `${start.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} – ${end.getDate()}`;
+  }
+  return `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${end.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
 }
 
 function FeaturedEventCard({ event }) {
@@ -100,7 +105,7 @@ function FeaturedEventCard({ event }) {
         <div className="absolute bottom-0 left-0 right-0 p-5 z-10">
           <div className="flex items-center gap-2 text-xs text-white/90 mb-2">
             <Calendar className="h-3 w-3" />
-            {formatDate(event.date)}
+            {formatDateRange(event.date, event.endDate)}
             <span className="text-white/40">|</span>
             <Clock className="h-3 w-3" />
             {event.time}
@@ -184,14 +189,14 @@ function EventGridCard({ event }) {
         <div className="absolute bottom-3 left-3 right-3 z-10">
           <div className="flex items-center gap-2 text-xs text-white/90">
             <Calendar className="h-3 w-3" />
-            {formatDate(event.date)}
+            {formatDateRange(event.date, event.endDate)}
           </div>
         </div>
       </div>
 
       <div className="p-4 flex flex-col flex-1 relative z-20 bg-card">
         <h3 className="font-semibold text-foreground tracking-tight m-0 line-clamp-1">{event.title}</h3>
-        
+
         <div className="flex items-center gap-3 mt-2.5 text-xs text-muted-foreground">
           <span className="flex items-center gap-1 shrink-0">
             <Clock className="h-3 w-3 shrink-0" />
@@ -203,7 +208,22 @@ function EventGridCard({ event }) {
           </span>
         </div>
 
-        <div className="flex items-center justify-between mt-auto pt-5">
+        <div className="mt-auto pt-4">
+          <div className="flex items-center justify-between text-xs mb-1">
+            <span className={cn("font-medium", isAlmostFull ? "text-destructive" : "text-muted-foreground")}>
+              {isAlmostFull ? "Almost full!" : `${event.spotsLeft} spots left`}
+            </span>
+            <span className="text-muted-foreground">{event.totalSpots} total</span>
+          </div>
+          <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+            <div
+              className={cn("h-full rounded-full transition-all", isAlmostFull ? "bg-destructive" : "bg-primary")}
+              style={{ width: `${100 - spotsPercentage}%` }}
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between mt-3">
           <div>
             {event.price === 0 ? (
               <span className="font-bold text-primary">Free</span>
@@ -211,17 +231,11 @@ function EventGridCard({ event }) {
               <span className="font-bold">${event.price}</span>
             )}
           </div>
-          <span className={cn(
-            "text-xs font-medium",
-            isAlmostFull ? "text-destructive" : "text-muted-foreground"
-          )}>
-            {event.spotsLeft} spots left
-          </span>
+          <Button className="h-9 gap-1.5" size="sm">
+            <Ticket className="h-3.5 w-3.5" />
+            Book Now
+          </Button>
         </div>
-
-        <Button className="w-full mt-4 h-9" size="sm">
-          Book Now
-        </Button>
       </div>
     </article>
   )
@@ -257,7 +271,7 @@ function EventListCard({ event }) {
             <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground mb-2">
               <span className="flex items-center gap-1.5 shrink-0">
                 <Calendar className="h-4 w-4" />
-                {formatDate(event.date)}
+                {formatDateRange(event.date, event.endDate)}
               </span>
               <span className="flex items-center gap-1.5 shrink-0">
                 <Clock className="h-4 w-4" />
@@ -282,30 +296,23 @@ function EventListCard({ event }) {
           </div>
         </div>
         
-        <p className="mt-4 text-muted-foreground line-clamp-2 m-0 leading-relaxed text-sm">{event.description}</p>
-
-        <div className="flex flex-wrap items-center gap-2 mt-5">
-          {event.includes.slice(0, 3).map((item) => (
-            <span key={item} className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-xs text-secondary-foreground">
-              <Tag className="h-3 w-3" />
-              {item}
-            </span>
-          ))}
-          {event.includes.length > 3 && (
-            <span className="text-xs text-muted-foreground">+{event.includes.length - 3} more</span>
-          )}
-        </div>
-
-        <div className="flex items-center justify-between mt-6 pt-5 border-t border-border">
-          <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-muted-foreground" />
-            <span className={cn(
-              "text-sm font-medium",
-              isAlmostFull ? "text-destructive" : "text-muted-foreground"
-            )}>
+        <div className="mt-5 pt-4 border-t border-border">
+          <div className="flex items-center justify-between text-xs mb-1.5">
+            <span className={cn("font-medium flex items-center gap-1.5", isAlmostFull ? "text-destructive" : "text-muted-foreground")}>
+              <Users className="h-3.5 w-3.5" />
               {isAlmostFull ? `Only ${event.spotsLeft} spots left!` : `${event.spotsLeft} spots available`}
             </span>
+            <span className="text-muted-foreground">{event.totalSpots} total</span>
           </div>
+          <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+            <div
+              className={cn("h-full rounded-full transition-all", isAlmostFull ? "bg-destructive" : "bg-primary")}
+              style={{ width: `${100 - spotsPercentage}%` }}
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end mt-5">
           <Button className="gap-2 h-9">
             <Ticket className="h-4 w-4" />
             Book Now
@@ -320,8 +327,7 @@ const EventsPage = () => {
   const [events, setEvents]           = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState("All Events");
-  const [viewMode, setViewMode] = useState("grid");
-  const [showFilters, setShowFilters] = useState(false);
+  const [viewMode] = useState("grid");
   const [isLoading, setIsLoading]     = useState(true);
 
   useEffect(() => {
@@ -329,7 +335,7 @@ const EventsPage = () => {
       try {
         setIsLoading(true);
         const data = await eventService.getAllEvents();
-        setEvents(Array.isArray(data) ? data.map(enrichEvent) : []);
+        setEvents(Array.isArray(data) ? data.map(ev => enrichEvent(ev)) : []);
       } catch {
         setEvents([]);
       } finally {
@@ -338,6 +344,12 @@ const EventsPage = () => {
     };
     load();
   }, []);
+
+  const categories = useMemo(() => {
+    const cats = events.map(e => e.category).filter(Boolean);
+    const unique = [...new Set(cats)].sort();
+    return ["All Events", ...unique];
+  }, [events]);
 
   const filteredEvents = events.filter(event => {
     const matchesCategory = selectedCategory === "All Events" || event.category === selectedCategory
@@ -359,11 +371,11 @@ const EventsPage = () => {
       <section className="relative">
         <div className="relative h-[45vh] min-h-[360px] overflow-hidden">
           <img
-            src="https://images.unsplash.com/photo-1541334057884-297eb04ec21d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"
+            src={eventsHeroImg}
             alt="Zoo events"
             className="absolute inset-0 w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-[rgba(0,0,0,0.6)] via-[rgba(0,0,0,0.4)] to-background" />
+          <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.4) 50%, rgba(250,250,250,1) 100%)' }} />
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center px-4 mt-8">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white tracking-tight text-balance m-0">
@@ -417,7 +429,7 @@ const EventsPage = () => {
             {/* RIGHT: Category Filters */}
             <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
               <style>{`.flex.items-center.gap-2.overflow-x-auto::-webkit-scrollbar { display: none; }`}</style>
-              {CATEGORIES.map((category) => (
+              {categories.map((category) => (
                 <button
                   key={category}
                   className={cn(
@@ -443,7 +455,7 @@ const EventsPage = () => {
       ) : (
         <>
           {/* Featured Events */}
-          {(featuredEvents.length > 0 && selectedCategory === "All Events") && (
+          {featuredEvents.length > 0 && (
             <section className="mx-auto max-w-7xl px-4 pt-12 lg:px-8">
               <div className="flex items-center gap-2 mb-6">
                 <Star className="h-5 w-5 text-accent fill-accent" />

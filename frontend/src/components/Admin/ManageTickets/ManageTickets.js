@@ -1,25 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import '../AdminTable.css';
-import { Ticket, Info, Plus, Edit2, Trash2 } from 'lucide-react';
+import { Ticket, Plus, Edit2, Trash2, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { useReactTable, getCoreRowModel, getSortedRowModel, getPaginationRowModel, flexRender } from '@tanstack/react-table';
+import { toast } from 'sonner';
 import AdminModalForm from '../AdminModalForm';
 import ticketService from '../../../services/ticketService';
 
+const SortIcon = ({ column }) => {
+  if (!column.getCanSort()) return null;
+  return (
+    <span className="sort-icon">
+      {column.getIsSorted() === 'asc' ? <ChevronUp size={12} /> :
+       column.getIsSorted() === 'desc' ? <ChevronDown size={12} /> :
+       <ChevronsUpDown size={12} />}
+    </span>
+  );
+};
+
 const ManageTickets = () => {
   const [tickets, setTickets] = useState([]);
-  
-  // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTicket, setEditingTicket] = useState(null);
-  
   const [isLoading, setIsLoading] = useState(true);
-
-  // Form State aligned with TicketType Schema
-  const [formData, setFormData] = useState({
-    type: '',
-    category: 'General', // Enum: General | Child | VIP | Event
-    desc: '',
-    price: 0
-  });
+  const [sorting, setSorting] = useState([]);
+  const [formData, setFormData] = useState({ type: '', category: 'General', desc: '', price: 0 });
 
   const loadData = async () => {
     try {
@@ -28,23 +32,17 @@ const ManageTickets = () => {
       setTickets(data);
     } catch (err) {
       console.error('Failed to load tickets:', err);
+      toast.error(err.message || 'Failed to load tickets.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
   const handleOpenModal = (ticket = null) => {
-    if (ticket) {
-      setEditingTicket(ticket);
-      setFormData({ ...ticket });
-    } else {
-      setEditingTicket(null);
-      setFormData({ type: '', category: 'General', desc: '', price: 0 });
-    }
+    if (ticket) { setEditingTicket(ticket); setFormData({ ...ticket }); }
+    else { setEditingTicket(null); setFormData({ type: '', category: 'General', desc: '', price: 0 }); }
     setIsModalOpen(true);
   };
 
@@ -52,9 +50,10 @@ const ManageTickets = () => {
     if (window.confirm('Are you sure you want to delete this ticket type?')) {
       try {
         await ticketService.deleteTicket(id);
-        setTickets(tickets.filter(t => t.id !== id));
+        setTickets(prev => prev.filter(t => t.id !== id));
+        toast.success('Ticket type deleted.');
       } catch (err) {
-        alert('Failed to delete ticket.');
+        toast.error(err.message || 'Failed to delete ticket.');
       }
     }
   };
@@ -64,99 +63,150 @@ const ManageTickets = () => {
     try {
       if (editingTicket) {
         await ticketService.updateTicket(editingTicket.id, formData);
+        toast.success('Ticket type updated.');
       } else {
         await ticketService.createTicket(formData);
+        toast.success('Ticket type created.');
       }
       await loadData();
       setIsModalOpen(false);
     } catch (err) {
-      alert('Failed to save ticket type.');
+      toast.error(err.message || 'Failed to save ticket type.');
       console.error(err);
     }
   };
+
+  const columns = useMemo(() => [
+    {
+      accessorKey: 'type',
+      header: 'Ticket Name',
+      cell: info => <span className="font-medium text-dark">{info.getValue()}</span>,
+    },
+    {
+      accessorKey: 'category',
+      header: 'Category',
+      cell: info => {
+        const cat = info.getValue();
+        return (
+          <span className="pill-badge outline"
+            style={cat === 'VIP' ? { background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0' } : {}}>
+            {cat}
+          </span>
+        );
+      },
+    },
+    {
+      accessorKey: 'desc',
+      header: 'Description',
+      cell: info => <span className="text-secondary">{info.getValue()}</span>,
+      enableSorting: false,
+    },
+    {
+      accessorKey: 'price',
+      header: 'Price',
+      cell: info => <span className="font-medium text-dark" style={{ display: 'block', textAlign: 'right' }}>${Number(info.getValue() || 0).toFixed(2)}</span>,
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      enableSorting: false,
+      cell: ({ row }) => (
+        <div className="action-buttons">
+          <button className="action-btn edit" onClick={() => handleOpenModal(row.original)}><Edit2 size={16} /></button>
+          <button className="action-btn delete" onClick={() => handleDelete(row.original.id)}><Trash2 size={16} /></button>
+        </div>
+      ),
+    },
+  ], [tickets]);
+
+  const table = useReactTable({
+    data: tickets,
+    columns,
+    state: { sorting },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    initialState: { pagination: { pageSize: 10 } },
+  });
 
   return (
     <div className="admin-page">
       <div className="admin-page-header-container">
         <div>
-          <h1 className="admin-page-title">
-            <Ticket className="title-icon" size={28} /> Manage Tickets
-          </h1>
+          <h1 className="admin-page-title"><Ticket className="title-icon" size={26} /> Manage Tickets</h1>
           <p className="admin-page-subtitle">Configure ticket pricing and categories.</p>
         </div>
-
         <div className="admin-page-actions">
           <button className="admin-btn-primary" onClick={() => handleOpenModal()}>
-            <Plus size={18} /> Add Ticket Type
+            <Plus size={16} /> Add Ticket Type
           </button>
         </div>
       </div>
 
-      <div style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '16px', display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '24px', color: '#1e3a8a' }}>
-        <Info size={20} style={{ color: '#2563eb' }} />
-        <p style={{ fontSize: '0.95rem' }}>
-          <strong>Notice:</strong> To change ticket pricing, please contact the IT Administrator or submit a helpdesk ticket. Direct modifications are restricted per financial compliance rules.
-        </p>
-      </div>
+
 
       <div className="admin-table-container">
         <table className="admin-table">
           <thead>
-            <tr>
-              <th>Ticket Name</th>
-              <th>Category Type</th>
-              <th>Description</th>
-              <th style={{textAlign: 'right'}}>Price</th>
-              <th className="align-center">Actions</th>
-            </tr>
+            {table.getHeaderGroups().map(hg => (
+              <tr key={hg.id}>
+                {hg.headers.map(header => (
+                  <th key={header.id}
+                      onClick={header.column.getToggleSortingHandler()}
+                      data-sorted={header.column.getIsSorted() || undefined}
+                      style={header.id === 'price' ? { textAlign: 'right' } : {}}>
+                    {flexRender(header.column.columnDef.header, header.getContext())}
+                    <SortIcon column={header.column} />
+                  </th>
+                ))}
+              </tr>
+            ))}
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan="5" style={{textAlign: 'center', padding: '32px'}}>Loading...</td></tr>
-            ) : tickets.map((ticket) => (
-              <tr key={ticket.id}>
-                <td className="font-medium text-dark">{ticket.type}</td>
-                <td>
-                  <span className={`pill-badge ${ticket.category === 'VIP' ? '' : 'outline'}`} 
-                        style={ticket.category === 'VIP' ? {backgroundColor: '#dcfce7', color: '#166534'} : {}}>
-                    {ticket.category}
-                  </span>
-                </td>
-                <td className="text-secondary">{ticket.desc}</td>
-                <td className="font-medium text-dark" style={{textAlign: 'right'}}>${Number(ticket.price || 0).toFixed(2)}</td>
-                <td>
-                  <div className="action-buttons">
-                    <button className="action-btn edit" onClick={() => handleOpenModal(ticket)}><Edit2 size={16} /></button>
-                    <button className="action-btn delete" onClick={() => handleDelete(ticket.id)}><Trash2 size={16} /></button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {!isLoading && tickets.length === 0 && (
-              <tr>
-                <td colSpan="5" style={{textAlign: 'center', padding: '32px', color: '#64748b'}}>
-                  No tickets configured.
-                </td>
-              </tr>
+              <tr className="no-hover"><td colSpan={columns.length}>
+                <div className="admin-table-loading"><div className="admin-loading-spinner" /><p>Loading tickets...</p></div>
+              </td></tr>
+            ) : table.getRowModel().rows.length === 0 ? (
+              <tr className="no-hover"><td colSpan={columns.length}>
+                <div className="admin-table-empty">
+                  <div className="admin-table-empty-icon"><Ticket size={22} /></div>
+                  <p className="admin-table-empty-title">No tickets configured</p>
+                  <p className="admin-table-empty-desc">Add your first ticket type to get started.</p>
+                </div>
+              </td></tr>
+            ) : (
+              table.getRowModel().rows.map(row => (
+                <tr key={row.id}>
+                  {row.getVisibleCells().map(cell => (
+                    <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+                  ))}
+                </tr>
+              ))
             )}
           </tbody>
         </table>
+        {!isLoading && table.getPageCount() > 1 && (
+          <div className="admin-table-pagination">
+            <span className="admin-pagination-info">Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()} · {tickets.length} records</span>
+            <div className="admin-pagination-controls">
+              <button className="admin-pagination-btn" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>←</button>
+              <button className="admin-pagination-btn" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>→</button>
+            </div>
+          </div>
+        )}
       </div>
 
-      <AdminModalForm 
-        title={editingTicket ? "Edit Ticket Type" : "Add New Ticket"} 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)}
-        onSubmit={handleSubmit}
-      >
+      <AdminModalForm title={editingTicket ? 'Edit Ticket Type' : 'Add New Ticket'} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSubmit={handleSubmit}>
         <div className="form-row">
           <div className="form-group">
             <label>Ticket Name</label>
-            <input type="text" placeholder="e.g. Adult Admission" value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})} required />
+            <input type="text" placeholder="e.g. Adult Admission" value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })} required />
           </div>
           <div className="form-group">
-            <label>Category (Type Name Enum)</label>
-            <select value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}>
+            <label>Category</label>
+            <select value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}>
               <option value="General">General</option>
               <option value="Child">Child</option>
               <option value="VIP">VIP</option>
@@ -164,18 +214,15 @@ const ManageTickets = () => {
             </select>
           </div>
         </div>
-
         <div className="form-group">
           <label>Description</label>
-          <input type="text" placeholder="e.g. Single day access for guests 13-64" value={formData.desc} onChange={e => setFormData({...formData, desc: e.target.value})} required />
+          <input type="text" placeholder="e.g. Single day access for guests 13–64" value={formData.desc} onChange={e => setFormData({ ...formData, desc: e.target.value })} required />
         </div>
-        
         <div className="form-group">
           <label>Price ($)</label>
-          <input type="number" min="0" step="0.01" placeholder="0.00" value={formData.price} onChange={e => setFormData({...formData, price: Number(e.target.value)})} required />
+          <input type="number" min="0" step="0.01" placeholder="0.00" value={formData.price} onChange={e => setFormData({ ...formData, price: Number(e.target.value) })} required />
         </div>
       </AdminModalForm>
-
     </div>
   );
 };

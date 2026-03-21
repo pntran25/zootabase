@@ -20,7 +20,7 @@ router.get('/api/tickets', async (req, res) => {
         res.json(mappedResult);
     } catch (error) {
         console.error('Error fetching tickets:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ error: error.message });
     }
 });
 
@@ -46,7 +46,7 @@ router.post('/api/tickets', async (req, res) => {
         res.status(201).json({ id: result.recordset[0].TicketTypeID.toString(), ...req.body });
     } catch (error) {
         console.error('Error creating ticket type:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ error: error.message });
     }
 });
 
@@ -72,7 +72,7 @@ router.put('/api/tickets/:id', async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         console.error('Error updating ticket type:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ error: error.message });
     }
 });
 
@@ -87,7 +87,7 @@ router.delete('/api/tickets/:id', async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         console.error('Error deleting ticket type:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ error: error.message });
     }
 });
 

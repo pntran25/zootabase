@@ -27,6 +27,7 @@ const UserLayout = () => {
               Home
             </NavLink>
             <NavLink to="/exhibits" className={({ isActive }) => `ww-nav-link ${isActive ? 'active' : ''}`}>Exhibits</NavLink>
+            <NavLink to="/attractions" className={({ isActive }) => `ww-nav-link ${isActive ? 'active' : ''}`}>Attractions</NavLink>
             <NavLink to="/animals" className={({ isActive }) => `ww-nav-link ${isActive ? 'active' : ''}`}>Animals</NavLink>
             <NavLink to="/events" className={({ isActive }) => `ww-nav-link ${isActive ? 'active' : ''}`}>Events</NavLink>
             <NavLink to="/products" className={({ isActive }) => `ww-nav-link ${isActive ? 'active' : ''}`}>Gift Shop</NavLink>

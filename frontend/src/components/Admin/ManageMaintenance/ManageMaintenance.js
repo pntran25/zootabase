@@ -1,33 +1,56 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import '../AdminTable.css';
-import { Wrench, Search, Plus, CheckCircle, Edit2, Trash2 } from 'lucide-react';
+import { Wrench, Search, Plus, CheckCircle, Edit2, Trash2, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { useReactTable, getCoreRowModel, getSortedRowModel, getPaginationRowModel, flexRender } from '@tanstack/react-table';
+import { toast } from 'sonner';
 import AdminModalForm from '../AdminModalForm';
 import maintenanceService from '../../../services/maintenanceService';
+
+const SortIcon = ({ column }) => {
+  if (!column.getCanSort()) return null;
+  return (
+    <span className="sort-icon">
+      {column.getIsSorted() === 'asc' ? <ChevronUp size={12} /> :
+       column.getIsSorted() === 'desc' ? <ChevronDown size={12} /> :
+       <ChevronsUpDown size={12} />}
+    </span>
+  );
+};
+
+const priorityStyle = (priority) => {
+  if (priority === 'High' || priority === 'Critical') return { color: '#ef4444', background: '#fef2f2', border: '1px solid #fca5a5' };
+  if (priority === 'Medium') return { color: '#d97706', background: '#fef3c7', border: '1px solid #fde68a' };
+  return { color: '#059669', background: '#d1fae5', border: '1px solid #6ee7b7' };
+};
+
+const statusStyle = (status) => {
+  if (status === 'Completed') return { background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0' };
+  if (status === 'In Progress') return { background: '#fef9c3', color: '#854d0e', border: '1px solid #fef08a' };
+  return { background: 'var(--adm-bg-surface-2)', color: 'var(--adm-text-secondary)', border: '1px solid var(--adm-border)' };
+};
+
+const statusDotColor = (status) => {
+  if (status === 'Completed') return '#22c55e';
+  if (status === 'In Progress') return '#eab308';
+  return '#94a3b8';
+};
 
 const ManageMaintenance = () => {
   const [logs, setLogs] = useState([]);
   const [search, setSearch] = useState('');
-  
-  // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLog, setEditingLog] = useState(null);
-  
   const [isLoading, setIsLoading] = useState(true);
-
-  // Form State aligned with MaintenanceRequest Schema
+  const [sorting, setSorting] = useState([]);
   const [formData, setFormData] = useState({
-    issueType: '', // Maps to Description in Schema
-    location: '', // Maps to ExhibitID context
-    status: 'Pending', 
-    date: new Date().toISOString().split('T')[0],
-    priority: 'Low' // UI extra
+    issueType: '', location: '', status: 'Pending',
+    date: new Date().toISOString().split('T')[0], priority: 'Medium'
   });
 
   const loadData = async () => {
     try {
       setIsLoading(true);
       const data = await maintenanceService.getAllMaintenance();
-      // Map API Response to UI expected format
       const mapped = data.map(log => ({
         id: log.id,
         issueType: log.description,
@@ -35,35 +58,29 @@ const ManageMaintenance = () => {
         date: log.dateSubmitted,
         status: log.status,
         reportedBy: log.reportedBy,
-        priority: 'Medium' // DB schema does not have priority, using default Medium for UI
+        priority: 'Medium',
       }));
       setLogs(mapped);
     } catch (err) {
       console.error('Failed to load maintenance logs:', err);
+      toast.error(err.message || 'Failed to load maintenance logs.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
-  const filteredLogs = logs.filter(log => 
-    log.issueType.toLowerCase().includes(search.toLowerCase()) || 
-    log.location.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredLogs = useMemo(() =>
+    logs.filter(log =>
+      log.issueType.toLowerCase().includes(search.toLowerCase()) ||
+      log.location.toLowerCase().includes(search.toLowerCase())
+    ), [logs, search]);
 
   const handleOpenModal = (log = null) => {
     if (log) {
       setEditingLog(log);
-      setFormData({ 
-        issueType: log.issueType, 
-        location: log.location, 
-        status: log.status, 
-        date: log.date, 
-        priority: log.priority 
-      });
+      setFormData({ issueType: log.issueType, location: log.location, status: log.status, date: log.date, priority: log.priority });
     } else {
       setEditingLog(null);
       setFormData({ issueType: '', location: '', status: 'Pending', date: new Date().toISOString().split('T')[0], priority: 'Medium' });
@@ -75,9 +92,10 @@ const ManageMaintenance = () => {
     if (window.confirm('Are you sure you want to delete this maintenance record?')) {
       try {
         await maintenanceService.deleteMaintenance(id);
-        setLogs(logs.filter(l => l.id !== id));
+        setLogs(prev => prev.filter(l => l.id !== id));
+        toast.success('Maintenance record deleted.');
       } catch (err) {
-        alert('Failed to delete maintenance log.');
+        toast.error(err.message || 'Failed to delete maintenance record.');
       }
     }
   };
@@ -90,159 +108,207 @@ const ManageMaintenance = () => {
         description: formData.issueType,
         dateSubmitted: formData.date,
         status: formData.status,
-        reportedBy: 'Admin User'
+        reportedBy: 'Admin User',
       };
-
       if (editingLog) {
         await maintenanceService.updateMaintenance(editingLog.id, payload);
+        toast.success('Maintenance record updated.');
       } else {
         await maintenanceService.createMaintenance(payload);
+        toast.success('Maintenance request created.');
       }
       await loadData();
       setIsModalOpen(false);
     } catch (err) {
-      alert('Failed to save maintenance log.');
+      toast.error(err.message || 'Failed to save maintenance record.');
       console.error(err);
     }
   };
 
   const handleToggleStatus = async (id, currentStatus) => {
-    const newStatus = currentStatus === 'Pending' ? 'In Progress' : (currentStatus === 'In Progress' ? 'Completed' : 'Pending');
+    const newStatus = currentStatus === 'Pending' ? 'In Progress' : currentStatus === 'In Progress' ? 'Completed' : 'Pending';
     const log = logs.find(l => l.id === id);
     if (!log) return;
-    
     try {
-      const payload = {
+      await maintenanceService.updateMaintenance(id, {
         exhibit: log.location,
         description: log.issueType,
         dateSubmitted: log.date,
         status: newStatus,
-        reportedBy: log.reportedBy || 'Admin User'
-      };
-      await maintenanceService.updateMaintenance(id, payload);
-      setLogs(logs.map(l => l.id === id ? { ...l, status: newStatus } : l));
+        reportedBy: log.reportedBy || 'Admin User',
+      });
+      setLogs(prev => prev.map(l => l.id === id ? { ...l, status: newStatus } : l));
+      toast.success(`Status updated to ${newStatus}.`);
     } catch (err) {
-      alert('Failed to update status.');
+      toast.error(err.message || 'Failed to update status.');
     }
   };
+
+  const columns = useMemo(() => [
+    {
+      accessorKey: 'issueType',
+      header: 'Issue',
+      cell: ({ row }) => (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <span className="font-medium text-dark">{row.original.issueType}</span>
+          <span className="text-secondary" style={{ fontSize: '0.78rem' }}>Reported {row.original.date}</span>
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'location',
+      header: 'Location',
+      cell: info => <span className="pill-badge outline">{info.getValue()}</span>,
+    },
+    {
+      accessorKey: 'priority',
+      header: 'Priority',
+      cell: info => (
+        <span className="pill-badge outline" style={priorityStyle(info.getValue())}>{info.getValue()}</span>
+      ),
+    },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: info => (
+        <span className="pill-badge outline" style={statusStyle(info.getValue())}>
+          <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: statusDotColor(info.getValue()), marginRight: 5 }} />
+          {info.getValue()}
+        </span>
+      ),
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      enableSorting: false,
+      cell: ({ row }) => (
+        <div className="action-buttons">
+          <button
+            className="action-btn"
+            onClick={() => handleToggleStatus(row.original.id, row.original.status)}
+            style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.78rem', color: 'var(--adm-accent)', padding: '5px 10px', border: '1px solid var(--adm-accent)', borderRadius: 6 }}
+          >
+            <CheckCircle size={13} /> Advance
+          </button>
+          <button className="action-btn edit" onClick={() => handleOpenModal(row.original)}><Edit2 size={16} /></button>
+          <button className="action-btn delete" onClick={() => handleDelete(row.original.id)}><Trash2 size={16} /></button>
+        </div>
+      ),
+    },
+  ], [logs]);
+
+  const table = useReactTable({
+    data: filteredLogs,
+    columns,
+    state: { sorting },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    initialState: { pagination: { pageSize: 10 } },
+  });
+
+  const openCount = logs.filter(l => l.status !== 'Completed').length;
 
   return (
     <div className="admin-page">
       <div className="admin-page-header-container">
         <div>
-          <h1 className="admin-page-title">
-            <Wrench className="title-icon" size={28} /> Maintenance Logs
-          </h1>
+          <h1 className="admin-page-title"><Wrench className="title-icon" size={26} /> Maintenance Logs</h1>
           <p className="admin-page-subtitle">Track and manage park repair requests.</p>
         </div>
-        
         <div className="admin-page-actions">
           <div className="admin-search-container">
-            <Search className="search-icon" size={18} />
-            <input 
-              type="text" 
-              placeholder="Search requests..." 
-              className="admin-search-input"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+            <Search className="search-icon" size={16} />
+            <input type="text" placeholder="Search requests..." className="admin-search-input" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           <button className="admin-btn-primary" onClick={() => handleOpenModal()}>
-            <Plus size={18} /> New Request
+            <Plus size={16} /> New Request
           </button>
         </div>
       </div>
 
+      {openCount > 0 && (
+        <div className="admin-info-banner" style={{ borderColor: '#fde68a', background: '#fefce8' }}>
+          <Wrench size={18} style={{ color: '#d97706', flexShrink: 0, marginTop: 1 }} />
+          <p style={{ margin: 0, fontSize: '0.875rem', color: '#92400e' }}>
+            <strong>{openCount} open request{openCount !== 1 ? 's' : ''}</strong> require attention.
+          </p>
+        </div>
+      )}
+
       <div className="admin-table-container">
         <table className="admin-table">
           <thead>
-            <tr>
-              <th>Issue Type</th>
-              <th>Location (Area)</th>
-              <th>Priority</th>
-              <th>Status</th>
-              <th className="align-center">Actions</th>
-            </tr>
+            {table.getHeaderGroups().map(hg => (
+              <tr key={hg.id}>
+                {hg.headers.map(header => (
+                  <th key={header.id}
+                      onClick={header.column.getToggleSortingHandler()}
+                      data-sorted={header.column.getIsSorted() || undefined}>
+                    {flexRender(header.column.columnDef.header, header.getContext())}
+                    <SortIcon column={header.column} />
+                  </th>
+                ))}
+              </tr>
+            ))}
           </thead>
           <tbody>
             {isLoading ? (
-               <tr><td colSpan="5" style={{textAlign: 'center', padding: '32px'}}>Loading...</td></tr>
-            ) : filteredLogs.map((log) => (
-              <tr key={log.id}>
-                <td>
-                  <div style={{display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start'}}>
-                    <span className="font-medium text-dark">{log.issueType}</span>
-                    <span className="text-secondary" style={{fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px'}}>
-                      <span style={{color:'#cbd5e1'}}>🕒</span> Reported {log.date}
-                    </span>
-                  </div>
-                </td>
-                <td className="text-secondary">{log.location}</td>
-                <td>
-                  <span className={`pill-badge outline`} 
-                        style={log.priority === 'High' ? {color: '#ef4444', backgroundColor: '#fef2f2', borderColor: '#fca5a5'} : 
-                               log.priority === 'Medium' ? {color: '#d97706', backgroundColor: '#fef3c7', borderColor: '#fde68a'} : 
-                               {color: '#059669', backgroundColor: '#d1fae5', borderColor: '#6ee7b7'}}>
-                    {log.priority}
-                  </span>
-                </td>
-                <td>
-                  <span className={`status-badge ${log.status === 'Pending' ? 'open' : log.status === 'In Progress' ? 'in progress' : 'resolved'}`}
-                        style={log.status === 'Pending' ? {backgroundColor: '#1e293b', color: 'white'} : log.status === 'Completed' ? {backgroundColor: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0'} : {backgroundColor: '#fef9c3', color: '#854d0e', border: '1px solid #fef08a'}}>
-                    {log.status === 'Pending' && <span className="status-indicator-dot" style={{backgroundColor: '#cbd5e1'}}></span>}
-                    {log.status === 'In Progress' && <span className="status-indicator-dot" style={{backgroundColor: '#eab308'}}></span>}
-                    {log.status === 'Completed' && <span className="status-indicator-dot" style={{backgroundColor: '#22c55e'}}></span>}
-                    {log.status}
-                  </span>
-                </td>
-                <td>
-                  <div className="action-buttons">
-                    <button className="action-btn" onClick={() => handleToggleStatus(log.id, log.status)} style={{display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: '#10b981', padding: '6px 12px', border: '1px solid #10b981', borderRadius: '4px'}}>
-                      <CheckCircle size={14} /> Toggle Status
-                    </button>
-                    <button className="action-btn edit" onClick={() => handleOpenModal(log)}><Edit2 size={16} /></button>
-                    <button className="action-btn delete" onClick={() => handleDelete(log.id)}><Trash2 size={16} /></button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {!isLoading && filteredLogs.length === 0 && (
-              <tr>
-                <td colSpan="5" style={{textAlign: 'center', padding: '32px', color: '#64748b'}}>
-                  No maintenance logs found matching your search.
-                </td>
-              </tr>
+              <tr><td colSpan={columns.length}>
+                <div className="admin-table-loading"><div className="admin-loading-spinner" /><p>Loading maintenance logs...</p></div>
+              </td></tr>
+            ) : table.getRowModel().rows.length === 0 ? (
+              <tr><td colSpan={columns.length}>
+                <div className="admin-table-empty">
+                  <div className="admin-table-empty-icon"><Wrench size={22} /></div>
+                  <p className="admin-table-empty-title">No maintenance logs found</p>
+                  <p className="admin-table-empty-desc">
+                    {search ? 'Try adjusting your search.' : 'Log a new request to get started.'}
+                  </p>
+                </div>
+              </td></tr>
+            ) : (
+              table.getRowModel().rows.map(row => (
+                <tr key={row.id}>
+                  {row.getVisibleCells().map(cell => (
+                    <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+                  ))}
+                </tr>
+              ))
             )}
           </tbody>
         </table>
+        {!isLoading && table.getPageCount() > 1 && (
+          <div className="admin-table-pagination">
+            <span className="admin-pagination-info">Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()} · {filteredLogs.length} records</span>
+            <div className="admin-pagination-controls">
+              <button className="admin-pagination-btn" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>←</button>
+              <button className="admin-pagination-btn" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>→</button>
+            </div>
+          </div>
+        )}
       </div>
 
-      <AdminModalForm 
-        title={editingLog ? "Edit Maintenance Request" : "New Maintenance Request"} 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)}
-        onSubmit={handleSubmit}
-      >
+      <AdminModalForm title={editingLog ? 'Edit Maintenance Request' : 'New Maintenance Request'} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSubmit={handleSubmit}>
         <div className="form-group">
           <label>Issue Description</label>
-          <input type="text" placeholder="e.g. Broken turnstile at Entrance A" value={formData.issueType} onChange={e => setFormData({...formData, issueType: e.target.value})} required />
+          <input type="text" placeholder="e.g. Broken turnstile at Entrance A" value={formData.issueType} onChange={e => setFormData({ ...formData, issueType: e.target.value })} required />
         </div>
-
         <div className="form-row">
           <div className="form-group">
             <label>Location (Area / Exhibit)</label>
-            <input type="text" placeholder="e.g. Main Entrance" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} required />
+            <input type="text" placeholder="e.g. Main Entrance" value={formData.location} onChange={e => setFormData({ ...formData, location: e.target.value })} required />
           </div>
           <div className="form-group">
             <label>Reported Date</label>
-            <input type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} required />
+            <input type="date" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} required />
           </div>
         </div>
-        
         <div className="form-row">
           <div className="form-group">
             <label>Priority</label>
-            <select value={formData.priority} onChange={e => setFormData({...formData, priority: e.target.value})}>
+            <select value={formData.priority} onChange={e => setFormData({ ...formData, priority: e.target.value })}>
               <option value="Low">Low</option>
               <option value="Medium">Medium</option>
               <option value="High">High</option>
@@ -251,7 +317,7 @@ const ManageMaintenance = () => {
           </div>
           <div className="form-group">
             <label>Status</label>
-            <select value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})}>
+            <select value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })}>
               <option value="Pending">Pending</option>
               <option value="In Progress">In Progress</option>
               <option value="Completed">Completed</option>
@@ -260,7 +326,6 @@ const ManageMaintenance = () => {
           </div>
         </div>
       </AdminModalForm>
-
     </div>
   );
 };

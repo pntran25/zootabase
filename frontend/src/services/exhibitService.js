@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiPut, apiDelete, API_BASE_URL } from './apiClient';
+import { apiGet, apiPost, apiPut, apiDelete, API_BASE_URL, humanizeError } from './apiClient';
 
 export const getExhibits = async () => {
   try {
@@ -36,24 +36,41 @@ export const deleteExhibit = async (id) => {
   }
 };
 
-export const uploadExhibitImage = async (id, file) => {
+export const setExhibitFeatured = async (id, isFeatured) => {
+  let response;
   try {
-    const formData = new FormData();
-    formData.append('image', file);
+    response = await fetch(`${API_BASE_URL}/api/exhibits/${id}/featured`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isFeatured }),
+    });
+  } catch {
+    throw new Error(humanizeError(0));
+  }
+  if (!response.ok) {
+    let serverMsg = '';
+    try { const body = await response.json(); serverMsg = body.error || ''; } catch {}
+    throw new Error(humanizeError(response.status, serverMsg));
+  }
+  return response.json();
+};
 
-    const response = await fetch(`${API_BASE_URL}/api/exhibits/${id}/image`, {
+export const uploadExhibitImage = async (id, file) => {
+  const formData = new FormData();
+  formData.append('image', file);
+  let response;
+  try {
+    response = await fetch(`${API_BASE_URL}/api/exhibits/${id}/image`, {
       method: 'POST',
       body: formData,
-      // No Content-Type header needed for FormData; browser sets it with boundary
     });
-
-    if (!response.ok) {
-      throw new Error(`Upload failed with status ${response.status}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error(`Error uploading image for exhibit ${id}:`, error);
-    throw error;
+  } catch {
+    throw new Error(humanizeError(0));
   }
+  if (!response.ok) {
+    let serverMsg = '';
+    try { const body = await response.json(); serverMsg = body.error || ''; } catch {}
+    throw new Error(humanizeError(response.status, serverMsg));
+  }
+  return response.json();
 };

@@ -1,117 +1,197 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import '../AdminTable.css';
-import { PawPrint, Search, Plus, Edit2, Trash2, Image as ImageIcon } from 'lucide-react';
-
+import { PawPrint, Search, Plus, Edit2, Trash2, Image as ImageIcon, ChevronUp, ChevronDown, ChevronsUpDown, AlertTriangle, X, BookOpen } from 'lucide-react';
+import { useReactTable, getCoreRowModel, getSortedRowModel, getPaginationRowModel, flexRender } from '@tanstack/react-table';
+import { toast } from 'sonner';
 import AdminModalForm from '../AdminModalForm';
+import DatePickerInput from '../DatePickerInput';
+import AdminSelect from '../AdminSelect';
 import animalService from '../../../services/animalService';
+import { getAllSpeciesCodes, getNextAnimalCode } from '../../../services/speciesCodeService';
 import { API_BASE_URL } from '../../../services/apiClient';
+import { getExhibits } from '../../../services/exhibitService';
+
+const SortIcon = ({ column }) => {
+  if (!column.getCanSort()) return null;
+  return (
+    <span className="sort-icon">
+      {column.getIsSorted() === 'asc' ? <ChevronUp size={12} /> :
+       column.getIsSorted() === 'desc' ? <ChevronDown size={12} /> :
+       <ChevronsUpDown size={12} />}
+    </span>
+  );
+};
+
+const healthStyle = (health) => {
+  switch (health) {
+    case 'Excellent': return { bg: '#dcfce7', text: '#166534', dot: '#22c55e' };
+    case 'Good':      return { bg: 'var(--adm-bg-surface-2)', text: 'var(--adm-text-secondary)', dot: '#94a3b8' };
+    case 'Fair':
+    case 'Needs Checkup': return { bg: '#fef3c7', text: '#92400e', dot: '#f59e0b' };
+    case 'Critical':  return { bg: '#fee2e2', text: '#991b1b', dot: '#ef4444' };
+    default:          return { bg: 'var(--adm-bg-surface-2)', text: 'var(--adm-text-secondary)', dot: '#94a3b8' };
+  }
+};
+
+const DEPARTURE_OPTIONS = [
+  { value: 'Deceased',    label: 'Deceased — animal has passed away' },
+  { value: 'Transferred', label: 'Transferred — moved to another zoo' },
+  { value: 'Released',    label: 'Released — returned to the wild' },
+  { value: 'Other',       label: 'Other' },
+];
 
 const ManageAnimals = () => {
   const [animals, setAnimals] = useState([]);
   const [search, setSearch] = useState('');
-  
-  // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAnimal, setEditingAnimal] = useState(null);
-  
-  // Form State aligned with Animal Schema
+  const [isLoading, setIsLoading] = useState(true);
+  const [sorting, setSorting] = useState([]);
+  const [filterEndangered, setFilterEndangered] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
-    species: '',
-    exhibit: '', 
-    age: '',
-    gender: 'Unknown',
-    diet: '',
-    health: 'Good',
-    dateArrived: '',
-    lifespan: '',
-    weight: '',
-    region: '',
-    funFact: ''
+    name: '', species: '', speciesDetail: '', exhibit: '', age: '', gender: 'Unknown',
+    diet: '', health: 'Good', dateArrived: '', lifespan: '', weight: '', region: '', funFact: '',
+    isEndangered: false
   });
   const [imageFile, setImageFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [exhibits, setExhibits] = useState([]);
 
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
+  // Species code state
+  const [speciesCodes, setSpeciesCodes] = useState([]);
+  const [animalCodePreview, setAnimalCodePreview] = useState('');
+  const [isNewSpecies, setIsNewSpecies] = useState(false);
+  const [newCodeSuffix, setNewCodeSuffix] = useState('');
+
+  // Lookup modal
+  const [isLookupOpen, setIsLookupOpen] = useState(false);
+  const [lookupSearch, setLookupSearch] = useState('');
+
+  // Departure dialog
+  const [departureTarget, setDepartureTarget] = useState(null);
+  const [departureReason, setDepartureReason] = useState('Deceased');
 
   const loadData = async () => {
     try {
       setIsLoading(true);
-      const data = await animalService.getAllAnimals();
-      setAnimals(data);
-      setError(null);
+      const [animalData, exhibitData] = await Promise.all([
+        animalService.getAllAnimals(),
+        getExhibits(),
+      ]);
+      setAnimals(animalData);
+      setExhibits(exhibitData);
+      // Species codes are non-fatal — table may not exist yet before server restart
+      try {
+        const codeData = await getAllSpeciesCodes();
+        setSpeciesCodes(codeData);
+      } catch {
+        // silently ignore — codes will load after server restart runs migrations
+      }
     } catch (err) {
-      console.error('Failed to load animals:', err);
-      setError('Failed to load animals. Please try again later.');
+      console.error('Failed to load data:', err);
+      toast.error(err.message || 'Failed to load data.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
-  const filteredAnimals = animals.filter(animal => 
-    animal.name.toLowerCase().includes(search.toLowerCase()) || 
-    animal.species.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const getHealthColor = (health) => {
-    switch(health) {
-      case 'Excellent': return { bg: '#dcfce7', text: '#166534', dot: '#22c55e' };
-      case 'Good': return { bg: '#f1f5f9', text: '#475569', dot: '#94a3b8' };
-      case 'Fair': return { bg: '#fef3c7', text: '#92400e', dot: '#f59e0b' };
-      case 'Needs Checkup': return { bg: '#fef3c7', text: '#92400e', dot: '#f59e0b' };
-      case 'Critical': return { bg: '#fee2e2', text: '#991b1b', dot: '#ef4444' };
-      default: return { bg: '#f1f5f9', text: '#475569', dot: '#94a3b8' };
-    }
-  };
+  const filteredAnimals = useMemo(() =>
+    animals.filter(animal => {
+      const matchesSearch =
+        animal.name.toLowerCase().includes(search.toLowerCase()) ||
+        animal.species.toLowerCase().includes(search.toLowerCase()) ||
+        (animal.animalCode || '').toLowerCase().includes(search.toLowerCase());
+      const matchesEndangered = !filterEndangered ||
+        animal.isEndangered === true || animal.isEndangered === 1;
+      return matchesSearch && matchesEndangered;
+    }), [animals, search, filterEndangered]);
 
   const handleOpenModal = (animal = null) => {
     if (animal) {
       setEditingAnimal(animal);
-      setFormData({ 
-        name: animal.name || '', 
-        species: animal.species || '', 
-        exhibit: animal.exhibit || '', 
-        age: animal.age || 0, 
-        gender: animal.gender || 'Unknown', 
-        diet: animal.diet || '', 
-        health: animal.health || 'Good', 
+      setFormData({
+        name: animal.name || '', species: animal.species || '', speciesDetail: animal.speciesDetail || '',
+        exhibit: animal.exhibit || '',
+        age: animal.age || 0, gender: animal.gender || 'Unknown', diet: animal.diet || '',
+        health: animal.health || 'Good',
         dateArrived: animal.dateArrived ? animal.dateArrived.split('T')[0] : '',
-        lifespan: animal.lifespan || '',
-        weight: animal.weight || '',
-        region: animal.region || '',
-        funFact: animal.funFact || ''
+        lifespan: animal.lifespan || '', weight: animal.weight || '',
+        region: animal.region || '', funFact: animal.funFact || '',
+        isEndangered: animal.isEndangered === true || animal.isEndangered === 1,
       });
+      setAnimalCodePreview(animal.animalCode || '');
+      setIsNewSpecies(false);
+      setNewCodeSuffix('');
       setImageFile(null);
+      setPreviewUrl(animal.imageUrl ? `${API_BASE_URL}${animal.imageUrl}` : null);
     } else {
       setEditingAnimal(null);
-      setFormData({ name: '', species: '', exhibit: '', age: '', gender: 'Unknown', diet: '', health: 'Good', dateArrived: '', lifespan: '', weight: '', region: '', funFact: '' });
+      setFormData({ name: '', species: '', speciesDetail: '', exhibit: '', age: '', gender: 'Unknown', diet: '', health: 'Good', dateArrived: '', lifespan: '', weight: '', region: '', funFact: '', isEndangered: false });
+      setAnimalCodePreview('');
+      setIsNewSpecies(false);
+      setNewCodeSuffix('');
       setImageFile(null);
+      setPreviewUrl(null);
     }
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this animal?')) {
-      try {
-        await animalService.deleteAnimal(id);
-        setAnimals(animals.filter(a => a.id !== id));
-      } catch (err) {
-        alert('Failed to delete animal');
-      }
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setImageFile(file);
+    if (previewUrl && previewUrl.startsWith('blob:')) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(URL.createObjectURL(file));
+  };
+
+  const handleSpeciesChange = async (val) => {
+    setFormData(prev => ({ ...prev, species: val }));
+    if (editingAnimal) return; // don't change code when editing
+    const match = speciesCodes.find(sc => sc.speciesName.toLowerCase() === val.toLowerCase());
+    if (val && match) {
+      setIsNewSpecies(false);
+      const preview = await getNextAnimalCode(val);
+      setAnimalCodePreview(preview ? preview.animalCode : '');
+    } else if (val) {
+      setIsNewSpecies(true);
+      setAnimalCodePreview('');
+      setNewCodeSuffix('');
+    } else {
+      setIsNewSpecies(false);
+      setAnimalCodePreview('');
+    }
+  };
+
+  const handleDelete = (animal) => {
+    setDepartureTarget({ id: animal.id, name: animal.name });
+    setDepartureReason('Deceased');
+  };
+
+  const confirmDeparture = async () => {
+    try {
+      await animalService.deleteAnimal(departureTarget.id, departureReason);
+      setAnimals(prev => prev.filter(a => a.id !== departureTarget.id));
+      toast.success(`${departureTarget.name} marked as ${departureReason.toLowerCase()}.`);
+      setDepartureTarget(null);
+    } catch (err) {
+      toast.error(err.message || 'Failed to remove animal.');
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const payload = { ...formData };
-
+    if (!editingAnimal && isNewSpecies && !newCodeSuffix) {
+      toast.error('Enter a species code suffix for the new species (e.g. "lio" for Lion).');
+      return;
+    }
     try {
+      const payload = {
+        ...formData,
+        ...(!editingAnimal && isNewSpecies ? { codeSuffix: newCodeSuffix } : {}),
+      };
       let savedAnimalId = null;
-
       if (editingAnimal) {
         await animalService.updateAnimal(editingAnimal.id, payload);
         savedAnimalId = editingAnimal.id;
@@ -119,212 +199,509 @@ const ManageAnimals = () => {
         const result = await animalService.createAnimal(payload);
         savedAnimalId = result.id;
       }
-
+      await animalService.setEndangered(savedAnimalId, formData.isEndangered);
       if (imageFile && savedAnimalId) {
         await animalService.uploadAnimalImage(savedAnimalId, imageFile);
       }
-
       await loadData();
       setIsModalOpen(false);
+      toast.success(editingAnimal ? 'Animal record updated.' : 'Animal added successfully.');
     } catch (err) {
       console.error(err);
-      alert('Failed to save animal. Please check your inputs and try again.');
+      toast.error(err.message || 'Failed to save animal. Please check your inputs.');
     }
   };
+
+  const columns = useMemo(() => [
+    {
+      id: 'image',
+      header: '',
+      enableSorting: false,
+      cell: ({ row }) => {
+        const animal = row.original;
+        return animal.imageUrl ? (
+          <img src={`${API_BASE_URL}${animal.imageUrl}`} alt={animal.name}
+            style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover', border: '1.5px solid var(--adm-border)', display: 'block' }} />
+        ) : (
+          <div style={{ width: 48, height: 48, borderRadius: 8, background: 'var(--adm-bg-surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--adm-border)' }}>
+            <ImageIcon size={18} style={{ color: 'var(--adm-text-muted)' }} />
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: 'animalCode',
+      header: 'Animal ID',
+      size: 120,
+      cell: info => info.getValue()
+        ? <span style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: 'var(--adm-accent)', fontWeight: 700 }}>{info.getValue()}</span>
+        : <span className="text-secondary">—</span>,
+    },
+    {
+      accessorKey: 'name',
+      header: 'Name',
+      cell: info => <span className="font-medium text-dark">{info.getValue()}</span>,
+    },
+    {
+      accessorKey: 'species',
+      header: 'Animal Group',
+      cell: ({ row }) => (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <span className="font-medium text-dark">{row.original.species}</span>
+          {row.original.speciesDetail && (
+            <span className="text-secondary" style={{ fontSize: '0.78rem' }}>{row.original.speciesDetail}</span>
+          )}
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'exhibit',
+      header: 'Exhibit',
+      cell: info => info.getValue()
+        ? <span className="pill-badge outline">{info.getValue()}</span>
+        : <span style={{ color: 'var(--adm-text-muted)', fontSize: '0.8rem', fontStyle: 'italic' }}>Undecided</span>,
+    },
+    {
+      id: 'dietAge',
+      header: 'Diet / Age',
+      enableSorting: false,
+      cell: ({ row }) => (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.82rem' }}>
+          <span className="text-secondary">Diet: <span className="font-medium text-dark">{row.original.diet || 'Unknown'}</span></span>
+          <span className="text-secondary">Age: <span className="font-medium text-dark">{row.original.age} yrs</span> ({row.original.gender})</span>
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'health',
+      header: 'Health',
+      cell: info => {
+        const s = healthStyle(info.getValue());
+        return (
+          <span className="pill-badge outline" style={{ background: s.bg, color: s.text, border: `1px solid ${s.dot}33` }}>
+            <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: s.dot, marginRight: 5 }} />
+            {info.getValue()}
+          </span>
+        );
+      },
+    },
+    {
+      accessorKey: 'isEndangered',
+      header: 'Endangered',
+      sortingFn: (a, b) => {
+        const aV = (a.original.isEndangered === true || a.original.isEndangered === 1) ? 1 : 0;
+        const bV = (b.original.isEndangered === true || b.original.isEndangered === 1) ? 1 : 0;
+        return aV - bV;
+      },
+      cell: info => {
+        const isEndangered = info.getValue() === true || info.getValue() === 1;
+        return isEndangered ? (
+          <span className="endangered-badge" style={{
+            display: 'inline-flex', alignItems: 'center', gap: 5,
+            background: '#fef2f2', color: '#b91c1c',
+            border: '1px solid #fca5a5', borderRadius: 20,
+            padding: '3px 10px', fontSize: '0.75rem', fontWeight: 700,
+          }}>
+            <AlertTriangle size={12} />
+            Endangered
+          </span>
+        ) : null;
+      },
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      enableSorting: false,
+      cell: ({ row }) => (
+        <div className="action-buttons">
+          <button className="action-btn edit" onClick={() => handleOpenModal(row.original)}><Edit2 size={16} /></button>
+          <button className="action-btn delete" onClick={() => handleDelete(row.original)}><Trash2 size={16} /></button>
+        </div>
+      ),
+    },
+  ], [animals]);
+
+  const table = useReactTable({
+    data: filteredAnimals,
+    columns,
+    state: { sorting },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    initialState: { pagination: { pageSize: 10 }, sorting: [{ id: 'exhibit', desc: false }, { id: 'species', desc: false }] },
+  });
+
+  const filteredLookup = speciesCodes.filter(sc => {
+    const q = lookupSearch.toLowerCase();
+    return sc.speciesName.toLowerCase().includes(q) || sc.codeSuffix.toLowerCase().includes(q);
+  });
 
   return (
     <div className="admin-page">
       <div className="admin-page-header-container">
         <div>
-          <h1 className="admin-page-title">
-            <PawPrint className="title-icon" size={28} /> Manage Animals
-          </h1>
+          <h1 className="admin-page-title"><PawPrint className="title-icon" size={26} /> Manage Animals</h1>
           <p className="admin-page-subtitle">View, add, edit, or remove zoo animals.</p>
         </div>
-        
         <div className="admin-page-actions">
           <div className="admin-search-container">
-            <Search className="search-icon" size={18} />
-            <input 
-              type="text" 
-              placeholder="Search animals..." 
-              className="admin-search-input"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+            <Search className="search-icon" size={16} />
+            <input type="text" placeholder="Search animals or ID..." className="admin-search-input" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
+          <button
+            onClick={() => setFilterEndangered(f => !f)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 7,
+              height: 38, padding: '0 14px',
+              background: filterEndangered ? '#fef2f2' : 'var(--adm-bg-surface)',
+              color: filterEndangered ? '#b91c1c' : 'var(--adm-text-secondary)',
+              border: filterEndangered ? '1px solid #fca5a5' : '1px solid var(--adm-border)',
+              borderRadius: 'var(--adm-radius-md)', fontWeight: 600,
+              fontSize: '0.875rem', cursor: 'pointer', transition: 'all 0.18s ease',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <AlertTriangle size={15} />
+            {filterEndangered ? 'Endangered Only' : 'All Animals'}
+          </button>
+          <button
+            onClick={() => { setLookupSearch(''); setIsLookupOpen(true); }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 7,
+              height: 38, padding: '0 14px',
+              background: 'var(--adm-bg-surface)', color: 'var(--adm-text-secondary)',
+              border: '1px solid var(--adm-border)', borderRadius: 'var(--adm-radius-md)',
+              fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <BookOpen size={15} />
+            Animal ID Lookup
+          </button>
           <button className="admin-btn-primary" onClick={() => handleOpenModal()}>
-            <Plus size={18} /> Add Animal
+            <Plus size={16} /> Add Animal
           </button>
         </div>
       </div>
 
       <div className="admin-table-container">
-        {isLoading ? (
-          <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Loading animals...</div>
-        ) : error ? (
-          <div style={{ padding: '40px', textAlign: 'center', color: '#ef4444' }}>{error}</div>
-        ) : (
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th style={{width: '60px'}}>Image</th>
-                <th>Name</th>
-                <th>Species</th>
-                <th>Exhibit</th>
-                <th>Diet / Age</th>
-                <th>Health</th>
-                <th className="align-center">Actions</th>
+        <table className="admin-table">
+          <thead>
+            {table.getHeaderGroups().map(hg => (
+              <tr key={hg.id}>
+                {hg.headers.map(header => (
+                  <th key={header.id}
+                      onClick={header.column.getToggleSortingHandler()}
+                      data-sorted={header.column.getIsSorted() || undefined}
+                      style={header.column.columnDef.size ? { maxWidth: header.column.getSize() } : undefined}>
+                    {flexRender(header.column.columnDef.header, header.getContext())}
+                    <SortIcon column={header.column} />
+                  </th>
+                ))}
               </tr>
-            </thead>
-            <tbody>
-              {filteredAnimals.map((animal) => {
-                const colors = getHealthColor(animal.health);
-                return (
-                <tr key={animal.id}>
-                  <td>
-                    {animal.imageUrl ? (
-                      <img 
-                        src={`${API_BASE_URL}${animal.imageUrl}`} 
-                        alt={animal.name} 
-                        style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} 
-                      />
-                    ) : (
-                      <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
-                        <ImageIcon size={20} />
-                      </div>
-                    )}
-                  </td>
-                  <td className="font-medium text-dark">{animal.name}</td>
-                  <td className="text-secondary">{animal.species}</td>
-                  <td><span className="pill-badge outline">{animal.exhibit}</span></td>
-                  <td>
-                      <div style={{display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.85rem'}}>
-                        <span className="text-secondary">Diet: <span className="text-dark font-medium">{animal.diet || 'Unknown'}</span></span>
-                        <span className="text-secondary">Age: <span className="text-dark font-medium">{animal.age} yrs</span> ({animal.gender})</span>
-                      </div>
-                  </td>
-                  <td>
-                    <span className="status-badge" style={{backgroundColor: colors.bg, color: colors.text}}>
-                        <span className="status-indicator-dot" style={{backgroundColor: colors.dot}}></span>
-                        {animal.health}
-                    </span>
-                  </td>
-                  <td>
-                    <div className="action-buttons">
-                      <button className="action-btn edit" onClick={() => handleOpenModal(animal)}><Edit2 size={16} /></button>
-                      <button className="action-btn delete" onClick={() => handleDelete(animal.id)}><Trash2 size={16} /></button>
-                    </div>
-                  </td>
+            ))}
+          </thead>
+          <tbody>
+            {isLoading ? (
+              <tr className="no-hover"><td colSpan={columns.length}>
+                <div className="admin-table-loading"><div className="admin-loading-spinner" /><p>Loading animals...</p></div>
+              </td></tr>
+            ) : table.getRowModel().rows.length === 0 ? (
+              <tr className="no-hover"><td colSpan={columns.length}>
+                <div className="admin-table-empty">
+                  <div className="admin-table-empty-icon"><PawPrint size={22} /></div>
+                  <p className="admin-table-empty-title">No animals found</p>
+                  <p className="admin-table-empty-desc">
+                    {search ? 'Try adjusting your search.' : 'Add your first animal to get started.'}
+                  </p>
+                </div>
+              </td></tr>
+            ) : (
+              table.getRowModel().rows.map(row => (
+                <tr key={row.id}>
+                  {row.getVisibleCells().map(cell => (
+                    <td key={cell.id}
+                        style={{
+                          ...(cell.column.columnDef.size ? { maxWidth: cell.column.getSize() } : {}),
+                          ...(cell.column.id === 'image' ? { paddingRight: 6 } : {}),
+                        }}>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
+                  ))}
                 </tr>
-              )})}
-              {filteredAnimals.length === 0 && (
-                <tr>
-                  <td colSpan="7" style={{textAlign: 'center', padding: '32px', color: '#64748b'}}>
-                    No animals found.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+              ))
+            )}
+          </tbody>
+        </table>
+        {!isLoading && table.getPageCount() > 1 && (
+          <div className="admin-table-pagination">
+            <span className="admin-pagination-info">Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()} · {filteredAnimals.length} records</span>
+            <div className="admin-pagination-controls">
+              <button className="admin-pagination-btn" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>←</button>
+              <button className="admin-pagination-btn" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>→</button>
+            </div>
+          </div>
         )}
       </div>
 
-      <AdminModalForm 
-        title={editingAnimal ? "Edit Animal Record" : "Add New Animal"} 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)}
-        onSubmit={handleSubmit}
-      >
+      {/* ── Add / Edit Modal ── */}
+      <AdminModalForm title={editingAnimal ? 'Edit Animal Record' : 'Add New Animal'} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSubmit={handleSubmit}>
         <div className="form-row">
           <div className="form-group">
             <label>Name</label>
-            <input type="text" placeholder="Animal Name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required />
+            <input type="text" placeholder="Animal Name (optional)" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
           </div>
           <div className="form-group">
-            <label>Species</label>
-            <input type="text" placeholder="Species" value={formData.species} onChange={e => setFormData({...formData, species: e.target.value})} required />
+            <label>Animal Group</label>
+            <input
+              type="text"
+              list="species-datalist"
+              placeholder="e.g. Lion, Elephant..."
+              value={formData.species}
+              onChange={e => handleSpeciesChange(e.target.value)}
+              required
+            />
+            <datalist id="species-datalist">
+              {[...new Set(animals.map(a => a.species).filter(Boolean))].sort().map(s => (
+                <option key={s} value={s} />
+              ))}
+            </datalist>
+
+            {/* Known species — show upcoming Animal ID */}
+            {!editingAnimal && !isNewSpecies && animalCodePreview && (
+              <small style={{ color: 'var(--adm-accent)', marginTop: 4, display: 'block', fontWeight: 600 }}>
+                Animal ID will be: {animalCodePreview}
+              </small>
+            )}
+
+            {/* Editing — show existing Animal ID read-only */}
+            {editingAnimal && animalCodePreview && (
+              <small style={{ color: 'var(--adm-text-secondary)', marginTop: 4, display: 'block' }}>
+                Animal ID: <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--adm-accent)' }}>{animalCodePreview}</span>
+              </small>
+            )}
+
+            {/* New species — require code suffix */}
+            {!editingAnimal && isNewSpecies && formData.species && (
+              <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <label style={{ fontSize: '0.8rem', color: 'var(--adm-text-secondary)', fontWeight: 500 }}>
+                  New species — enter a short code suffix
+                </label>
+                <input
+                  type="text"
+                  maxLength={10}
+                  placeholder='e.g. "lio" for Lion'
+                  value={newCodeSuffix}
+                  onChange={e => setNewCodeSuffix(e.target.value.toLowerCase().replace(/[^a-z]/g, ''))}
+                />
+                {newCodeSuffix && (
+                  <small style={{ color: 'var(--adm-text-secondary)' }}>
+                    First animal of this species will be: <strong style={{ fontFamily: 'monospace' }}>{newCodeSuffix}-00001</strong>
+                  </small>
+                )}
+              </div>
+            )}
           </div>
         </div>
-        
+        <div className="form-group">
+          <label>Species <span style={{ fontWeight: 400, color: 'var(--adm-text-muted)' }}>(optional — specific subspecies or common name)</span></label>
+          <input
+            type="text"
+            placeholder="e.g. African Lion, West African Elephant..."
+            value={formData.speciesDetail}
+            onChange={e => setFormData({ ...formData, speciesDetail: e.target.value })}
+          />
+        </div>
         <div className="form-row">
           <div className="form-group">
             <label>Age (Years)</label>
-            <input type="number" min="0" placeholder="0" value={formData.age} onChange={e => setFormData({...formData, age: e.target.value})} required />
+            <input type="number" min="0" placeholder="0" value={formData.age} onChange={e => setFormData({ ...formData, age: e.target.value })} required />
           </div>
           <div className="form-group">
             <label>Gender</label>
-            <select value={formData.gender} onChange={e => setFormData({...formData, gender: e.target.value})}>
-              <option value="Male">Male</option>
-              <option value="Female">Female</option>
-              <option value="Unknown">Unknown</option>
-            </select>
+            <AdminSelect
+              value={formData.gender}
+              onChange={val => setFormData({ ...formData, gender: val })}
+              options={['Male', 'Female', 'Unknown']}
+            />
           </div>
         </div>
-
         <div className="form-row">
           <div className="form-group">
-            <label>Assign to Exhibit (Habitat)</label>
-            <input type="text" placeholder="Exhibit Name" value={formData.exhibit} onChange={e => setFormData({...formData, exhibit: e.target.value})} required />
+            <label>Assign to Exhibit</label>
+            <AdminSelect
+              value={formData.exhibit}
+              onChange={val => setFormData({ ...formData, exhibit: val })}
+              options={[{ value: '', label: 'Select an exhibit...' }, { value: 'Undecided', label: 'Undecided' }, ...exhibits.map(ex => ({ value: ex.ExhibitName, label: ex.ExhibitName }))]}
+              placeholder="Select an exhibit..."
+            />
           </div>
           <div className="form-group">
             <label>Date Arrived</label>
-            <input type="date" value={formData.dateArrived} onChange={e => setFormData({...formData, dateArrived: e.target.value})} />
+            <DatePickerInput
+              value={formData.dateArrived}
+              onChange={val => setFormData({ ...formData, dateArrived: val })}
+              placeholder="Select arrival date..."
+            />
           </div>
         </div>
-
         <div className="form-row">
           <div className="form-group">
             <label>Diet Type</label>
-            <input type="text" placeholder="e.g. Carnivore, Herbivore" value={formData.diet} onChange={e => setFormData({...formData, diet: e.target.value})} />
+            <input type="text" placeholder="e.g. Carnivore, Herbivore" value={formData.diet} onChange={e => setFormData({ ...formData, diet: e.target.value })} />
           </div>
           <div className="form-group">
-            <label>Health Score / Status</label>
-            <select value={formData.health} onChange={e => setFormData({...formData, health: e.target.value})}>
-              <option value="Excellent">Excellent</option>
-              <option value="Good">Good</option>
-              <option value="Fair">Fair</option>
-              <option value="Needs Checkup">Needs Checkup</option>
-              <option value="Critical">Critical</option>
-            </select>
+            <label>Health Status</label>
+            <AdminSelect
+              value={formData.health}
+              onChange={val => setFormData({ ...formData, health: val })}
+              options={['Excellent', 'Good', 'Fair', 'Needs Checkup', 'Critical']}
+            />
           </div>
         </div>
-
+        <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+          <input
+            type="checkbox"
+            id="isEndangered"
+            checked={formData.isEndangered}
+            onChange={e => setFormData({ ...formData, isEndangered: e.target.checked })}
+            style={{ width: 16, height: 16, margin: 0, accentColor: '#ef4444', flexShrink: 0 }}
+          />
+          <label htmlFor="isEndangered" style={{ margin: 0, cursor: 'pointer' }}>
+            Mark as <span style={{ color: '#ef4444', fontWeight: 700 }}>Endangered</span>
+          </label>
+        </div>
         <div className="form-group">
           <label>Profile Image</label>
-          <input 
-             type="file" 
-             accept="image/*" 
-             onChange={e => setImageFile(e.target.files[0])} 
-             style={{display: 'block', marginTop: '8px'}}
-          />
-          <small className="text-secondary">If no image is provided, a placeholder will be used.</small>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 8 }}>
+            {previewUrl ? (
+              <img src={previewUrl} alt="Preview"
+                style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover', border: '1.5px solid var(--adm-border)', flexShrink: 0 }} />
+            ) : (
+              <div style={{ width: 64, height: 64, borderRadius: 8, background: 'var(--adm-bg-surface-2)', border: '1px dashed var(--adm-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <ImageIcon size={22} style={{ color: 'var(--adm-text-muted)' }} />
+              </div>
+            )}
+            <div style={{ flex: 1 }}>
+              <input type="file" accept="image/*" onChange={handleImageChange} style={{ display: 'block', width: '100%' }} />
+              <small className="text-secondary" style={{ marginTop: 4, display: 'block' }}>If no image is provided, a placeholder will be used.</small>
+            </div>
+          </div>
         </div>
-
-        {/* Quick Facts Section */}
-        <h4 style={{margin: '18px 0 8px', color: '#374151', fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', borderTop: '1px solid #e5e7eb', paddingTop: '14px'}}>Quick Facts (Hover Info)</h4>
+        <p className="form-section-heading">Quick Facts (Hover Info)</p>
         <div className="form-row">
           <div className="form-group">
             <label>Lifespan</label>
-            <input type="text" placeholder="e.g. 10-14 years" value={formData.lifespan} onChange={e => setFormData({...formData, lifespan: e.target.value})} />
+            <input type="text" placeholder="e.g. 10–14 years" value={formData.lifespan} onChange={e => setFormData({ ...formData, lifespan: e.target.value })} />
           </div>
           <div className="form-group">
             <label>Weight</label>
-            <input type="text" placeholder="e.g. 265-420 lbs" value={formData.weight} onChange={e => setFormData({...formData, weight: e.target.value})} />
+            <input type="text" placeholder="e.g. 265–420 lbs" value={formData.weight} onChange={e => setFormData({ ...formData, weight: e.target.value })} />
           </div>
         </div>
         <div className="form-row">
           <div className="form-group">
             <label>Region</label>
-            <input type="text" placeholder="e.g. Africa" value={formData.region} onChange={e => setFormData({...formData, region: e.target.value})} />
+            <input type="text" placeholder="e.g. Africa" value={formData.region} onChange={e => setFormData({ ...formData, region: e.target.value })} />
           </div>
           <div className="form-group">
             <label>Interesting Fact</label>
-            <input type="text" placeholder="Short fun fact" value={formData.funFact} onChange={e => setFormData({...formData, funFact: e.target.value})} />
+            <input type="text" placeholder="Short fun fact" value={formData.funFact} onChange={e => setFormData({ ...formData, funFact: e.target.value })} />
           </div>
         </div>
       </AdminModalForm>
 
+      {/* ── Animal ID Lookup Modal ── */}
+      {isLookupOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: 'var(--adm-bg-surface)', borderRadius: 14, padding: 28, width: 560, maxWidth: '100%', maxHeight: '80vh', display: 'flex', flexDirection: 'column', gap: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--adm-text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <BookOpen size={18} style={{ color: 'var(--adm-accent)' }} />
+                Animal ID Lookup
+              </h2>
+              <button onClick={() => setIsLookupOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--adm-text-muted)', padding: 4, borderRadius: 6, display: 'flex' }}>
+                <X size={18} />
+              </button>
+            </div>
+            <input
+              type="text"
+              placeholder="Filter by species or code..."
+              value={lookupSearch}
+              onChange={e => setLookupSearch(e.target.value)}
+              style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--adm-border)', background: 'var(--adm-bg-surface-2)', fontSize: '0.875rem', color: 'var(--adm-text-primary)' }}
+              autoFocus
+            />
+            <div style={{ overflowY: 'auto', flex: 1, borderRadius: 8, border: '1px solid var(--adm-border)' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+                <thead>
+                  <tr style={{ background: 'var(--adm-bg-surface-2)', position: 'sticky', top: 0 }}>
+                    <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 600, color: 'var(--adm-text-secondary)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Species</th>
+                    <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 600, color: 'var(--adm-text-secondary)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Code</th>
+                    <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 600, color: 'var(--adm-text-secondary)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Last Assigned ID</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredLookup.length === 0 ? (
+                    <tr>
+                      <td colSpan={3} style={{ padding: 24, textAlign: 'center', color: 'var(--adm-text-muted)', fontSize: '0.875rem' }}>
+                        {lookupSearch ? 'No matching species found.' : 'No species codes registered yet.'}
+                      </td>
+                    </tr>
+                  ) : filteredLookup.map(sc => (
+                    <tr key={sc.codeSuffix} style={{ borderBottom: '1px solid var(--adm-border-light)' }}>
+                      <td style={{ padding: '10px 16px', color: 'var(--adm-text-primary)', fontWeight: 500 }}>{sc.speciesName}</td>
+                      <td style={{ padding: '10px 16px', fontFamily: 'monospace', fontWeight: 700, color: 'var(--adm-accent)' }}>{sc.codeSuffix}</td>
+                      <td style={{ padding: '10px 16px', fontFamily: 'monospace', color: 'var(--adm-text-secondary)' }}>
+                        {sc.lastCount > 0 ? `${sc.codeSuffix}-${String(sc.lastCount).padStart(5, '0')}` : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--adm-text-muted)' }}>
+              {speciesCodes.length} species registered · codes are assigned automatically when adding animals
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ── Departure Reason Dialog ── */}
+      {departureTarget && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: 'var(--adm-bg-surface)', borderRadius: 14, padding: 28, width: 420, maxWidth: '100%', display: 'flex', flexDirection: 'column', gap: 18, boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <h2 style={{ margin: '0 0 4px', fontSize: '1.1rem', fontWeight: 700, color: 'var(--adm-text-primary)' }}>Remove Animal</h2>
+                <p style={{ margin: 0, color: 'var(--adm-text-secondary)', fontSize: '0.9rem' }}>
+                  Why is <strong style={{ color: 'var(--adm-text-primary)' }}>{departureTarget.name}</strong> leaving the zoo?
+                </p>
+              </div>
+              <button onClick={() => setDepartureTarget(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--adm-text-muted)', padding: 4, borderRadius: 6, display: 'flex', flexShrink: 0 }}>
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {DEPARTURE_OPTIONS.map(opt => (
+                <label key={opt.value} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '10px 14px', borderRadius: 8, border: `1.5px solid ${departureReason === opt.value ? 'var(--adm-accent)' : 'var(--adm-border)'}`, background: departureReason === opt.value ? 'var(--adm-accent-subtle, rgba(34,107,64,0.07))' : 'transparent', transition: 'all 0.15s' }}>
+                  <input type="radio" name="departureReason" value={opt.value} checked={departureReason === opt.value} onChange={() => setDepartureReason(opt.value)} style={{ accentColor: 'var(--adm-accent)', flexShrink: 0 }} />
+                  <span style={{ fontSize: '0.875rem', color: 'var(--adm-text-primary)' }}>{opt.label}</span>
+                </label>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button onClick={() => setDepartureTarget(null)} style={{ padding: '8px 18px', borderRadius: 8, border: '1px solid var(--adm-border)', background: 'var(--adm-bg-surface)', color: 'var(--adm-text-secondary)', fontWeight: 600, cursor: 'pointer', fontSize: '0.875rem' }}>
+                Cancel
+              </button>
+              <button onClick={confirmDeparture} style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: '#ef4444', color: '#fff', fontWeight: 600, cursor: 'pointer', fontSize: '0.875rem' }}>
+                Confirm Removal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

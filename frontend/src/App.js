@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom
 import UserLayout from './layout/UserLayout';
 import HomePage from './components/User/Home/HomePage';
 import EventsPage from './components/User/Attraction/EventsPage';
+import AttractionPage from './components/User/Attraction/AttractionPage';
 import ExhibitPage from './components/User/Exhibit/ExhibitPage';
 import AnimalPage from './components/User/Animal/AnimalPage';
 import TicketPage from './components/User/Ticket/TicketPage';
@@ -31,7 +32,7 @@ function App() {
           {/* User Routes */}
           <Route element={<UserLayout />}>
             <Route path="/" element={<HomePage />} />
-            <Route path="/attractions" element={<EventsPage />} />
+            <Route path="/attractions" element={<AttractionPage />} />
             <Route path="/events" element={<EventsPage />} />
             <Route path="/exhibits" element={<ExhibitPage />} />
             <Route path="/animals" element={<AnimalPage />} />

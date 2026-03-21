@@ -106,6 +106,9 @@ router.get('/', async (req, res) => {
                 a.Weight as weight,
                 a.Region as region,
                 a.FunFact as funFact,
+                a.IsEndangered as isEndangered,
+                a.AnimalCode as animalCode,
+                a.SpeciesDetail as speciesDetail,
                 h.HabitatType,
                 e.ExhibitName as exhibit
             FROM Animal a
@@ -117,21 +120,44 @@ router.get('/', async (req, res) => {
         res.json(result.recordset);
     } catch (error) {
         console.error('Error fetching animals:', error);
-        res.status(500).json({ error: 'Failed to fetch animals' });
+        res.status(500).json({ error: error.message });
     }
 });
 
 // POST new animal
 router.post('/', async (req, res) => {
     try {
-        const { name, species, age, gender, diet, health, dateArrived, exhibit, lifespan, weight, region, funFact } = req.body;
+        const { name, species, speciesDetail, age, gender, diet, health, dateArrived, exhibit, lifespan, weight, region, funFact, isEndangered, codeSuffix } = req.body;
         const pool = await connectToDb();
         const transaction = new sql.Transaction(pool);
         await transaction.begin();
 
         try {
             const request = new sql.Request(transaction);
-            const habitatId = await resolveHabitatId(request, exhibit);
+            const habitatId = (exhibit && exhibit !== 'Undecided')
+                ? await resolveHabitatId(request, exhibit)
+                : null;
+
+            // Auto-assign AnimalCode from SpeciesCode registry
+            let animalCode = null;
+            const scRes = await request
+                .input('speciesLookup', sql.NVarChar, species)
+                .query(`
+                    UPDATE SpeciesCode SET LastCount = LastCount + 1
+                    OUTPUT INSERTED.CodeSuffix, INSERTED.LastCount
+                    WHERE SpeciesName = @speciesLookup
+                `);
+            if (scRes.recordset.length) {
+                const { CodeSuffix, LastCount } = scRes.recordset[0];
+                animalCode = `${CodeSuffix}-${String(LastCount).padStart(5, '0')}`;
+            } else if (codeSuffix) {
+                const cs = codeSuffix.trim().toLowerCase();
+                await request
+                    .input('newSn', sql.NVarChar, species)
+                    .input('newCs', sql.NVarChar, cs)
+                    .query('INSERT INTO SpeciesCode (SpeciesName, CodeSuffix, LastCount) VALUES (@newSn, @newCs, 1)');
+                animalCode = `${cs}-00001`;
+            }
 
             const result = await request
                 .input('name', sql.NVarChar, name)
@@ -146,21 +172,25 @@ router.post('/', async (req, res) => {
                 .input('weight', sql.NVarChar, weight || null)
                 .input('region', sql.NVarChar, region || null)
                 .input('funFact', sql.NVarChar, funFact || null)
+                .input('isEndangered', sql.Bit, isEndangered ? 1 : 0)
+                .input('animalCode', sql.NVarChar, animalCode)
+                .input('speciesDetail', sql.NVarChar, speciesDetail || null)
                 .query(`
                     DECLARE @AnimOut TABLE (id INT, imageUrl NVARCHAR(255));
-                    
-                    INSERT INTO Animal (Name, Species, Age, Gender, Diet, HealthStatus, DateArrived, HabitatID, Lifespan, Weight, Region, FunFact)
+
+                    INSERT INTO Animal (Name, Species, SpeciesDetail, Age, Gender, Diet, HealthStatus, DateArrived, HabitatID, Lifespan, Weight, Region, FunFact, IsEndangered, AnimalCode)
                     OUTPUT INSERTED.AnimalID, INSERTED.ImageUrl INTO @AnimOut
-                    VALUES (@name, @species, @age, @gender, @diet, @health, @dateArrived, @habitatId, @lifespan, @weight, @region, @funFact);
-                    
+                    VALUES (@name, @species, @speciesDetail, @age, @gender, @diet, @health, @dateArrived, @habitatId, @lifespan, @weight, @region, @funFact, @isEndangered, @animalCode);
+
                     SELECT id, imageUrl FROM @AnimOut;
                 `);
 
             await transaction.commit();
-            res.status(201).json({ 
-                id: result.recordset[0].id, 
+            res.status(201).json({
+                id: result.recordset[0].id,
+                animalCode,
                 name, species, age, gender, diet, health, dateArrived, exhibit,
-                lifespan, weight, region, funFact,
+                lifespan, weight, region, funFact, isEndangered,
                 imageUrl: result.recordset[0].imageUrl
             });
         } catch (err) {
@@ -169,7 +199,7 @@ router.post('/', async (req, res) => {
         }
     } catch (error) {
         console.error('Error creating animal:', error);
-        res.status(500).json({ error: 'Failed to create animal' });
+        res.status(500).json({ error: error.message });
     }
 });
 
@@ -177,14 +207,16 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, species, age, gender, diet, health, dateArrived, exhibit, lifespan, weight, region, funFact } = req.body;
+        const { name, species, speciesDetail, age, gender, diet, health, dateArrived, exhibit, lifespan, weight, region, funFact, isEndangered } = req.body;
         const pool = await connectToDb();
         const transaction = new sql.Transaction(pool);
         await transaction.begin();
 
         try {
             const request = new sql.Request(transaction);
-            const habitatId = await resolveHabitatId(request, exhibit);
+            const habitatId = (exhibit && exhibit !== 'Undecided')
+                ? await resolveHabitatId(request, exhibit)
+                : null;
 
             await request
                 .input('id', sql.Int, id)
@@ -200,12 +232,16 @@ router.put('/:id', async (req, res) => {
                 .input('weight', sql.NVarChar, weight || null)
                 .input('region', sql.NVarChar, region || null)
                 .input('funFact', sql.NVarChar, funFact || null)
+                .input('isEndangered', sql.Bit, isEndangered ? 1 : 0)
+                .input('speciesDetail', sql.NVarChar, speciesDetail || null)
                 .query(`
                     UPDATE Animal
-                    SET Name = @name, Species = @species, Age = @age, Gender = @gender, 
-                        Diet = @diet, HealthStatus = @health, DateArrived = @dateArrived, 
+                    SET Name = @name, Species = @species, SpeciesDetail = @speciesDetail,
+                        Age = @age, Gender = @gender,
+                        Diet = @diet, HealthStatus = @health, DateArrived = @dateArrived,
                         HabitatID = @habitatId, Lifespan = @lifespan, Weight = @weight,
-                        Region = @region, FunFact = @funFact, UpdatedAt = SYSUTCDATETIME()
+                        Region = @region, FunFact = @funFact, IsEndangered = @isEndangered,
+                        UpdatedAt = SYSUTCDATETIME()
                     WHERE AnimalID = @id AND DeletedAt IS NULL
                 `);
 
@@ -217,23 +253,41 @@ router.put('/:id', async (req, res) => {
         }
     } catch (error) {
         console.error('Error updating animal:', error);
-        res.status(500).json({ error: 'Failed to update animal' });
+        res.status(500).json({ error: error.message });
     }
 });
 
-// DELETE delete animal
-router.delete('/:id', async (req, res) => {
+// PATCH endangered flag only (simple, no transaction needed)
+router.patch('/:id/endangered', async (req, res) => {
     try {
         const { id } = req.params;
+        const { isEndangered } = req.body;
         const pool = await connectToDb();
         await pool.request()
             .input('id', sql.Int, id)
-            .query('UPDATE Animal SET DeletedAt = SYSUTCDATETIME() WHERE AnimalID = @id');
-        
-        res.json({ message: 'Animal deleted successfully' });
+            .input('isEndangered', sql.Bit, isEndangered ? 1 : 0)
+            .query('UPDATE Animal SET IsEndangered = @isEndangered, UpdatedAt = SYSUTCDATETIME() WHERE AnimalID = @id AND DeletedAt IS NULL');
+        res.json({ message: 'Endangered status updated' });
     } catch (error) {
-        console.error('Error deleting animal:', error);
-        res.status(500).json({ error: 'Failed to delete animal' });
+        console.error('Error updating endangered status:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// DELETE delete animal (soft-delete with departure reason)
+router.delete('/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const reason = (req.body && req.body.reason) || 'Other';
+        const pool = await connectToDb();
+        await pool.request()
+            .input('id', sql.Int, id)
+            .input('reason', sql.NVarChar, reason)
+            .query('UPDATE Animal SET DeletedAt = SYSUTCDATETIME(), DepartureReason = @reason WHERE AnimalID = @id');
+        res.json({ message: 'Animal removed successfully' });
+    } catch (error) {
+        console.error('Error removing animal:', error);
+        res.status(500).json({ error: error.message });
     }
 });
 
@@ -260,7 +314,7 @@ router.post('/:id/image', upload.single('image'), async (req, res) => {
         res.json({ message: 'Image uploaded successfully', ImageUrl: imageUrl });
     } catch (err) {
         console.error('Error uploading image:', err);
-        res.status(500).json({ error: 'Failed to upload image' });
+        res.status(500).json({ error: err.message });
     }
 });
 

@@ -20,7 +20,7 @@ router.get('/api/feedback', async (req, res) => {
         res.json(mappedResult);
     } catch (error) {
         console.error('Error fetching feedback:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ error: error.message });
     }
 });
 
@@ -46,7 +46,7 @@ router.post('/api/feedback', async (req, res) => {
         res.status(201).json({ id: result.recordset[0].FeedbackID.toString(), ...req.body });
     } catch (error) {
         console.error('Error creating feedback:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ error: error.message });
     }
 });
 
@@ -61,7 +61,7 @@ router.delete('/api/feedback/:id', async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         console.error('Error deleting feedback:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ error: error.message });
     }
 });
 
