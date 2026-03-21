@@ -175,7 +175,7 @@ const ExhibitPage = () => {
                   {exhibit.AreaName && (
                     <span className="ww-card-region">{exhibit.AreaName}</span>
                   )}
-                  {exhibit.ExhibitID % 2 === 1 && (
+                  {(exhibit.IsFeatured === true || exhibit.IsFeatured === 1) && (
                     <span className="ww-card-featured-badge">Featured</span>
                   )}
                 </div>

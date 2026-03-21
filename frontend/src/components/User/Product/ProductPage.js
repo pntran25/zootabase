@@ -1,19 +1,19 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { getAllProducts } from '../../../services/productService';
+import { API_BASE_URL } from '../../../services/apiClient';
+import giftShopHeroImg from '../../../assets/images/gift-shop-hero.jpg';
 import './ProductPage.css';
-import { Search, ShoppingCart, Heart, Star, Filter, Grid3X3, List as ListIcon, Plus, Minus, X } from 'lucide-react';
-
-const CATEGORIES = [
-  { id: "All Products", label: "All Products" },
-  { id: "Gift Shop", label: "Gift Shop" },
-  { id: "Food", label: "Food" },
-  { id: "Beverage", label: "Beverage" }
-];
+import { Search, ShoppingCart, Filter, Plus, Minus, X } from 'lucide-react';
 
 const EMOJI_MAP = {
-  'Gift Shop': '🧸',
-  'Food': '🍿',
-  'Beverage': '☕',
+  'Plush Toys & Stuffed Animals': '🧸',
+  'Apparel & Wearables': '👕',
+  'Souvenirs & Memorabilia': '🏆',
+  'Books & Educational Items': '📚',
+  'Toys & Games': '🎮',
+  'Home & Decor': '🏠',
+  'Jewelry & Accessories': '💎',
+  'Art & Collectibles': '🎨',
 };
 
 const cn = (...classes) => classes.filter(Boolean).join(' ');
@@ -35,9 +35,6 @@ const Button = ({ children, variant = 'default', size = 'default', className, ..
   return <button className={cn(base, variants[variant], sizes[size], className)} {...props}>{children}</button>;
 };
 
-const Input = ({ className, ...props }) => {
-  return <input className={cn("flex h-10 w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50", className)} {...props} />;
-};
 
 const Badge = ({ children, variant = "default", className }) => {
   const base = "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2";
@@ -49,23 +46,11 @@ const Badge = ({ children, variant = "default", className }) => {
   return <span className={cn(base, variants[variant], className)}>{children}</span>;
 }
 
-// Data Enablers
-function enrichProduct(product, index) {
-  const badges = ['Best Seller', 'New', null, 'Popular', 'Sale', null, 'New', null];
-  const ratings = [4.8, 4.9, 4.7, 4.8, 4.6, 4.9, 4.5, 4.7];
-  const reviews = [156, 203, 89, 134, 78, 312, 44, 97];
-  
-  const price = Number(product.price || 0);
-  const badge = badges[index % badges.length];
-
+function enrichProduct(product) {
   return {
     ...product,
-    image: product.imageUrl ? product.imageUrl : '',
-    badge,
-    rating: ratings[index % ratings.length],
-    reviews: reviews[index % reviews.length],
-    inStock: true,
-    originalPrice: badge === 'Sale' ? price * 1.2 : null
+    image: product.imageUrl ? `${API_BASE_URL}${product.imageUrl}` : '',
+    inStock: (product.stockQuantity || 0) > 0,
   };
 }
 
@@ -73,10 +58,9 @@ const ProductPage = () => {
   const [products, setProducts] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All Products');
-  const [viewMode, setViewMode] = useState("grid");
+  const [viewMode] = useState("grid");
   const [cart, setCart] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [wishlist, setWishlist] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -84,7 +68,7 @@ const ProductPage = () => {
       try {
         setIsLoading(true);
         const data = await getAllProducts();
-        setProducts(Array.isArray(data) && data.length ? data.map(enrichProduct) : []);
+        setProducts(Array.isArray(data) && data.length ? data.map(p => enrichProduct(p)) : []);
       } catch (error) {
         setProducts([]);
       } finally {
@@ -93,6 +77,11 @@ const ProductPage = () => {
     };
     loadProducts();
   }, []);
+
+  const categories = useMemo(() => {
+    const unique = [...new Set(products.map(p => p.category).filter(Boolean))].sort();
+    return [{ id: 'All Products', label: 'All Products' }, ...unique.map(c => ({ id: c, label: c }))];
+  }, [products]);
 
   const filteredProducts = products.filter((product) => {
     const matchesSearch = (product.name || '').toLowerCase().includes(searchQuery.toLowerCase());
@@ -127,13 +116,7 @@ const ProductPage = () => {
     );
   };
 
-  const toggleWishlist = (productId) => {
-    setWishlist((prev) =>
-      prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId]
-    );
-  };
-
-  const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
@@ -141,11 +124,11 @@ const ProductPage = () => {
       {/* Hero Section */}
       <section className="relative h-[45vh] min-h-[360px] flex items-center justify-center overflow-hidden bg-muted">
         <img
-          src="https://images.unsplash.com/photo-1596484552834-6a58f850e0a1?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"
+          src={giftShopHeroImg}
           alt="Zoo Gift Shop"
           className="absolute inset-0 w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-[rgba(0,0,0,0.6)] via-[rgba(0,0,0,0.4)] to-background" />
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.4) 50%, rgba(250,250,250,1) 100%)' }} />
         <div className="relative z-10 text-center px-4 max-w-4xl mx-auto mt-8">
           <Badge className="mb-4 bg-accent text-accent-foreground border-none">Shop Online</Badge>
           <h1 className="text-4xl md:text-6xl font-bold text-white mb-4 text-balance m-0 tracking-tight">
@@ -198,7 +181,7 @@ const ProductPage = () => {
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                 <style>{`.flex.items-center.gap-2.overflow-x-auto::-webkit-scrollbar { display: none; }`}</style>
-                {CATEGORIES.map((category) => (
+                {categories.map((category) => (
                   <button
                     key={category.id}
                     className={cn(
@@ -265,54 +248,38 @@ const ProductPage = () => {
                       src={product.image}
                       alt={product.name}
                       className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      style={!product.inStock ? { filter: 'blur(3px) brightness(0.45)' } : {}}
                     />
                   ) : (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-secondary/30">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-secondary/30"
+                      style={!product.inStock ? { filter: 'blur(3px) brightness(0.45)' } : {}}>
                         <span className="text-6xl drop-shadow-sm">{emoji}</span>
                     </div>
                   )}
-                  {product.badge && (
-                    <Badge className="absolute top-3 left-3 bg-accent text-accent-foreground border-none shadow-sm">
-                      {product.badge}
-                    </Badge>
-                  )}
                   {!product.inStock && (
-                    <div className="absolute inset-0 bg-background/80 flex items-center justify-center backdrop-blur-sm">
-                      <Badge variant="secondary" className="border-none shadow-sm">Out of Stock</Badge>
+                    <div className="absolute inset-0" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{
+                        background: 'rgba(55,55,55,0.88)',
+                        color: '#d1d5db',
+                        fontSize: '0.8rem',
+                        fontWeight: 700,
+                        letterSpacing: '0.1em',
+                        textTransform: 'uppercase',
+                        padding: '0.45rem 1.5rem',
+                        borderRadius: 4,
+                        border: '1px solid rgba(180,180,180,0.35)',
+                        transform: 'rotate(-8deg)',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+                      }}>Out of Stock</span>
                     </div>
                   )}
-                  <button
-                    onClick={() => toggleWishlist(product.id)}
-                    className="absolute top-3 right-3 p-2 rounded-full bg-background/90 backdrop-blur-sm hover:bg-background transition-colors border-none cursor-pointer shadow-sm"
-                  >
-                    <Heart
-                      className={cn(
-                        "h-4 w-4 transition-colors",
-                        wishlist.includes(product.id) ? "fill-red-500 text-red-500" : "text-muted-foreground"
-                      )}
-                    />
-                  </button>
                 </div>
                 <div className="p-5 flex flex-col flex-1">
-                  <h3 className="font-semibold text-foreground mb-1 line-clamp-1 min-h-[1.5rem] tracking-tight">{product.name}</h3>
-                  <p className="text-sm text-muted-foreground mb-3 line-clamp-2 min-h-[2.5rem] leading-relaxed">
-                    {product.description || `${product.category || 'Gift Shop'} item — a perfect wildlife-inspired keepsake.`}
-                  </p>
-                  <div className="flex items-center gap-2 mb-4 mt-auto">
-                    <div className="flex items-center gap-1">
-                      <Star className="h-4 w-4 fill-amber-400 text-amber-400 shrink-0" />
-                      <span className="text-sm font-medium">{product.rating}</span>
-                    </div>
-                    <span className="text-sm text-muted-foreground">({product.reviews} reviews)</span>
-                  </div>
-                  <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-foreground mb-1 line-clamp-1 tracking-tight">{product.name}</h3>
+                  <p className="text-xs text-muted-foreground mb-3">{product.category}</p>
+                  <div className="flex items-center justify-between mt-auto">
                     <div className="flex items-center gap-2">
                       <span className="text-lg font-bold text-foreground">${Number(product.price || 0).toFixed(2)}</span>
-                      {product.originalPrice && (
-                        <span className="text-sm text-muted-foreground line-through">
-                          ${product.originalPrice.toFixed(2)}
-                        </span>
-                      )}
                     </div>
                     <Button
                       size="sm"
@@ -348,44 +315,17 @@ const ProductPage = () => {
                         <span className="text-5xl drop-shadow-sm">{emoji}</span>
                     </div>
                   )}
-                  {product.badge && (
-                    <Badge className="absolute top-2 left-2 text-[10px] bg-accent text-accent-foreground border-none px-2 shadow-sm">
-                      {product.badge}
-                    </Badge>
-                  )}
                 </div>
                 <div className="flex-1 flex flex-col justify-between py-1">
                   <div>
-                    <div className="flex items-start justify-between gap-4">
+                    <div>
                       <h3 className="font-semibold text-xl text-foreground tracking-tight m-0">{product.name}</h3>
-                      <button onClick={() => toggleWishlist(product.id)} className="bg-background rounded-full p-2 border-none cursor-pointer hover:bg-muted shadow-sm border border-border">
-                        <Heart
-                          className={cn(
-                            "h-4 w-4 transition-colors",
-                            wishlist.includes(product.id) ? "fill-red-500 text-red-500" : "text-muted-foreground"
-                          )}
-                        />
-                      </button>
                     </div>
-                    <p className="text-muted-foreground mt-2 text-sm leading-relaxed max-w-2xl m-0">
-                      {product.description || `${product.category || 'Gift Shop'} item — a perfect wildlife-inspired keepsake.`}
-                    </p>
-                    <div className="flex items-center gap-2 mt-3 sm:flex">
-                      <div className="flex items-center gap-1">
-                          <Star className="h-4 w-4 fill-amber-400 text-amber-400 shrink-0" />
-                          <span className="text-sm font-medium">{product.rating}</span>
-                      </div>
-                      <span className="text-sm text-muted-foreground">({product.reviews} reviews)</span>
-                    </div>
+                    <p className="text-sm text-muted-foreground mt-1 m-0">{product.category}</p>
                   </div>
                   <div className="flex items-center justify-between mt-4 sm:mt-0 pt-4">
                     <div className="flex items-center gap-2">
                       <span className="text-2xl font-bold text-foreground">${Number(product.price || 0).toFixed(2)}</span>
-                      {product.originalPrice && (
-                        <span className="text-muted-foreground line-through">
-                          ${product.originalPrice.toFixed(2)}
-                        </span>
-                      )}
                     </div>
                     <Button disabled={!product.inStock} onClick={() => addToCart(product)} className="h-10 px-6">
                       Add to Cart

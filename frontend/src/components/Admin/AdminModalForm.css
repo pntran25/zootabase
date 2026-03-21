@@ -1,67 +1,92 @@
+/* =====================================================
+   AdminModalForm.css — Modal & Form Styles
+   ===================================================== */
+
 .admin-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(15, 23, 42, 0.5); /* Slate 900 with opacity */
+  background-color: rgba(0, 0, 0, 0.72);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  backdrop-filter: blur(2px);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
 .admin-modal-container {
-  background-color: white;
-  border-radius: 8px;
+  background-color: var(--adm-bg-surface);
+  border-radius: var(--adm-radius-lg);
   width: 100%;
-  max-width: 500px;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  max-width: 620px;
+  box-shadow: var(--adm-shadow-modal);
+  border: 1px solid var(--adm-border);
   display: flex;
   flex-direction: column;
-  max-height: 90vh;
+  max-height: 95vh;
 }
 
 .admin-modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 24px;
-  border-bottom: 1px solid #e2e8f0;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--adm-border);
+  border-left: 3px solid var(--adm-accent);
+  border-radius: var(--adm-radius-lg) var(--adm-radius-lg) 0 0;
+  background: var(--adm-bg-surface-2);
 }
 
 .admin-modal-header h2 {
   margin: 0;
-  font-size: 1.1rem;
-  color: #0f172a;
-  font-weight: 600;
+  font-size: 1rem;
+  color: var(--adm-text-primary);
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .admin-modal-close {
   background: none;
   border: none;
-  color: #64748b;
+  color: var(--adm-text-muted);
   cursor: pointer;
-  padding: 4px;
+  padding: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: var(--adm-radius-sm);
   transition: all 0.2s ease;
 }
 
 .admin-modal-close:hover {
-  background-color: #f1f5f9;
-  color: #0f172a;
+  background-color: var(--adm-bg-hover);
+  color: var(--adm-text-primary);
 }
 
 .admin-modal-content {
-  padding: 24px;
+  padding: 24px 28px;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--adm-border) transparent;
 }
 
-/* Form Styles */
+.admin-modal-content::-webkit-scrollbar {
+  width: 5px;
+}
+
+.admin-modal-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.admin-modal-content::-webkit-scrollbar-thumb {
+  background: var(--adm-border);
+  border-radius: 99px;
+}
+
+/* ── Form Layout ────────────────────────────────────── */
 .form-row {
   display: flex;
   gap: 16px;
@@ -71,9 +96,9 @@
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
   flex: 1;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .form-row .form-group {
@@ -81,81 +106,136 @@
 }
 
 .form-group label {
-  font-size: 0.85rem;
-  color: #334155;
-  font-weight: 500;
+  font-size: 0.8rem;
+  color: var(--adm-text-secondary);
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 .form-group input,
 .form-group select,
 .form-group textarea {
-  padding: 10px 12px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  color: #0f172a;
+  padding: 9px 12px;
+  border: 1px solid var(--adm-border);
+  border-radius: var(--adm-radius-md);
+  font-size: 0.875rem;
+  color: var(--adm-text-primary);
+  background-color: var(--adm-bg-surface-2);
   outline: none;
-  transition: border-color 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
   font-family: inherit;
-  background-color: white;
 }
 
 .form-group input::placeholder,
 .form-group textarea::placeholder {
-  color: #94a3b8;
+  color: var(--adm-text-muted);
 }
 
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+  border-color: var(--adm-accent);
+  box-shadow: 0 0 0 3px var(--adm-accent-glow);
+  background-color: var(--adm-bg-surface);
+}
+
+.form-group select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 10px center;
+  background-repeat: no-repeat;
+  background-size: 16px;
+  padding-right: 32px;
 }
 
 .form-group textarea {
   resize: vertical;
   min-height: 80px;
+  line-height: 1.5;
 }
 
-/* Checkbox specific */
+/* ── File Input ─────────────────────────────────────── */
+.form-group input[type="file"] {
+  padding: 0;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.form-group input[type="file"]::file-selector-button {
+  height: 100%;
+  padding: 9px 14px;
+  margin-right: 12px;
+  background: var(--adm-bg-surface);
+  border: none;
+  border-right: 1px solid var(--adm-border);
+  color: var(--adm-text-secondary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.form-group input[type="file"]::file-selector-button:hover {
+  background: var(--adm-accent);
+  color: #fff;
+  border-right-color: var(--adm-accent);
+}
+
+/* Checkbox */
 .form-group.checkbox-group {
   flex-direction: row;
   align-items: center;
   gap: 8px;
 }
 .form-group.checkbox-group input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
+  width: 15px;
+  height: 15px;
   cursor: pointer;
+  accent-color: var(--adm-accent);
 }
 .form-group.checkbox-group label {
   cursor: pointer;
   margin: 0;
 }
 
-/* Modal Actions */
+/* Section Heading inside modal */
+.form-section-heading {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--adm-text-muted);
+  border-top: 1px solid var(--adm-border-light);
+  padding-top: 16px;
+  margin: 20px 0 14px;
+}
+
+/* ── Modal Actions ──────────────────────────────────── */
 .admin-modal-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
+  gap: 10px;
   margin-top: 24px;
   padding-top: 16px;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid var(--adm-border-light);
 }
 
 .admin-btn-secondary {
-  background-color: white;
-  color: #475569;
-  border: 1px solid #cbd5e1;
-  padding: 8px 16px;
-  border-radius: 6px;
+  background-color: var(--adm-bg-surface-2);
+  color: var(--adm-text-secondary);
+  border: 1px solid var(--adm-border);
+  padding: 8px 18px;
+  border-radius: var(--adm-radius-md);
   font-weight: 500;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .admin-btn-secondary:hover {
-  background-color: #f8fafc;
-  color: #0f172a;
+  background-color: var(--adm-bg-hover);
+  color: var(--adm-text-primary);
+  border-color: var(--adm-text-muted);
 }

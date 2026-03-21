@@ -87,7 +87,7 @@ router.get('/api/maintenance', async (req, res) => {
         res.json(mappedResult);
     } catch (error) {
         console.error('Error fetching maintenance:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ error: error.message });
     }
 });
 
@@ -127,7 +127,7 @@ router.post('/api/maintenance', async (req, res) => {
         }
     } catch (error) {
         console.error('Error creating maintenance req:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ error: error.message });
     }
 });
 
@@ -167,7 +167,7 @@ router.put('/api/maintenance/:id', async (req, res) => {
         }
     } catch (error) {
         console.error('Error updating maintenance req:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ error: error.message });
     }
 });
 
@@ -182,7 +182,7 @@ router.delete('/api/maintenance/:id', async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         console.error('Error deleting maintenance req:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ error: error.message });
     }
 });
 

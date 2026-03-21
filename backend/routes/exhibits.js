@@ -34,6 +34,7 @@ router.get('/', async (req, res) => {
                 e.Capacity, 
                 e.OpeningHours, 
                 e.ImageUrl,
+                e.IsFeatured,
                 a.AreaName,
                 h.HabitatType
             FROM Exhibit e
@@ -44,7 +45,7 @@ router.get('/', async (req, res) => {
         res.json(result.recordset);
     } catch (err) {
         console.error('Error fetching exhibits:', err);
-        res.status(500).json({ error: 'Failed to fetch exhibits' });
+        res.status(500).json({ error: err.message });
     }
 });
 
@@ -116,7 +117,7 @@ router.post('/', async (req, res) => {
 
     } catch (err) {
         console.error('Error creating exhibit:', err);
-        res.status(500).json({ error: 'Failed to create exhibit' });
+        res.status(500).json({ error: err.message });
     }
 });
 
@@ -196,7 +197,24 @@ router.put('/:id', async (req, res) => {
 
     } catch (err) {
         console.error('Error updating exhibit:', err);
-        res.status(500).json({ error: 'Failed to update exhibit' });
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// PATCH featured flag only
+router.patch('/:id/featured', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { isFeatured } = req.body;
+        const pool = await connectToDb();
+        await pool.request()
+            .input('id', sql.Int, id)
+            .input('isFeatured', sql.Bit, isFeatured ? 1 : 0)
+            .query('UPDATE Exhibit SET IsFeatured = @isFeatured, UpdatedAt = SYSUTCDATETIME() WHERE ExhibitID = @id AND DeletedAt IS NULL');
+        res.json({ message: 'Featured status updated' });
+    } catch (error) {
+        console.error('Error updating featured status:', error);
+        res.status(500).json({ error: error.message });
     }
 });
 
@@ -205,14 +223,26 @@ router.delete('/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const pool = await connectToDb();
+
+        // Unlink any animals assigned to habitats under this exhibit
+        await pool.request()
+            .input('id', sql.Int, id)
+            .query(`
+                UPDATE Animal SET HabitatID = NULL
+                WHERE DeletedAt IS NULL
+                  AND HabitatID IN (
+                    SELECT h.HabitatID FROM Habitat h WHERE h.ExhibitID = @id
+                  )
+            `);
+
         await pool.request()
             .input('id', sql.Int, id)
             .query('UPDATE Exhibit SET DeletedAt = SYSUTCDATETIME() WHERE ExhibitID = @id');
-        
+
         res.json({ message: 'Exhibit deleted successfully' });
     } catch (err) {
         console.error('Error deleting exhibit:', err);
-        res.status(500).json({ error: 'Failed to delete exhibit' });
+        res.status(500).json({ error: err.message });
     }
 });
 
@@ -240,7 +270,7 @@ router.post('/:id/image', upload.single('image'), async (req, res) => {
         res.json({ message: 'Image uploaded successfully', ImageUrl: imageUrl });
     } catch (err) {
         console.error('Error uploading image:', err);
-        res.status(500).json({ error: 'Failed to upload image' });
+        res.status(500).json({ error: err.message });
     }
 });
 

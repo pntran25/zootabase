@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiPut, apiDelete, API_BASE_URL } from './apiClient';
+import { apiGet, apiPost, apiPut, apiDelete, API_BASE_URL, humanizeError } from './apiClient';
 
 const getAllAnimals = async () => {
     try {
@@ -30,9 +30,9 @@ const updateAnimal = async (id, animalData) => {
     }
 };
 
-const deleteAnimal = async (id) => {
+const deleteAnimal = async (id, reason) => {
     try {
-        const response = await apiDelete(`/api/animals/${id}`);
+        const response = await apiDelete(`/api/animals/${id}`, { reason });
         return response;
     } catch (error) {
         console.error('Error deleting animal:', error);
@@ -40,25 +40,43 @@ const deleteAnimal = async (id) => {
     }
 };
 
-const uploadAnimalImage = async (id, file) => {
+const setEndangered = async (id, isEndangered) => {
+    let response;
     try {
-        const formData = new FormData();
-        formData.append('image', file);
-        
-        const response = await fetch(`${API_BASE_URL}/api/animals/${id}/image`, {
+        response = await fetch(`${API_BASE_URL}/api/animals/${id}/endangered`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ isEndangered }),
+        });
+    } catch {
+        throw new Error(humanizeError(0));
+    }
+    if (!response.ok) {
+        let serverMsg = '';
+        try { const body = await response.json(); serverMsg = body.error || ''; } catch {}
+        throw new Error(humanizeError(response.status, serverMsg));
+    }
+    return response.json();
+};
+
+const uploadAnimalImage = async (id, file) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    let response;
+    try {
+        response = await fetch(`${API_BASE_URL}/api/animals/${id}/image`, {
             method: 'POST',
             body: formData,
         });
-
-        if (!response.ok) {
-            throw new Error(`Upload Failed with status ${response.status}`);
-        }
-
-        return response.json();
-    } catch (error) {
-        console.error('Error uploading animal image:', error);
-        throw error;
+    } catch {
+        throw new Error(humanizeError(0));
     }
+    if (!response.ok) {
+        let serverMsg = '';
+        try { const body = await response.json(); serverMsg = body.error || ''; } catch {}
+        throw new Error(humanizeError(response.status, serverMsg));
+    }
+    return response.json();
 };
 
 export default {
@@ -66,5 +84,6 @@ export default {
     createAnimal,
     updateAnimal,
     deleteAnimal,
-    uploadAnimalImage
+    uploadAnimalImage,
+    setEndangered,
 };

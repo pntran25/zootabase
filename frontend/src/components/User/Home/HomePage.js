@@ -37,8 +37,11 @@ const HomePage = () => {
     fetchExhibits();
   }, []);
 
-  // First 8 exhibits for the featured bento grid
-  const displayExhibits = exhibits.slice(0, 8);
+  // Featured exhibits first, then fill to 8 with the rest
+  const displayExhibits = [
+    ...exhibits.filter(e => e.IsFeatured === true || e.IsFeatured === 1),
+    ...exhibits.filter(e => e.IsFeatured !== true && e.IsFeatured !== 1),
+  ].slice(0, 8);
 
   return (
     <main className="ww-home">

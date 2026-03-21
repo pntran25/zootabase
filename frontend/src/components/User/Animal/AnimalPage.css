@@ -1,1 +1,16 @@
 /* Styles completely migrated to Tailwind CSS directly in AnimalPage.js */
+
+@keyframes animalCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animal-card-enter {
+  animation: animalCardIn 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
