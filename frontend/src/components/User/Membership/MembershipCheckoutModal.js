@@ -1,14 +1,8 @@
 import { useState } from 'react';
-import { Lock, X, Ticket } from 'lucide-react';
+import { Lock, X, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiPost } from '../../../services/apiClient';
 import '../../User/Product/CheckoutModal.css';
-import './TicketCheckoutModal.css';
-
-const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
 
 const GooglePayIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -48,16 +42,17 @@ const PaymentIcons = () => (
   </div>
 );
 
-const TicketCheckoutModal = ({
+const MembershipCheckoutModal = ({
   isOpen, onClose,
-  visitDate,
-  ticketType,
-  quantities,
-  addOns,
-  subtotal, total,
+  plan, billingPeriod, total,
+  userProfile,
   onOrderPlaced,
 }) => {
-  const [contact, setContact] = useState({ email: '', fullName: '', address1: '', address2: '', city: '', state: '', zip: '', phone: '' });
+  const [contact, setContact] = useState({
+    email: userProfile?.Email || '',
+    fullName: userProfile?.FullName || '',
+    address1: '', address2: '', city: '', state: '', zip: '', phone: '',
+  });
   const [card, setCard] = useState({ number: '', expiry: '', cvv: '' });
   const [billingSame, setBillingSame] = useState(true);
   const [bill, setBill] = useState({ fullName: '', address1: '', address2: '', city: '', state: '', zip: '' });
@@ -69,9 +64,6 @@ const TicketCheckoutModal = ({
 
   const fmtCard = v => { const d = v.replace(/\D/g, '').slice(0, 16); return d.match(/.{1,4}/g)?.join(' ') || d; };
   const fmtExpiry = v => { const d = v.replace(/\D/g, '').slice(0, 4); return d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d; };
-
-  const visitDateStr = visitDate ? `${MONTHS[visitDate.month]} ${visitDate.day}, ${visitDate.year}` : '';
-  const totalGuests = (quantities?.adult || 0) + (quantities?.child || 0) + (quantities?.senior || 0);
 
   const handlePlace = async () => {
     if (!contact.email || !contact.fullName || !contact.address1 || !contact.city || !contact.state || !contact.zip) {
@@ -90,11 +82,11 @@ const TicketCheckoutModal = ({
     setPlacing(true);
     try {
       const cardLastFour = card.number.replace(/\D/g, '').slice(-4);
-      const visitDateISO = visitDate
-        ? `${visitDate.year}-${String(visitDate.month + 1).padStart(2, '0')}-${String(visitDate.day).padStart(2, '0')}`
-        : null;
 
-      await apiPost('/api/ticket-orders', {
+      await apiPost('/api/membership-subscriptions', {
+        customerId: userProfile?.CustomerID || null,
+        planName: plan.Name,
+        billingPeriod,
         fullName: contact.fullName,
         email: contact.email,
         phone: contact.phone || null,
@@ -110,22 +102,15 @@ const TicketCheckoutModal = ({
         billingCity: billingSame ? null : bill.city,
         billingState: billingSame ? null : bill.state,
         billingZip: billingSame ? null : bill.zip,
-        visitDate: visitDateISO,
-        ticketType: ticketType?.name,
-        adultQty: quantities?.adult || 0,
-        childQty: quantities?.child || 0,
-        seniorQty: quantities?.senior || 0,
-        addOns: addOns || [],
         cardLastFour,
-        subtotal,
         total,
       });
 
-      toast.success('Your tickets have been booked! Check your email for confirmation.', { duration: 6000 });
+      toast.success('Membership activated! Welcome to the wild side.', { duration: 6000 });
       onOrderPlaced();
       onClose();
     } catch (err) {
-      toast.error(err.message || 'Failed to place order. Please try again.');
+      toast.error(err.message || 'Failed to activate membership. Please try again.');
     } finally {
       setPlacing(false);
     }
@@ -133,14 +118,16 @@ const TicketCheckoutModal = ({
 
   if (!isOpen) return null;
 
+  const periodLabel = billingPeriod === 'yearly' ? 'Yearly' : 'Monthly';
+
   return (
     <div className="co-overlay" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="co-modal tco-modal">
+      <div className="co-modal" style={{ maxWidth: 900 }}>
         {/* Header */}
         <div className="co-header">
           <div className="co-header-left">
             <Lock size={16} color="#2d6a4f" />
-            <h1>TICKET CHECKOUT</h1>
+            <h1>MEMBERSHIP CHECKOUT</h1>
           </div>
           <button className="co-close-btn" onClick={onClose}><X size={16} /> Close</button>
         </div>
@@ -276,64 +263,35 @@ const TicketCheckoutModal = ({
           <div className="co-right">
             <p className="co-summary-title">Order Summary</p>
 
-            {/* Visit Date */}
-            <div className="tco-info-row">
-              <span className="tco-info-label">Visit Date</span>
-              <span className="tco-info-value">{visitDateStr}</span>
-            </div>
-
-            {/* Ticket type + quantities */}
-            <div className="co-item-list" style={{ marginTop: 14 }}>
-              <div className="tco-ticket-type">
-                <Ticket size={14} style={{ color: '#2d6a4f', flexShrink: 0, marginTop: 2 }} />
-                <span className="tco-ticket-name">{ticketType?.name}</span>
+            {/* Plan info */}
+            <div style={{ background: 'rgba(45,106,79,0.08)', border: '1px solid rgba(45,106,79,0.2)', borderRadius: 8, padding: '10px 14px', marginBottom: 14 }}>
+              <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#2d6a4f', marginBottom: 2 }}>
+                Membership Plan
               </div>
-              {(quantities?.adult || 0) > 0 && (
-                <div className="tco-qty-row">
-                  <span>{quantities.adult}x Adult</span>
-                  <span>${(quantities.adult * ticketType.prices.adult).toFixed(2)}</span>
-                </div>
-              )}
-              {(quantities?.child || 0) > 0 && (
-                <div className="tco-qty-row">
-                  <span>{quantities.child}x Child</span>
-                  <span>${(quantities.child * ticketType.prices.child).toFixed(2)}</span>
-                </div>
-              )}
-              {(quantities?.senior || 0) > 0 && (
-                <div className="tco-qty-row">
-                  <span>{quantities.senior}x Senior</span>
-                  <span>${(quantities.senior * ticketType.prices.senior).toFixed(2)}</span>
-                </div>
-              )}
-              {addOns && addOns.length > 0 && (
-                <>
-                  <div className="tco-divider" />
-                  <p className="tco-addon-header">Add-ons</p>
-                  {addOns.map(a => (
-                    <div key={a.id} className="tco-qty-row">
-                      <span>{a.name} x{totalGuests}</span>
-                      <span>${(a.price * totalGuests).toFixed(2)}</span>
-                    </div>
-                  ))}
-                </>
-              )}
+              <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#1a1a1a' }}>{plan?.Name}</div>
             </div>
 
-            {/* Totals */}
+            <div className="co-item-list">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                <CreditCard size={14} style={{ color: '#2d6a4f', flexShrink: 0 }} />
+                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1a1a1a' }}>{periodLabel} Billing</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#555', padding: '2px 0', marginTop: 6 }}>
+                <span>{plan?.Name} ({periodLabel})</span>
+                <span style={{ fontWeight: 600, color: '#1a1a1a' }}>${Number(total).toFixed(billingPeriod === 'yearly' ? 0 : 2)}</span>
+              </div>
+            </div>
+
+            {/* Total */}
             <div className="co-totals">
-              <div className="co-totals-row">
-                <span className="co-totals-label">Subtotal</span>
-                <span className="co-totals-value">${subtotal.toFixed(2)}</span>
-              </div>
               <div className="co-totals-row total">
                 <span className="co-totals-label">TOTAL</span>
-                <span className="co-totals-value">${total.toFixed(2)}</span>
+                <span className="co-totals-value">${Number(total).toFixed(billingPeriod === 'yearly' ? 0 : 2)}</span>
               </div>
             </div>
 
             <button className="co-place-btn" onClick={handlePlace} disabled={placing}>
-              {placing ? 'PLACING ORDER...' : 'PLACE ORDER'}
+              {placing ? 'ACTIVATING...' : 'PLACE ORDER'}
             </button>
             <p className="co-secure-note">Transactions are secure and encrypted</p>
             <PaymentIcons />
@@ -344,4 +302,4 @@ const TicketCheckoutModal = ({
   );
 };
 
-export default TicketCheckoutModal;
+export default MembershipCheckoutModal;

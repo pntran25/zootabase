@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, PawPrint, Map, Ticket, ShoppingBag,
   Wrench, LogOut, TicketCheck, CalendarDays,
-  Sun, Moon, Users, LineChart, FileText
+  Sun, Moon, Users, LineChart, FileText, CreditCard
 } from 'lucide-react';
 import brandLogo from '../assets/images/Logo.png';
 import { Toaster, toast } from 'sonner';
@@ -13,7 +13,7 @@ import { auth } from '../services/firebase';
 import './AdminLayout.css';
 
 const rolePermissions = {
-  'Super Admin': ['dashboard', 'animals', 'exhibits', 'attractions', 'events', 'tickets', 'shop', 'maintenance', 'staff', 'analytics', 'feedback', 'reports'],
+  'Super Admin': ['dashboard', 'animals', 'exhibits', 'attractions', 'events', 'tickets', 'shop', 'maintenance', 'staff', 'analytics', 'feedback', 'reports', 'memberships'],
   'Caretaker': ['dashboard', 'animals', 'exhibits'],
   'Event Coordinator': ['dashboard', 'events'],
   'Ticket Staff': ['dashboard', 'tickets'],
@@ -52,12 +52,11 @@ const AdminLayout = () => {
   };
 
   const handleLogout = async () => {
+    navigate('/');
     try {
       if (auth.currentUser) await auth.signOut();
-      navigate('/');
     } catch (e) {
       console.error(e);
-      navigate('/');
     }
   };
 
@@ -129,6 +128,10 @@ const AdminLayout = () => {
           <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Data Reports</p>
 
           {renderLink('/admin/reports', <FileText size={18} className="nav-icon" />, 'Transaction History', 'reports')}
+
+          <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Memberships</p>
+
+          {renderLink('/admin/memberships', <CreditCard size={18} className="nav-icon" />, 'Manage Plans', 'memberships')}
 
           <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">System</p>
 

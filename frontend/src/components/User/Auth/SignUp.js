@@ -7,23 +7,25 @@ import loginImg from '../../../assets/images/login_lion.png';
 import brandLogo from '../../../assets/images/Logo.png';
 
 const Signup = () => {
-  const [name, setName]           = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName]   = useState('');
   const [email, setEmail]         = useState('');
   const [password, setPassword]   = useState('');
   const [showPass, setShowPass]   = useState(false);
   const [errorMsg, setErrorMsg]   = useState('');
   const navigate = useNavigate();
 
-  const handleSyncTokens = async (userCredential) => {
+  const handleSyncTokens = async (userCredential, fullName) => {
     const token = await userCredential.user.getIdToken(true);
     const response = await fetch('http://localhost:5000/api/auth/sync', {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
-        }
+        },
+        body: JSON.stringify({ fullName }),
     });
-    
+
     const data = await response.json();
     if (data.isStaff) {
         navigate('/admin');
@@ -35,10 +37,11 @@ const Signup = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
+    const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      await updateProfile(userCredential.user, { displayName: name });
-      await handleSyncTokens(userCredential);
+      await updateProfile(userCredential.user, { displayName: fullName });
+      await handleSyncTokens(userCredential, fullName);
     } catch (err) {
       console.error(err);
       if (err.code === 'auth/email-already-in-use') {
@@ -56,7 +59,7 @@ const Signup = () => {
       setErrorMsg('');
       const provider = new GoogleAuthProvider();
       const userCredential = await signInWithPopup(auth, provider);
-      await handleSyncTokens(userCredential);
+      await handleSyncTokens(userCredential, null);
     } catch (err) {
       console.error(err);
       setErrorMsg('Google sign-up failed. Please try again.');
@@ -123,20 +126,34 @@ const Signup = () => {
 
             <form onSubmit={handleSubmit} className="space-y-4 flex flex-col">
               
-              <div className="space-y-1 flex flex-col items-start relative w-full mb-4">
-                <label className="text-sm font-medium text-foreground mb-1">
-                  Full Name
-                </label>
-                <div className="relative w-full">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                  <input
-                    type="text"
-                    placeholder="John Doe"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full pl-10 pr-4 h-11 bg-background border border-border rounded-md text-sm outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                    required
-                  />
+              <div className="flex gap-3 w-full mb-4">
+                <div className="space-y-1 flex flex-col items-start relative flex-1">
+                  <label className="text-sm font-medium text-foreground mb-1">First Name</label>
+                  <div className="relative w-full">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <input
+                      type="text"
+                      placeholder="John"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      className="w-full pl-10 pr-4 h-11 bg-background border border-border rounded-md text-sm outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1 flex flex-col items-start relative flex-1">
+                  <label className="text-sm font-medium text-foreground mb-1">Last Name</label>
+                  <div className="relative w-full">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <input
+                      type="text"
+                      placeholder="Doe"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      className="w-full pl-10 pr-4 h-11 bg-background border border-border rounded-md text-sm outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                      required
+                    />
+                  </div>
                 </div>
               </div>
 

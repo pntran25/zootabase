@@ -10,6 +10,7 @@ import TicketPage from './components/User/Ticket/TicketPage';
 import ProductPage from './components/User/Product/ProductPage';
 import TransactionPage from './components/User/Transaction/TransactionPage';
 import TicketingPage from './components/User/Ticketing/TicketingPage';
+import MembershipPage from './components/User/Membership/MembershipPage';
 import Login from './components/User/Auth/Login';
 import Signup from './components/User/Auth/Signup';
 
@@ -28,6 +29,7 @@ import ProtectedRoute from './components/Admin/ProtectedRoute';
 import ManageStaff from './components/Admin/ManageStaff/ManageStaff';
 import LoginAnalytics from './components/Admin/Dashboard/LoginAnalytics';
 import DataReports from './components/Admin/DataReports/DataReports';
+import ManageMemberships from './components/Admin/ManageMemberships/ManageMemberships';
 
 const allStaffRoles = ['Super Admin', 'Caretaker', 'Event Coordinator', 'Ticket Staff', 'Shop Manager', 'Maintenance'];
 
@@ -47,6 +49,7 @@ function App() {
             <Route path="/ticketing" element={<TicketingPage />} />
             <Route path="/tickets" element={<TicketPage />} />
             <Route path="/transactions" element={<TransactionPage />} />
+            <Route path="/membership" element={<MembershipPage />} />
             <Route path="*" element={<HomePage />} />
           </Route>
 
@@ -68,6 +71,7 @@ function App() {
              <Route path="staff" element={<ProtectedRoute allowedRoles={['Super Admin']}><ManageStaff /></ProtectedRoute>} />
              <Route path="analytics" element={<ProtectedRoute allowedRoles={['Super Admin']}><LoginAnalytics /></ProtectedRoute>} />
              <Route path="reports" element={<ProtectedRoute allowedRoles={['Super Admin', 'Shop Manager']}><DataReports /></ProtectedRoute>} />
+             <Route path="memberships" element={<ProtectedRoute allowedRoles={['Super Admin']}><ManageMemberships /></ProtectedRoute>} />
           </Route>
         </Routes>
       </div>

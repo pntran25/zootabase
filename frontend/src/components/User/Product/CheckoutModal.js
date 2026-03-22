@@ -58,7 +58,7 @@ const PaymentIcons = ({ size = 'sm' }) => (
   </div>
 );
 
-const CheckoutModal = ({ isOpen, onClose, cart, cartTotal, onOrderPlaced }) => {
+const CheckoutModal = ({ isOpen, onClose, cart, cartTotal, membershipDiscount = 0, onOrderPlaced }) => {
   const [ship, setShip] = useState({ email: '', fullName: '', address1: '', address2: '', city: '', state: '', zip: '', phone: '' });
   const [card, setCard] = useState({ number: '', expiry: '', cvv: '' });
   const [billingSame, setBillingSame] = useState(true);
@@ -67,8 +67,10 @@ const CheckoutModal = ({ isOpen, onClose, cart, cartTotal, onOrderPlaced }) => {
   const [placing, setPlacing] = useState(false);
 
   const subtotal = cartTotal;
-  const tax = subtotal * TAX_RATE;
-  const total = subtotal + SHIPPING_COST + tax;
+  const discountAmount = membershipDiscount > 0 ? +(subtotal * membershipDiscount / 100).toFixed(2) : 0;
+  const discountedSubtotal = subtotal - discountAmount;
+  const tax = discountedSubtotal * TAX_RATE;
+  const total = discountedSubtotal + SHIPPING_COST + tax;
 
   const setS = (key, val) => setShip(p => ({ ...p, [key]: val }));
   const setC = (key, val) => setCard(p => ({ ...p, [key]: val }));
@@ -115,7 +117,10 @@ const CheckoutModal = ({ isOpen, onClose, cart, cartTotal, onOrderPlaced }) => {
           billingCity: billingSame ? null : bill.city,
           billingState: billingSame ? null : bill.state,
           billingZip: billingSame ? null : bill.zip,
-          cardLastFour, subtotal, shipping: SHIPPING_COST, tax, total, orderItems,
+          cardLastFour,
+          subtotal: discountedSubtotal,
+          membershipDiscount, discountAmount,
+          shipping: SHIPPING_COST, tax, total, orderItems,
         }),
       });
       if (!response.ok) {
@@ -315,11 +320,23 @@ const CheckoutModal = ({ isOpen, onClose, cart, cartTotal, onOrderPlaced }) => {
               })}
             </div>
 
+            {membershipDiscount > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, padding: '8px 12px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8 }}>
+                <span style={{ fontSize: '0.8rem', color: '#15803d', fontWeight: 700 }}>🎟 Member Discount — {membershipDiscount}% off applied</span>
+              </div>
+            )}
+
             <div className="co-totals">
               <div className="co-totals-row">
                 <span className="co-totals-label">Subtotal</span>
                 <span className="co-totals-value">${subtotal.toFixed(2)}</span>
               </div>
+              {discountAmount > 0 && (
+                <div className="co-totals-row">
+                  <span className="co-totals-label" style={{ color: '#16a34a' }}>Member Discount ({membershipDiscount}%)</span>
+                  <span className="co-totals-value" style={{ color: '#16a34a' }}>−${discountAmount.toFixed(2)}</span>
+                </div>
+              )}
               <div className="co-totals-row">
                 <span className="co-totals-label">Shipping</span>
                 <span className="co-totals-value">${SHIPPING_COST.toFixed(2)}</span>
