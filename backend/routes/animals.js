@@ -110,6 +110,7 @@ router.get('/', async (req, res) => {
                 a.IsEndangered as isEndangered,
                 a.AnimalCode as animalCode,
                 a.SpeciesDetail as speciesDetail,
+                a.IsDisplay as isDisplay,
                 a.CreatedBy as createdBy,
                 a.UpdatedBy as updatedBy,
                 h.HabitatType,
@@ -118,6 +119,7 @@ router.get('/', async (req, res) => {
             LEFT JOIN Habitat h ON a.HabitatID = h.HabitatID
             LEFT JOIN Exhibit e ON h.ExhibitID = e.ExhibitID
             WHERE a.DeletedAt IS NULL
+            ${req.query.displayOnly === 'true' ? 'AND a.IsDisplay = 1' : ''}
         `;
         const result = await pool.request().query(query);
         res.json(result.recordset);
@@ -130,7 +132,7 @@ router.get('/', async (req, res) => {
 // POST new animal
 router.post('/', optionalAuth, async (req, res) => {
     try {
-        const { name, species, speciesDetail, age, gender, diet, health, dateArrived, exhibit, lifespan, weight, region, funFact, isEndangered, codeSuffix } = req.body;
+        const { name, species, speciesDetail, age, gender, diet, health, dateArrived, exhibit, lifespan, weight, region, funFact, isEndangered, isDisplay, codeSuffix } = req.body;
         const adminName = req.userProfile ? `${req.userProfile.FirstName} ${req.userProfile.LastName}`.trim() : null;
         const pool = await connectToDb();
         const transaction = new sql.Transaction(pool);
@@ -177,15 +179,16 @@ router.post('/', optionalAuth, async (req, res) => {
                 .input('region', sql.NVarChar, region || null)
                 .input('funFact', sql.NVarChar, funFact || null)
                 .input('isEndangered', sql.Bit, isEndangered ? 1 : 0)
+                .input('isDisplay', sql.Bit, isDisplay ? 1 : 0)
                 .input('animalCode', sql.NVarChar, animalCode)
                 .input('speciesDetail', sql.NVarChar, speciesDetail || null)
                 .input('createdBy', sql.NVarChar, adminName)
                 .query(`
                     DECLARE @AnimOut TABLE (id INT, imageUrl NVARCHAR(255));
 
-                    INSERT INTO Animal (Name, Species, SpeciesDetail, Age, Gender, Diet, HealthStatus, DateArrived, HabitatID, Lifespan, Weight, Region, FunFact, IsEndangered, AnimalCode, CreatedBy)
+                    INSERT INTO Animal (Name, Species, SpeciesDetail, Age, Gender, Diet, HealthStatus, DateArrived, HabitatID, Lifespan, Weight, Region, FunFact, IsEndangered, IsDisplay, AnimalCode, CreatedBy)
                     OUTPUT INSERTED.AnimalID, INSERTED.ImageUrl INTO @AnimOut
-                    VALUES (@name, @species, @speciesDetail, @age, @gender, @diet, @health, @dateArrived, @habitatId, @lifespan, @weight, @region, @funFact, @isEndangered, @animalCode, @createdBy);
+                    VALUES (@name, @species, @speciesDetail, @age, @gender, @diet, @health, @dateArrived, @habitatId, @lifespan, @weight, @region, @funFact, @isEndangered, @isDisplay, @animalCode, @createdBy);
 
                     SELECT id, imageUrl FROM @AnimOut;
                 `);
@@ -212,7 +215,7 @@ router.post('/', optionalAuth, async (req, res) => {
 router.put('/:id', optionalAuth, async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, species, speciesDetail, age, gender, diet, health, dateArrived, exhibit, lifespan, weight, region, funFact, isEndangered } = req.body;
+        const { name, species, speciesDetail, age, gender, diet, health, dateArrived, exhibit, lifespan, weight, region, funFact, isEndangered, isDisplay } = req.body;
         const adminName = req.userProfile ? `${req.userProfile.FirstName} ${req.userProfile.LastName}`.trim() : null;
         const pool = await connectToDb();
         const transaction = new sql.Transaction(pool);
@@ -239,6 +242,7 @@ router.put('/:id', optionalAuth, async (req, res) => {
                 .input('region', sql.NVarChar, region || null)
                 .input('funFact', sql.NVarChar, funFact || null)
                 .input('isEndangered', sql.Bit, isEndangered ? 1 : 0)
+                .input('isDisplay', sql.Bit, isDisplay ? 1 : 0)
                 .input('speciesDetail', sql.NVarChar, speciesDetail || null)
                 .input('updatedBy', sql.NVarChar, adminName)
                 .query(`
@@ -248,6 +252,7 @@ router.put('/:id', optionalAuth, async (req, res) => {
                         Diet = @diet, HealthStatus = @health, DateArrived = @dateArrived,
                         HabitatID = @habitatId, Lifespan = @lifespan, Weight = @weight,
                         Region = @region, FunFact = @funFact, IsEndangered = @isEndangered,
+                        IsDisplay = @isDisplay,
                         UpdatedAt = SYSUTCDATETIME(), UpdatedBy = @updatedBy
                     WHERE AnimalID = @id AND DeletedAt IS NULL
                 `);

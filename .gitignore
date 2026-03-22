@@ -41,3 +41,5 @@ __pycache__/
 
 # dotenv environment example
 .env.example
+.claude  
+.claude/  

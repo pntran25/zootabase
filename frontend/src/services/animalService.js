@@ -10,6 +10,16 @@ const getAllAnimals = async () => {
     }
 };
 
+const getDisplayAnimals = async () => {
+    try {
+        const response = await apiGet('/api/animals?displayOnly=true');
+        return response;
+    } catch (error) {
+        console.error('Error fetching display animals:', error);
+        throw error;
+    }
+};
+
 const createAnimal = async (animalData) => {
     try {
         const response = await apiPost('/api/animals', animalData);
@@ -81,6 +91,7 @@ const uploadAnimalImage = async (id, file) => {
 
 export default {
     getAllAnimals,
+    getDisplayAnimals,
     createAnimal,
     updateAnimal,
     deleteAnimal,
