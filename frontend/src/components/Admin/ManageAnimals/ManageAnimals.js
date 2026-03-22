@@ -745,34 +745,38 @@ const ManageAnimals = () => {
             />
           </div>
         </div>
+        <div className="form-row">
+          <div className="form-group">
+            <label>Diet Type</label>
+            <AdminSelect
+              value={formData.diet}
+              onChange={val => setFormData({ ...formData, diet: val })}
+              options={[{ value: '', label: 'Select diet type...' }, 'Herbivore', 'Carnivore', 'Omnivore']}
+            />
+          </div>
+          <div className="form-group">
+            <label>Health Status</label>
+            <AdminSelect
+              value={formData.health}
+              onChange={val => setFormData({ ...formData, health: val })}
+              options={['Excellent', 'Good', 'Fair', 'Needs Checkup', 'Critical']}
+            />
+          </div>
+        </div>
+        <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+          <input
+            type="checkbox"
+            id="isEndangered"
+            checked={formData.isEndangered}
+            onChange={e => setFormData({ ...formData, isEndangered: e.target.checked })}
+            style={{ width: 16, height: 16, margin: 0, accentColor: '#ef4444', flexShrink: 0 }}
+          />
+          <label htmlFor="isEndangered" style={{ margin: 0, cursor: 'pointer' }}>
+            Mark as <span style={{ color: '#ef4444', fontWeight: 700 }}>Endangered</span>
+          </label>
+        </div>
         {formData.isDisplay && (
           <>
-            <div className="form-row">
-              <div className="form-group">
-                <label>Diet Type</label>
-                <input type="text" placeholder="e.g. Carnivore, Herbivore" value={formData.diet} onChange={e => setFormData({ ...formData, diet: e.target.value })} />
-              </div>
-              <div className="form-group">
-                <label>Health Status</label>
-                <AdminSelect
-                  value={formData.health}
-                  onChange={val => setFormData({ ...formData, health: val })}
-                  options={['Excellent', 'Good', 'Fair', 'Needs Checkup', 'Critical']}
-                />
-              </div>
-            </div>
-            <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-              <input
-                type="checkbox"
-                id="isEndangered"
-                checked={formData.isEndangered}
-                onChange={e => setFormData({ ...formData, isEndangered: e.target.checked })}
-                style={{ width: 16, height: 16, margin: 0, accentColor: '#ef4444', flexShrink: 0 }}
-              />
-              <label htmlFor="isEndangered" style={{ margin: 0, cursor: 'pointer' }}>
-                Mark as <span style={{ color: '#ef4444', fontWeight: 700 }}>Endangered</span>
-              </label>
-            </div>
             <div className="form-group">
               <label>Profile Image</label>
               <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 8 }}>
