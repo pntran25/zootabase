@@ -28,13 +28,14 @@ router.get('/', async (req, res) => {
     try {
         const pool = await connectToDb();
         const result = await pool.request().query(`
-            SELECT 
-                e.ExhibitID, 
-                e.ExhibitName, 
-                e.Capacity, 
-                e.OpeningHours, 
+            SELECT
+                e.ExhibitID,
+                e.ExhibitName,
+                e.Capacity,
+                e.OpeningHours,
                 e.ImageUrl,
                 e.IsFeatured,
+                e.Description,
                 a.AreaName,
                 h.HabitatType
             FROM Exhibit e
@@ -52,9 +53,9 @@ router.get('/', async (req, res) => {
 // POST new exhibit
 router.post('/', async (req, res) => {
     try {
-        const { ExhibitName, AreaName, HabitatType, Capacity, OpeningHours } = req.body;
+        const { ExhibitName, AreaName, HabitatType, Capacity, OpeningHours, Description } = req.body;
         const pool = await connectToDb();
-        
+
         // Use a transaction since we might need to create an Area and a Habitat
         const transaction = new sql.Transaction(pool);
         await transaction.begin();
@@ -67,7 +68,7 @@ router.post('/', async (req, res) => {
             const areaResult = await request
                 .input('paramAreaName', sql.NVarChar, AreaName)
                 .query('SELECT AreaID FROM Area WHERE AreaName = @paramAreaName');
-            
+
             if (areaResult.recordset.length > 0) {
                 areaId = areaResult.recordset[0].AreaID;
             } else {
@@ -82,10 +83,11 @@ router.post('/', async (req, res) => {
                 .input('paramAreaId', sql.Int, areaId)
                 .input('paramCapacity', sql.Int, Capacity)
                 .input('paramOpeningHours', sql.NVarChar, OpeningHours)
+                .input('paramDescription', sql.NVarChar(1000), Description || null)
                 .query(`
-                    INSERT INTO Exhibit (ExhibitName, AreaID, Capacity, OpeningHours)
+                    INSERT INTO Exhibit (ExhibitName, AreaID, Capacity, OpeningHours, Description)
                     OUTPUT INSERTED.ExhibitID
-                    VALUES (@paramExhibitName, @paramAreaId, @paramCapacity, @paramOpeningHours)
+                    VALUES (@paramExhibitName, @paramAreaId, @paramCapacity, @paramOpeningHours, @paramDescription)
                 `);
             const exhibitId = exhibitResult.recordset[0].ExhibitID;
 
@@ -125,21 +127,21 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { ExhibitName, AreaName, HabitatType, Capacity, OpeningHours } = req.body;
+        const { ExhibitName, AreaName, HabitatType, Capacity, OpeningHours, Description } = req.body;
         const pool = await connectToDb();
-        
+
         const transaction = new sql.Transaction(pool);
         await transaction.begin();
 
         try {
             const request = new sql.Request(transaction);
-            
+
             // 1. Manage Area
             let areaId;
             const areaResult = await request
                 .input('paramAreaName', sql.NVarChar, AreaName)
                 .query('SELECT AreaID FROM Area WHERE AreaName = @paramAreaName');
-            
+
             if (areaResult.recordset.length > 0) {
                 areaId = areaResult.recordset[0].AreaID;
             } else {
@@ -155,12 +157,14 @@ router.put('/:id', async (req, res) => {
                 .input('paramAreaId', sql.Int, areaId)
                 .input('paramCapacity', sql.Int, Capacity)
                 .input('paramOpeningHours', sql.NVarChar, OpeningHours)
+                .input('paramDescription', sql.NVarChar(1000), Description || null)
                 .query(`
-                    UPDATE Exhibit 
-                    SET ExhibitName = @paramExhibitName, 
-                        AreaID = @paramAreaId, 
-                        Capacity = @paramCapacity, 
+                    UPDATE Exhibit
+                    SET ExhibitName = @paramExhibitName,
+                        AreaID = @paramAreaId,
+                        Capacity = @paramCapacity,
                         OpeningHours = @paramOpeningHours,
+                        Description = @paramDescription,
                         UpdatedAt = SYSUTCDATETIME()
                     WHERE ExhibitID = @paramId AND DeletedAt IS NULL
                 `);

@@ -11,6 +11,7 @@ import ProductPage from './components/User/Product/ProductPage';
 import TransactionPage from './components/User/Transaction/TransactionPage';
 import TicketingPage from './components/User/Ticketing/TicketingPage';
 import Login from './components/User/Auth/Login';
+import Signup from './components/User/Auth/Signup';
 
 // Admin Imports
 import AdminLayout from './layout/AdminLayout';
@@ -23,6 +24,12 @@ import ManageTickets from './components/Admin/ManageTickets/ManageTickets';
 import ManageShop from './components/Admin/ManageShop/ManageShop';
 import ManageMaintenance from './components/Admin/ManageMaintenance/ManageMaintenance';
 import GuestFeedback from './components/Admin/GuestFeedback/GuestFeedback';
+import ProtectedRoute from './components/Admin/ProtectedRoute';
+import ManageStaff from './components/Admin/ManageStaff/ManageStaff';
+import LoginAnalytics from './components/Admin/Dashboard/LoginAnalytics';
+import DataReports from './components/Admin/DataReports/DataReports';
+
+const allStaffRoles = ['Super Admin', 'Caretaker', 'Event Coordinator', 'Ticket Staff', 'Shop Manager', 'Maintenance'];
 
 function App() {
   return (
@@ -43,20 +50,24 @@ function App() {
             <Route path="*" element={<HomePage />} />
           </Route>
 
-          {/* Standalone Login route — no UserLayout header */}
+          {/* Standalone Login and Signup routes — no UserLayout header */}
           <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
 
           {/* Admin Routes */}
-          <Route path="/admin" element={<AdminLayout />}>
+          <Route path="/admin" element={<ProtectedRoute allowedRoles={allStaffRoles}><AdminLayout /></ProtectedRoute>}>
              <Route index element={<Dashboard />} />
-             <Route path="animals" element={<ManageAnimals />} />
-             <Route path="exhibits" element={<ManageExhibits />} />
-             <Route path="attractions" element={<ManageAttractions />} />
-             <Route path="events" element={<ManageEvents />} />
-             <Route path="tickets" element={<ManageTickets />} />
-             <Route path="shop" element={<ManageShop />} />
-             <Route path="maintenance" element={<ManageMaintenance />} />
-             <Route path="feedback" element={<GuestFeedback />} />
+             <Route path="animals" element={<ProtectedRoute allowedRoles={['Super Admin', 'Caretaker']}><ManageAnimals /></ProtectedRoute>} />
+             <Route path="exhibits" element={<ProtectedRoute allowedRoles={['Super Admin', 'Caretaker']}><ManageExhibits /></ProtectedRoute>} />
+             <Route path="attractions" element={<ProtectedRoute allowedRoles={['Super Admin']}><ManageAttractions /></ProtectedRoute>} />
+             <Route path="events" element={<ProtectedRoute allowedRoles={['Super Admin', 'Event Coordinator']}><ManageEvents /></ProtectedRoute>} />
+             <Route path="tickets" element={<ProtectedRoute allowedRoles={['Super Admin', 'Ticket Staff']}><ManageTickets /></ProtectedRoute>} />
+             <Route path="shop" element={<ProtectedRoute allowedRoles={['Super Admin', 'Shop Manager']}><ManageShop /></ProtectedRoute>} />
+             <Route path="maintenance" element={<ProtectedRoute allowedRoles={['Super Admin', 'Maintenance']}><ManageMaintenance /></ProtectedRoute>} />
+             <Route path="feedback" element={<ProtectedRoute allowedRoles={['Super Admin']}><GuestFeedback /></ProtectedRoute>} />
+             <Route path="staff" element={<ProtectedRoute allowedRoles={['Super Admin']}><ManageStaff /></ProtectedRoute>} />
+             <Route path="analytics" element={<ProtectedRoute allowedRoles={['Super Admin']}><LoginAnalytics /></ProtectedRoute>} />
+             <Route path="reports" element={<ProtectedRoute allowedRoles={['Super Admin', 'Shop Manager']}><DataReports /></ProtectedRoute>} />
           </Route>
         </Routes>
       </div>

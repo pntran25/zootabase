@@ -81,6 +81,26 @@
   --adm-shadow-modal:   0 24px 64px rgba(0, 0, 0, 0.7), 0 8px 24px rgba(0, 0, 0, 0.5);
 }
 
+/* ── Modal overlay dark theme (fixed positioning breaks var inheritance) ── */
+.admin-modal-overlay[data-theme="dark"] {
+  --adm-bg-base:        #0f0f0f;
+  --adm-bg-surface:     #171717;
+  --adm-bg-surface-2:   #1e1e1e;
+  --adm-bg-hover:       #242424;
+  --adm-border:         #2a2a2a;
+  --adm-border-light:   #1f1f1f;
+  --adm-text-primary:   #eeeeee;
+  --adm-text-secondary: #909090;
+  --adm-text-muted:     #555555;
+  --adm-accent:         #10b981;
+  --adm-accent-hover:   #059669;
+  --adm-accent-dim:     rgba(16, 185, 129, 0.12);
+  --adm-radius-sm:      6px;
+  --adm-radius-md:      10px;
+  --adm-radius-lg:      16px;
+  --adm-shadow-modal:   0 24px 64px rgba(0, 0, 0, 0.7), 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
 /* ── Utility Keyframes ──────────────────────────────── */
 
 /* Loading spinner */

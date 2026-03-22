@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Calendar, Check, ChevronLeft, ChevronRight, Clock, 
-  Gift, Info, Minus, Plus, ShieldCheck, Star, Ticket, Users, Zap 
+import {
+  Calendar, Check, ChevronLeft, ChevronRight, Clock,
+  Gift, Info, Minus, Plus, ShieldCheck, Star, Ticket, Users, Zap
 } from 'lucide-react';
+import TicketCheckoutModal from './TicketCheckoutModal';
 
 const cn = (...classes) => classes.filter(Boolean).join(' ');
 
@@ -82,11 +83,12 @@ const TicketingPage = () => {
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [selectedDate, setSelectedDate] = useState(new Date().getDate() + 1);
   const [isMounted, setIsMounted] = useState(false);
-  const [todayDate, setTodayDate] = useState({ 
-    year: new Date().getFullYear(), 
-    month: new Date().getMonth(), 
-    day: new Date().getDate() 
+  const [todayDate, setTodayDate] = useState({
+    year: new Date().getFullYear(),
+    month: new Date().getMonth(),
+    day: new Date().getDate()
   });
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -133,12 +135,12 @@ const TicketingPage = () => {
           alt="Zoo Tickets"
           className="absolute inset-0 w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(30, 20, 10, 0.65) 0%, rgba(30, 20, 10, 0.4) 50%, rgba(250, 250, 250, 1) 100%)' }} />
         <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-4">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4">
             Buy Tickets
           </h1>
-          <p className="text-lg md:text-xl text-foreground max-w-2xl mx-auto font-medium">
+          <p className="text-lg md:text-xl text-white max-w-2xl mx-auto font-medium">
             Book online and save up to 15% on admission
           </p>
         </div>
@@ -469,7 +471,7 @@ const TicketingPage = () => {
                   </p>
                 </div>
 
-                <button 
+                <button
                   className={cn(
                     "w-full flex items-center justify-center gap-2 mb-4 py-3 rounded-xl font-semibold transition-colors border-none",
                     totalGuests === 0 || !selectedDate
@@ -477,6 +479,7 @@ const TicketingPage = () => {
                       : "bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"
                   )}
                   disabled={totalGuests === 0 || !selectedDate}
+                  onClick={() => setIsCheckoutOpen(true)}
                 >
                   <Zap className="h-4 w-4" />
                   Checkout
@@ -501,6 +504,18 @@ const TicketingPage = () => {
           </div>
         </div>
       </section>
+
+      <TicketCheckoutModal
+        isOpen={isCheckoutOpen}
+        onClose={() => setIsCheckoutOpen(false)}
+        visitDate={{ month: currentMonth, day: selectedDate, year: currentYear }}
+        ticketType={selectedTicketData}
+        quantities={quantities}
+        addOns={selectedAddOns.map(id => ADDONS.find(a => a.id === id)).filter(Boolean)}
+        subtotal={ticketSubtotal + addOnsTotal}
+        total={total}
+        onOrderPlaced={() => setIsCheckoutOpen(false)}
+      />
 
       {/* Member Banner */}
       <section className="py-12 px-4 bg-[#EBF0EA]">

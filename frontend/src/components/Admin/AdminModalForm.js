@@ -1,19 +1,23 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { X } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import './AdminModalForm.css';
 
 const AdminModalForm = ({ title, isOpen, onClose, onSubmit, children }) => {
+  const theme = localStorage.getItem('admin-theme') || 'light';
+  const mouseDownOnOverlay = useRef(false);
   return (
     <AnimatePresence>
       {isOpen && (
         <motion.div
           className="admin-modal-overlay"
+          data-theme={theme}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.18 }}
-          onClick={onClose}
+          onMouseDown={e => { mouseDownOnOverlay.current = e.target === e.currentTarget; }}
+          onClick={e => { if (e.target === e.currentTarget && mouseDownOnOverlay.current) onClose(); }}
         >
           <motion.div
             className="admin-modal-container"

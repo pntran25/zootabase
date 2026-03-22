@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
+import { Toaster } from 'sonner';
 import './UserLayout.css';
 import Footer from './Footer';
 import brandLogo from '../assets/images/Logo.png';
@@ -54,6 +55,7 @@ const UserLayout = () => {
       </main>
 
       <Footer />
+      <Toaster richColors position="top-center" />
     </div>
   );
 };

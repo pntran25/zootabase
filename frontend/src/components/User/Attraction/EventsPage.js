@@ -33,6 +33,16 @@ const CATEGORY_EMOJI = {
   'Members Only':'🐘',
 };
 
+function fmt12(t) {
+  if (!t) return '';
+  const [hStr, mStr] = t.split(':');
+  const h = parseInt(hStr, 10);
+  if (isNaN(h)) return t;
+  const period = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return mStr && mStr !== '00' ? `${h12}:${mStr} ${period}` : `${h12} ${period}`;
+}
+
 function enrichEvent(ev) {
   const seed = parseInt(ev.id, 10) || 1;
   const capacity = ev.capacity || 50;
@@ -46,7 +56,7 @@ function enrichEvent(ev) {
     image: ev.imageUrl ? `${API_BASE_URL}${ev.imageUrl}` : '',
     date: ev.date || new Date().toISOString(),
     endDate: ev.endDate || '',
-    time: (ev.startTime || ev.time) ? `${ev.startTime || ev.time}${ev.endTime ? ' - ' + ev.endTime : ''}` : 'TBD',
+    time: (ev.startTime || ev.time) ? `${fmt12(ev.startTime || ev.time)}${ev.endTime ? ' – ' + fmt12(ev.endTime) : ''}` : 'TBD',
     location: ev.exhibit || ev.location || 'Zoo-wide',
     category: ev.category || '',
     spotsLeft,
