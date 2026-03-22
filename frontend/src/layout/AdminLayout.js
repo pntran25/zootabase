@@ -1,18 +1,33 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, PawPrint, Map, Ticket, ShoppingBag,
-  Wrench, MessageSquare, LogOut, TicketCheck, CalendarDays,
-  Sun, Moon
+  Wrench, LogOut, TicketCheck, CalendarDays,
+  Sun, Moon, Users, LineChart, FileText
 } from 'lucide-react';
 import brandLogo from '../assets/images/Logo.png';
-import { Toaster } from 'sonner';
+import { Toaster, toast } from 'sonner';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useAuth } from '../context/AuthContext';
+import { auth } from '../services/firebase';
 import './AdminLayout.css';
+
+const rolePermissions = {
+  'Super Admin': ['dashboard', 'animals', 'exhibits', 'attractions', 'events', 'tickets', 'shop', 'maintenance', 'staff', 'analytics', 'feedback', 'reports'],
+  'Caretaker': ['dashboard', 'animals', 'exhibits'],
+  'Event Coordinator': ['dashboard', 'events'],
+  'Ticket Staff': ['dashboard', 'tickets'],
+  'Shop Manager': ['dashboard', 'shop', 'reports'],
+  'Maintenance': ['dashboard', 'maintenance']
+};
 
 const AdminLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { userProfile } = useAuth();
+  const role = userProfile?.Role || 'Viewer';
+  const myPerms = rolePermissions[role] || [];
+  
   const [theme, setTheme] = useState(
     () => localStorage.getItem('admin-theme') || 'light'
   );
@@ -36,6 +51,43 @@ const AdminLayout = () => {
     localStorage.setItem('admin-theme', next);
   };
 
+  const handleLogout = async () => {
+    try {
+      if (auth.currentUser) await auth.signOut();
+      navigate('/');
+    } catch (e) {
+      console.error(e);
+      navigate('/');
+    }
+  };
+
+  const renderLink = (to, icon, label, id) => {
+    const isAllowed = myPerms.includes(id);
+    
+    if (!isAllowed) {
+      return (
+        <div 
+          className="admin-nav-link blur-sm opacity-50 cursor-not-allowed select-none"
+          onClick={() => toast.error('You do not have permission to access this section.')}
+        >
+          {icon}
+          <span>{label}</span>
+        </div>
+      );
+    }
+    
+    return (
+      <NavLink
+        to={to}
+        end={to === '/admin'}
+        className={({ isActive }) => `admin-nav-link${isActive ? ' active' : ''}`}
+      >
+        {icon}
+        <span>{label}</span>
+      </NavLink>
+    );
+  };
+
   return (
     <div className="admin-layout" data-theme={theme}>
       <Toaster position="top-right" richColors closeButton />
@@ -52,12 +104,12 @@ const AdminLayout = () => {
 
         {/* Profile Card */}
         <div className="admin-sidebar-profile">
-          <div className="sidebar-profile-avatar">A</div>
+          <div className="sidebar-profile-avatar">{userProfile?.FirstName?.charAt(0) || 'A'}</div>
           <div className="sidebar-profile-info">
-            <span className="sidebar-profile-name">Administrator</span>
+            <span className="sidebar-profile-name">{userProfile?.FirstName || 'Administrator'}</span>
             <span className="sidebar-profile-status">
               <span className="sidebar-status-dot" style={{ background: isConnected ? '#10b981' : '#ef4444' }} />
-              {isConnected ? 'Connected' : 'Offline'}
+              {role}
             </span>
           </div>
         </div>
@@ -65,51 +117,29 @@ const AdminLayout = () => {
         <div className="admin-sidebar-divider" />
 
         {/* Nav */}
-        <nav className="admin-nav">
-          <NavLink to="/admin" end className={({ isActive }) => `admin-nav-link${isActive ? ' active' : ''}`}>
-            <LayoutDashboard size={18} className="nav-icon" />
-            <span>Dashboard</span>
-          </NavLink>
-          <NavLink to="/admin/animals" className={({ isActive }) => `admin-nav-link${isActive ? ' active' : ''}`}>
-            <PawPrint size={18} className="nav-icon" />
-            <span>Animals</span>
-          </NavLink>
-          <NavLink to="/admin/exhibits" className={({ isActive }) => `admin-nav-link${isActive ? ' active' : ''}`}>
-            <Map size={18} className="nav-icon" />
-            <span>Exhibits</span>
-          </NavLink>
-          <NavLink to="/admin/attractions" className={({ isActive }) => `admin-nav-link${isActive ? ' active' : ''}`}>
-            <TicketCheck size={18} className="nav-icon" />
-            <span>Attractions</span>
-          </NavLink>
-          <NavLink to="/admin/events" className={({ isActive }) => `admin-nav-link${isActive ? ' active' : ''}`}>
-            <CalendarDays size={18} className="nav-icon" />
-            <span>Events</span>
-          </NavLink>
-          <NavLink to="/admin/tickets" className={({ isActive }) => `admin-nav-link${isActive ? ' active' : ''}`}>
-            <Ticket size={18} className="nav-icon" />
-            <span>Tickets</span>
-          </NavLink>
-          <NavLink to="/admin/shop" className={({ isActive }) => `admin-nav-link${isActive ? ' active' : ''}`}>
-            <ShoppingBag size={18} className="nav-icon" />
-            <span>Shop</span>
-          </NavLink>
+        <nav className="admin-nav mt-4" style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+          {renderLink('/admin', <LayoutDashboard size={18} className="nav-icon" />, 'Dashboard', 'dashboard')}
+          {renderLink('/admin/animals', <PawPrint size={18} className="nav-icon" />, 'Animals', 'animals')}
+          {renderLink('/admin/exhibits', <Map size={18} className="nav-icon" />, 'Exhibits', 'exhibits')}
+          {renderLink('/admin/attractions', <TicketCheck size={18} className="nav-icon" />, 'Attractions', 'attractions')}
+          {renderLink('/admin/events', <CalendarDays size={18} className="nav-icon" />, 'Events', 'events')}
+          {renderLink('/admin/tickets', <Ticket size={18} className="nav-icon" />, 'Tickets', 'tickets')}
+          {renderLink('/admin/shop', <ShoppingBag size={18} className="nav-icon" />, 'Shop', 'shop')}
+          
+          <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Data Reports</p>
 
-          <p className="admin-nav-section-label">System</p>
+          {renderLink('/admin/reports', <FileText size={18} className="nav-icon" />, 'Transaction History', 'reports')}
 
-          <NavLink to="/admin/maintenance" className={({ isActive }) => `admin-nav-link${isActive ? ' active' : ''}`}>
-            <Wrench size={18} className="nav-icon" />
-            <span>Maintenance</span>
-          </NavLink>
-          <NavLink to="/admin/feedback" className={({ isActive }) => `admin-nav-link${isActive ? ' active' : ''}`}>
-            <MessageSquare size={18} className="nav-icon" />
-            <span>Feedback</span>
-          </NavLink>
+          <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">System</p>
+
+          {renderLink('/admin/maintenance', <Wrench size={18} className="nav-icon" />, 'Maintenance', 'maintenance')}
+          {role === 'Super Admin' && renderLink('/admin/staff', <Users size={18} className="nav-icon" />, 'Staff Management', 'staff')}
+          {role === 'Super Admin' && renderLink('/admin/analytics', <LineChart size={18} className="nav-icon" />, 'Analytics', 'analytics')}
         </nav>
 
         {/* Footer */}
-        <div className="admin-sidebar-footer">
-          <button className="admin-logout-btn" onClick={() => navigate('/')}>
+        <div className="admin-sidebar-footer mt-auto">
+          <button className="admin-logout-btn" onClick={handleLogout}>
             <LogOut size={18} className="nav-icon" />
             <span>Logout</span>
           </button>

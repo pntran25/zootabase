@@ -1,18 +1,19 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import './ExhibitPage.css';
 import { Search, MapPin, Clock, Leaf, Users, ArrowRight, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getExhibits } from '../../../services/exhibitService';
 import { API_BASE_URL } from '../../../services/apiClient';
 import placeholderImg from '../../../assets/images/Exhibits_Images/ExhibitsComingSoon.png';
+import heroWildlife from '../../../assets/images/hero-wildlife.jpg';
+
+const REGION_PAGE_SIZE = 3;
 
 const ExhibitPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('All Regions');
   const [exhibits, setExhibits] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
-  const regionRef = useRef(null);
+  const [regionPage, setRegionPage] = useState(0);
 
   useEffect(() => {
     const fetchExhibits = async () => {
@@ -27,39 +28,6 @@ const ExhibitPage = () => {
     };
     fetchExhibits();
   }, []);
-
-  useEffect(() => {
-    const el = regionRef.current;
-    if (!el) return;
-
-    const checkScroll = () => {
-      const tolerance = 2;
-      setCanScrollLeft(el.scrollLeft > tolerance);
-      setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - tolerance);
-    };
-
-    const resizeObserver = new ResizeObserver(checkScroll);
-    resizeObserver.observe(el);
-    el.addEventListener('scroll', checkScroll);
-
-    const timer = setTimeout(checkScroll, 100);
-    const childObserver = new MutationObserver(checkScroll);
-    childObserver.observe(el, { childList: true, subtree: true, characterData: true });
-
-    return () => {
-      clearTimeout(timer);
-      resizeObserver.disconnect();
-      childObserver.disconnect();
-      el.removeEventListener('scroll', checkScroll);
-    };
-  }, [exhibits]);
-
-  const scrollRegions = (direction) => {
-    const el = regionRef.current;
-    if (!el) return;
-    const scrollAmount = 200;
-    el.scrollBy({ left: direction === 'left' ? -scrollAmount : scrollAmount, behavior: 'smooth' });
-  };
 
   // Compute dynamic categories based on regions
   const dynamicRegions = ['All Regions', ...Array.from(new Set(exhibits.map(e => e.AreaName).filter(Boolean)))];
@@ -76,10 +44,10 @@ const ExhibitPage = () => {
       {/* ── HERO ── */}
       <section className="ww-exhibit-hero">
         <div className="ww-exh-hero-frame">
-          <img 
-            src="https://images.unsplash.com/photo-1516426122078-c23e76319801?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80" 
-            alt="Zoo exhibits" 
-            className="ww-exh-hero-img" 
+          <img
+            src={heroWildlife}
+            alt="Zoo exhibits"
+            className="ww-exh-hero-img"
           />
           <div className="ww-exh-hero-overlay" />
           <div className="ww-exh-hero-content">
@@ -114,32 +82,34 @@ const ExhibitPage = () => {
               </button>
             </div>
 
-            {/* RIGHT: Region Filters with scroll arrows */}
+            {/* RIGHT: Region Filters — paginated (3 at a time) */}
             <div className="ww-region-scroll-wrapper">
-              <button 
-                className={`ww-scroll-arrow ww-scroll-arrow-left ${!canScrollLeft ? 'ww-scroll-hidden' : ''}`}
-                onClick={() => scrollRegions('left')} 
-                aria-label="Scroll regions left"
+              <button
+                className={`ww-scroll-arrow${regionPage === 0 ? ' ww-scroll-hidden' : ''}`}
+                onClick={() => setRegionPage(p => p - 1)}
+                aria-label="Previous regions"
               >
                 <ChevronLeft size={16} />
               </button>
-              
-              <div className="ww-region-filters" ref={regionRef}>
-                {dynamicRegions.map(region => (
-                  <button 
-                    key={region} 
-                    className={`ww-region-btn ${activeCategory === region ? 'active' : ''}`}
-                    onClick={() => setActiveCategory(region)}
-                  >
-                    {region}
-                  </button>
-                ))}
+
+              <div className="ww-region-filters">
+                {dynamicRegions
+                  .slice(regionPage * REGION_PAGE_SIZE, regionPage * REGION_PAGE_SIZE + REGION_PAGE_SIZE)
+                  .map(region => (
+                    <button
+                      key={region}
+                      className={`ww-region-btn ${activeCategory === region ? 'active' : ''}`}
+                      onClick={() => setActiveCategory(region)}
+                    >
+                      {region}
+                    </button>
+                  ))}
               </div>
 
-              <button 
-                className={`ww-scroll-arrow ww-scroll-arrow-right ${!canScrollRight ? 'ww-scroll-hidden' : ''}`}
-                onClick={() => scrollRegions('right')} 
-                aria-label="Scroll regions right"
+              <button
+                className={`ww-scroll-arrow${regionPage >= Math.ceil(dynamicRegions.length / REGION_PAGE_SIZE) - 1 ? ' ww-scroll-hidden' : ''}`}
+                onClick={() => setRegionPage(p => p + 1)}
+                aria-label="Next regions"
               >
                 <ChevronRight size={16} />
               </button>
@@ -189,9 +159,11 @@ const ExhibitPage = () => {
                   <h2 className="ww-card-title">{exhibit.ExhibitName}</h2>
                   
                   <p className="ww-card-desc">
-                    {exhibit.HabitatType 
-                      ? `Experience the vast ${exhibit.HabitatType.toLowerCase()} habitat, home to amazing wildlife and majestic creatures.` 
-                      : 'Experience one of our beautiful animal habitats, carefully designed for conservation.'}
+                    {exhibit.Description
+                      ? exhibit.Description
+                      : exhibit.HabitatType
+                        ? `Experience the vast ${exhibit.HabitatType.toLowerCase()} habitat, home to amazing wildlife and majestic creatures.`
+                        : 'Experience one of our beautiful animal habitats, carefully designed for conservation.'}
                   </p>
 
                   <div className="ww-card-chips">

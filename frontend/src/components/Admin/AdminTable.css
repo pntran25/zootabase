@@ -256,10 +256,15 @@
 }
 
 /* ── Action Buttons ─────────────────────────────────── */
+.admin-table th:last-child,
+.admin-table td:last-child {
+  text-align: right;
+}
+
 .action-buttons {
   display: flex;
   gap: 6px;
-  justify-content: center;
+  justify-content: flex-end;
 }
 
 .action-btn {

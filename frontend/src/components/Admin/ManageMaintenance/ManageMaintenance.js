@@ -4,6 +4,8 @@ import { Wrench, Search, Plus, CheckCircle, Edit2, Trash2, ChevronUp, ChevronDow
 import { useReactTable, getCoreRowModel, getSortedRowModel, getPaginationRowModel, flexRender } from '@tanstack/react-table';
 import { toast } from 'sonner';
 import AdminModalForm from '../AdminModalForm';
+import DatePickerInput from '../DatePickerInput';
+import AdminSelect from '../AdminSelect';
 import maintenanceService from '../../../services/maintenanceService';
 
 const SortIcon = ({ column }) => {
@@ -179,17 +181,19 @@ const ManageMaintenance = () => {
     },
     {
       id: 'actions',
-      header: 'Actions',
+      header: () => <span style={{ paddingRight: 60 }}>Actions</span>,
       enableSorting: false,
       cell: ({ row }) => (
         <div className="action-buttons">
-          <button
-            className="action-btn"
-            onClick={() => handleToggleStatus(row.original.id, row.original.status)}
-            style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.78rem', color: 'var(--adm-accent)', padding: '5px 10px', border: '1px solid var(--adm-accent)', borderRadius: 6 }}
-          >
-            <CheckCircle size={13} /> Advance
-          </button>
+          {row.original.status !== 'Completed' && (
+            <button
+              className="action-btn"
+              onClick={() => handleToggleStatus(row.original.id, row.original.status)}
+              style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.78rem', color: 'var(--adm-accent)', padding: '5px 10px', border: '1px solid var(--adm-accent)', borderRadius: 6 }}
+            >
+              <CheckCircle size={13} /> Advance
+            </button>
+          )}
           <button className="action-btn edit" onClick={() => handleOpenModal(row.original)}><Edit2 size={16} /></button>
           <button className="action-btn delete" onClick={() => handleDelete(row.original.id)}><Trash2 size={16} /></button>
         </div>
@@ -229,10 +233,10 @@ const ManageMaintenance = () => {
       </div>
 
       {openCount > 0 && (
-        <div className="admin-info-banner" style={{ borderColor: '#fde68a', background: '#fefce8' }}>
+        <div className="admin-info-banner" style={{ borderColor: 'rgba(217,119,6,0.3)', background: 'rgba(217,119,6,0.08)' }}>
           <Wrench size={18} style={{ color: '#d97706', flexShrink: 0, marginTop: 1 }} />
-          <p style={{ margin: 0, fontSize: '0.875rem', color: '#92400e' }}>
-            <strong>{openCount} open request{openCount !== 1 ? 's' : ''}</strong> require attention.
+          <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--adm-text-secondary)' }}>
+            <strong style={{ color: '#d97706' }}>{openCount} open request{openCount !== 1 ? 's' : ''}</strong> require attention.
           </p>
         </div>
       )}
@@ -302,27 +306,29 @@ const ManageMaintenance = () => {
           </div>
           <div className="form-group">
             <label>Reported Date</label>
-            <input type="date" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} required />
+            <DatePickerInput
+              value={formData.date}
+              onChange={val => setFormData({ ...formData, date: val })}
+              placeholder="Select reported date"
+            />
           </div>
         </div>
         <div className="form-row">
           <div className="form-group">
             <label>Priority</label>
-            <select value={formData.priority} onChange={e => setFormData({ ...formData, priority: e.target.value })}>
-              <option value="Low">Low</option>
-              <option value="Medium">Medium</option>
-              <option value="High">High</option>
-              <option value="Critical">Critical</option>
-            </select>
+            <AdminSelect
+              value={formData.priority}
+              onChange={val => setFormData({ ...formData, priority: val })}
+              options={['Low', 'Medium', 'High', 'Critical']}
+            />
           </div>
           <div className="form-group">
             <label>Status</label>
-            <select value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })}>
-              <option value="Pending">Pending</option>
-              <option value="In Progress">In Progress</option>
-              <option value="Completed">Completed</option>
-              <option value="Cancelled">Cancelled</option>
-            </select>
+            <AdminSelect
+              value={formData.status}
+              onChange={val => setFormData({ ...formData, status: val })}
+              options={['Pending', 'In Progress', 'Completed', 'Cancelled']}
+            />
           </div>
         </div>
       </AdminModalForm>

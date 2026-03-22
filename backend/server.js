@@ -19,6 +19,11 @@ const ticketsRouter = require('./routes/tickets');
 const maintenanceRouter = require('./routes/maintenance');
 const feedbackRouter = require('./routes/feedback');
 const speciesCodesRouter = require('./routes/speciesCodes');
+const authRouter = require('./routes/auth');
+const staffRouter = require('./routes/staff');
+const analyticsRouter = require('./routes/analytics');
+const ordersRouter = require('./routes/orders');
+const ticketOrdersRouter = require('./routes/ticketOrders');
 const path = require('path');
 
 app.use('/api/exhibits', exhibitsRouter);
@@ -30,6 +35,11 @@ app.use('/', ticketsRouter);
 app.use('/', maintenanceRouter);
 app.use('/', feedbackRouter);
 app.use('/api/species-codes', speciesCodesRouter);
+app.use('/api/auth', authRouter);
+app.use('/api/staff', staffRouter);
+app.use('/api/analytics', analyticsRouter);
+app.use('/api/orders', ordersRouter);
+app.use('/api/ticket-orders', ticketOrdersRouter);
 
 // Serve images from the frontend assets folder dynamically
 app.use('/images', express.static(path.join(__dirname, '../frontend/src/assets/images')));
@@ -64,6 +74,7 @@ async function runMigrations(pool) {
 		`UPDATE Exhibit SET IsFeatured = 0 WHERE IsFeatured IS NULL`,
 		`IF COL_LENGTH('Exhibit','UpdatedAt') IS NULL ALTER TABLE Exhibit ADD UpdatedAt DATETIME2 NULL`,
 		`IF COL_LENGTH('Exhibit','DeletedAt') IS NULL ALTER TABLE Exhibit ADD DeletedAt DATETIME2 NULL`,
+		`IF COL_LENGTH('Exhibit','Description') IS NULL ALTER TABLE Exhibit ADD Description NVARCHAR(1000) NULL`,
 		`IF COL_LENGTH('Attraction','Description') IS NULL ALTER TABLE Attraction ADD Description NVARCHAR(500) NULL`,
 		`IF COL_LENGTH('Attraction','Hours') IS NULL ALTER TABLE Attraction ADD Hours NVARCHAR(50) NULL`,
 		`IF COL_LENGTH('Attraction','Duration') IS NULL ALTER TABLE Attraction ADD Duration NVARCHAR(50) NULL`,
@@ -108,6 +119,44 @@ async function runMigrations(pool) {
 		 IF LEN(@fk) > 0 EXEC(@fk)`,
 		// Now widen the column
 		`ALTER TABLE Product ALTER COLUMN Category NVARCHAR(100) NULL`,
+		`IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='Orders' AND xtype='U')
+		  CREATE TABLE Orders (
+		    OrderID               INT IDENTITY(1,1) PRIMARY KEY,
+		    FullName              NVARCHAR(100)  NOT NULL,
+		    Email                 NVARCHAR(200)  NOT NULL,
+		    Phone                 NVARCHAR(30)   NULL,
+		    AddressLine1          NVARCHAR(200)  NOT NULL,
+		    AddressLine2          NVARCHAR(200)  NULL,
+		    City                  NVARCHAR(100)  NOT NULL,
+		    StateProvince         NVARCHAR(100)  NOT NULL,
+		    ZipCode               NVARCHAR(20)   NOT NULL,
+		    BillingSameAsShipping BIT            NOT NULL DEFAULT 1,
+		    CardLastFour          NVARCHAR(4)    NULL,
+		    Subtotal              DECIMAL(10,2)  NOT NULL,
+		    Shipping              DECIMAL(10,2)  NOT NULL,
+		    Tax                   DECIMAL(10,2)  NOT NULL,
+		    Total                 DECIMAL(10,2)  NOT NULL,
+		    OrderItems            NVARCHAR(MAX)  NULL,
+		    PlacedAt              DATETIME2      NOT NULL DEFAULT SYSUTCDATETIME()
+		  )`,
+		`IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='TicketOrders' AND xtype='U')
+		  CREATE TABLE TicketOrders (
+		    TicketOrderID  INT IDENTITY(1,1) PRIMARY KEY,
+		    FullName       NVARCHAR(100)  NOT NULL,
+		    Email          NVARCHAR(200)  NOT NULL,
+		    Phone          NVARCHAR(30)   NULL,
+		    VisitDate      DATE           NOT NULL,
+		    TicketType     NVARCHAR(100)  NOT NULL,
+		    AdultQty       INT            NOT NULL DEFAULT 0,
+		    ChildQty       INT            NOT NULL DEFAULT 0,
+		    SeniorQty      INT            NOT NULL DEFAULT 0,
+		    AddOns         NVARCHAR(MAX)  NULL,
+		    BillingAddress NVARCHAR(500)  NULL,
+		    CardLastFour   NVARCHAR(4)    NULL,
+		    Subtotal       DECIMAL(10,2)  NOT NULL,
+		    Total          DECIMAL(10,2)  NOT NULL,
+		    PlacedAt       DATETIME2      NOT NULL DEFAULT SYSUTCDATETIME()
+		  )`,
 	];
 
 	for (const sql of steps) {

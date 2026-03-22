@@ -113,7 +113,15 @@ const ManageEvents = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (formData.startTime && formData.endTime && formData.startTime >= formData.endTime) {
+    if (!formData.date) {
+      toast.error('Please select a start date.');
+      return;
+    }
+    if (!formData.startTime || !formData.endTime) {
+      toast.error('Please select both a start time and end time.');
+      return;
+    }
+    if (formData.startTime >= formData.endTime) {
       toast.error('Start time must be before end time.');
       return;
     }

@@ -194,9 +194,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 9999px;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.5rem;
   border: 1px solid var(--border);
   background-color: var(--card);
   color: var(--foreground);
@@ -216,12 +216,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  overflow-x: auto;
-  scroll-behavior: smooth;
-  -ms-overflow-style: none;
-  scrollbar-width: none;
 }
-.ww-region-filters::-webkit-scrollbar { display: none; }
 
 .ww-region-btn {
   display: inline-flex;

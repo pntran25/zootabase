@@ -7,7 +7,7 @@ import {
 } from 'recharts';
 import {
   PawPrint, Ticket, Wrench, Star, TrendingUp,
-  CalendarDays, MessageSquare, Users, ArrowUpRight, ArrowDownRight,
+  CalendarDays, ArrowUpRight, ArrowDownRight,
   Zap, ShoppingBag
 } from 'lucide-react';
 import './Dashboard.css';
@@ -48,14 +48,12 @@ const visitorData = [
 const recentActivity = [
   { action: 'New animal added', detail: 'Bengal Tiger — Savanna Exhibit', time: '2h ago', type: 'animal' },
   { action: 'Maintenance resolved', detail: 'Water filtration — Penguin Coast', time: '4h ago', type: 'maintenance' },
-  { action: 'New feedback received', detail: '★★★★★ — "Amazing experience!"', time: '5h ago', type: 'feedback' },
   { action: 'Event created', detail: 'Evening Safari Experience — Fri Mar 21', time: '1d ago', type: 'event' },
 ];
 
 const activityIcons = {
   animal: <PawPrint size={14} />,
   maintenance: <Wrench size={14} />,
-  feedback: <MessageSquare size={14} />,
   event: <CalendarDays size={14} />,
 };
 
@@ -158,7 +156,6 @@ const Dashboard = () => {
     { label: 'Add Animal', icon: <PawPrint size={20} />, path: '/admin/animals', color: 'green' },
     { label: 'New Event', icon: <CalendarDays size={20} />, path: '/admin/events', color: 'blue' },
     { label: 'Log Issue', icon: <Wrench size={20} />, path: '/admin/maintenance', color: 'orange' },
-    { label: 'View Feedback', icon: <MessageSquare size={20} />, path: '/admin/feedback', color: 'purple' },
   ];
 
   return (
@@ -235,7 +232,7 @@ const Dashboard = () => {
       {lowStockProducts.length > 0 && (
         <motion.div
           className="dashboard-panel"
-          style={{ borderLeft: '4px solid #ea580c', marginBottom: 0 }}
+          style={{ borderLeft: '4px solid #ea580c', marginBottom: 20 }}
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.32, type: 'spring', stiffness: 260, damping: 22 }}
@@ -343,56 +340,6 @@ const Dashboard = () => {
 
         {/* Right column */}
         <div className="dashboard-right-col">
-          {/* Recent Feedback */}
-          <motion.div
-            className="dashboard-panel feedback-panel"
-            custom={1}
-            variants={panelVariants}
-            initial="hidden"
-            animate="visible"
-          >
-            <div className="panel-header-flex">
-              <div>
-                <h3 className="panel-title">Recent Feedback</h3>
-                <p className="panel-subtitle">Latest guest surveys</p>
-              </div>
-              <button className="panel-view-all" onClick={() => navigate('/admin/feedback')}>
-                View All →
-              </button>
-            </div>
-
-            <div className="feedback-item">
-              <div className="feedback-header">
-                <span className="stars">★★★★☆</span>
-                <span className="feedback-date">Mar 8</span>
-              </div>
-              <p className="feedback-text">"Loved the penguins, but it was too crowded."</p>
-              <div className="feedback-tag">Penguin Coast</div>
-            </div>
-
-            <div className="feedback-divider" />
-
-            <div className="feedback-item">
-              <div className="feedback-header">
-                <span className="stars">★★★★★</span>
-                <span className="feedback-date">Mar 10</span>
-              </div>
-              <p className="feedback-text">"The giraffe feeding was the highlight of our day!"</p>
-              <div className="feedback-tag">African Savanna</div>
-            </div>
-
-            <div className="feedback-divider" />
-
-            <div className="feedback-item">
-              <div className="feedback-header">
-                <span className="stars">★★★★★</span>
-                <span className="feedback-date">Mar 12</span>
-              </div>
-              <p className="feedback-text">"Staff were incredibly knowledgeable and kind."</p>
-              <div className="feedback-tag">General</div>
-            </div>
-          </motion.div>
-
           {/* Recent Activity */}
           <motion.div
             className="dashboard-panel activity-panel"

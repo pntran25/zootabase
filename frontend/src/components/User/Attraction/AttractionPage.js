@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import './AttractionPage.css';
 import { Search, MapPin, Users, Clock, Filter, ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import { getAllAttractions } from '../../../services/attractionService';
@@ -97,14 +97,14 @@ const AttractionCard = ({ attraction }) => {
   );
 };
 
+const TYPE_PAGE_SIZE = 3;
+
 const AttractionPage = () => {
   const [attractions, setAttractions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeType, setActiveType] = useState('All');
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
-  const typeRef = useRef(null);
+  const [typePage, setTypePage] = useState(0);
 
   useEffect(() => {
     const fetchAttractions = async () => {
@@ -119,34 +119,6 @@ const AttractionPage = () => {
     };
     fetchAttractions();
   }, []);
-
-  useEffect(() => {
-    const el = typeRef.current;
-    if (!el) return;
-    const checkScroll = () => {
-      const tolerance = 2;
-      setCanScrollLeft(el.scrollLeft > tolerance);
-      setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - tolerance);
-    };
-    const resizeObserver = new ResizeObserver(checkScroll);
-    resizeObserver.observe(el);
-    el.addEventListener('scroll', checkScroll);
-    const timer = setTimeout(checkScroll, 100);
-    const childObserver = new MutationObserver(checkScroll);
-    childObserver.observe(el, { childList: true, subtree: true, characterData: true });
-    return () => {
-      clearTimeout(timer);
-      resizeObserver.disconnect();
-      childObserver.disconnect();
-      el.removeEventListener('scroll', checkScroll);
-    };
-  }, [attractions]);
-
-  const scrollTypes = (direction) => {
-    const el = typeRef.current;
-    if (!el) return;
-    el.scrollBy({ left: direction === 'left' ? -200 : 200, behavior: 'smooth' });
-  };
 
   const types = ['All', ...Array.from(new Set(attractions.map(a => a.type).filter(Boolean)))];
 
@@ -202,27 +174,29 @@ const AttractionPage = () => {
 
             <div className="ww-region-scroll-wrapper">
               <button
-                className={`ww-scroll-arrow ww-scroll-arrow-left ${!canScrollLeft ? 'ww-scroll-hidden' : ''}`}
-                onClick={() => scrollTypes('left')}
-                aria-label="Scroll left"
+                className={`ww-scroll-arrow${typePage === 0 ? ' ww-scroll-hidden' : ''}`}
+                onClick={() => setTypePage(p => p - 1)}
+                aria-label="Previous types"
               >
                 <ChevronLeft size={16} />
               </button>
-              <div className="ww-region-filters" ref={typeRef}>
-                {types.map(type => (
-                  <button
-                    key={type}
-                    className={`ww-region-btn ${activeType === type ? 'active' : ''}`}
-                    onClick={() => setActiveType(type)}
-                  >
-                    {type}
-                  </button>
-                ))}
+              <div className="ww-region-filters">
+                {types
+                  .slice(typePage * TYPE_PAGE_SIZE, typePage * TYPE_PAGE_SIZE + TYPE_PAGE_SIZE)
+                  .map(type => (
+                    <button
+                      key={type}
+                      className={`ww-region-btn ${activeType === type ? 'active' : ''}`}
+                      onClick={() => setActiveType(type)}
+                    >
+                      {type}
+                    </button>
+                  ))}
               </div>
               <button
-                className={`ww-scroll-arrow ww-scroll-arrow-right ${!canScrollRight ? 'ww-scroll-hidden' : ''}`}
-                onClick={() => scrollTypes('right')}
-                aria-label="Scroll right"
+                className={`ww-scroll-arrow${typePage >= Math.ceil(types.length / TYPE_PAGE_SIZE) - 1 ? ' ww-scroll-hidden' : ''}`}
+                onClick={() => setTypePage(p => p + 1)}
+                aria-label="Next types"
               >
                 <ChevronRight size={16} />
               </button>

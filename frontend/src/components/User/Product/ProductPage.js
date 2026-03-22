@@ -3,7 +3,9 @@ import { getAllProducts } from '../../../services/productService';
 import { API_BASE_URL } from '../../../services/apiClient';
 import giftShopHeroImg from '../../../assets/images/gift-shop-hero.jpg';
 import './ProductPage.css';
-import { Search, ShoppingCart, Filter, Plus, Minus, X } from 'lucide-react';
+import { Search, ShoppingCart, Filter, Plus, Minus, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { toast } from 'sonner';
+import CheckoutModal from './CheckoutModal';
 
 const EMOJI_MAP = {
   'Plush Toys & Stuffed Animals': '🧸',
@@ -61,7 +63,10 @@ const ProductPage = () => {
   const [viewMode] = useState("grid");
   const [cart, setCart] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [categoryPage, setCategoryPage] = useState(0);
+  const CAT_PAGE_SIZE = 3;
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -90,16 +95,20 @@ const ProductPage = () => {
   });
 
   const addToCart = (product) => {
+    const maxStock = product.stockQuantity || 0;
     setCart((prev) => {
       const existing = prev.find((item) => item.id === product.id);
       if (existing) {
+        if (existing.quantity >= maxStock) {
+          toast.error(`Only ${maxStock} in stock.`);
+          return prev;
+        }
         return prev.map((item) =>
           item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
-      return [...prev, { id: product.id, name: product.name, price: Number(product.price || 0), quantity: 1, image: product.image, category: product.category }];
+      return [...prev, { id: product.id, name: product.name, price: Number(product.price || 0), quantity: 1, image: product.image, category: product.category, stockQuantity: maxStock }];
     });
-    setIsCartOpen(true);
   };
 
   const removeFromCart = (productId) => {
@@ -109,9 +118,15 @@ const ProductPage = () => {
   const updateQuantity = (productId, delta) => {
     setCart((prev) =>
       prev
-        .map((item) =>
-          item.id === productId ? { ...item, quantity: Math.max(0, item.quantity + delta) } : item
-        )
+        .map((item) => {
+          if (item.id !== productId) return item;
+          const newQty = Math.max(0, item.quantity + delta);
+          if (delta > 0 && item.quantity >= (item.stockQuantity || Infinity)) {
+            toast.error(`Only ${item.stockQuantity} in stock.`);
+            return item;
+          }
+          return { ...item, quantity: newQty };
+        })
         .filter((item) => item.quantity > 0)
     );
   };
@@ -177,39 +192,62 @@ const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0
               </button>
             </div>
 
-            {/* RIGHT: Category Filters + Cart */}
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                <style>{`.flex.items-center.gap-2.overflow-x-auto::-webkit-scrollbar { display: none; }`}</style>
-                {categories.map((category) => (
-                  <button
-                    key={category.id}
-                    className={cn(
-                      "inline-flex whitespace-nowrap items-center shrink-0 rounded-lg border cursor-pointer transition-all text-sm font-medium",
-                      selectedCategory === category.id
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-background text-foreground border-border hover:bg-secondary"
-                    )}
-                    style={{ height: '2.25rem', padding: '0 0.875rem' }}
-                    onClick={() => setSelectedCategory(category.id)}
-                  >
-                    {category.label}
-                  </button>
-                ))}
+            {/* RIGHT: Category Carousel + Cart (always visible) */}
+            <div className="flex items-center gap-3 shrink-0">
+              {/* Prev arrow */}
+              <button
+                onClick={() => setCategoryPage(p => p - 1)}
+                disabled={categoryPage === 0}
+                className="inline-flex items-center justify-center rounded-lg border border-border bg-background text-foreground cursor-pointer hover:bg-secondary transition-colors disabled:opacity-30 disabled:cursor-default shrink-0"
+                style={{ height: '2.25rem', width: '2.25rem' }}
+              >
+                <ChevronLeft style={{ width: '1rem', height: '1rem' }} />
+              </button>
+
+              {/* 3 visible categories */}
+              <div className="flex items-center gap-2">
+                {categories
+                  .slice(categoryPage * CAT_PAGE_SIZE, categoryPage * CAT_PAGE_SIZE + CAT_PAGE_SIZE)
+                  .map((category) => (
+                    <button
+                      key={category.id}
+                      className={cn(
+                        "inline-flex whitespace-nowrap items-center shrink-0 rounded-lg border cursor-pointer transition-all text-sm font-medium",
+                        selectedCategory === category.id
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background text-foreground border-border hover:bg-secondary"
+                      )}
+                      style={{ height: '2.25rem', padding: '0 0.875rem' }}
+                      onClick={() => setSelectedCategory(category.id)}
+                    >
+                      {category.label}
+                    </button>
+                  ))}
               </div>
-              <Button
-                variant="outline"
-                className="relative h-10 px-4 shrink-0"
+
+              {/* Next arrow */}
+              <button
+                onClick={() => setCategoryPage(p => p + 1)}
+                disabled={categoryPage >= Math.ceil(categories.length / CAT_PAGE_SIZE) - 1}
+                className="inline-flex items-center justify-center rounded-lg border border-border bg-background text-foreground cursor-pointer hover:bg-secondary transition-colors disabled:opacity-30 disabled:cursor-default shrink-0"
+                style={{ height: '2.25rem', width: '2.25rem' }}
+              >
+                <ChevronRight style={{ width: '1rem', height: '1rem' }} />
+              </button>
+
+              {/* Cart — always visible, outside carousel */}
+              <button
+                className="relative inline-flex items-center justify-center rounded-xl border border-border bg-background text-foreground cursor-pointer hover:bg-secondary transition-colors shrink-0"
+                style={{ height: '2.75rem', width: '2.75rem' }}
                 onClick={() => setIsCartOpen(true)}
               >
-                <ShoppingCart className="h-4 w-4 mr-2" />
-                Cart
+                <ShoppingCart style={{ width: '1.125rem', height: '1.125rem' }} />
                 {cartCount > 0 && (
-                  <span className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center bg-primary text-primary-foreground text-xs rounded-full shadow-sm">
+                  <span className="absolute -top-1.5 -right-1.5 h-5 w-5 flex items-center justify-center bg-primary text-primary-foreground text-xs rounded-full shadow-sm font-bold">
                     {cartCount}
                   </span>
                 )}
-              </Button>
+              </button>
             </div>
           </div>
         </div>
@@ -271,6 +309,20 @@ const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0
                         transform: 'rotate(-8deg)',
                         boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
                       }}>Out of Stock</span>
+                    </div>
+                  )}
+                  {product.inStock && product.stockQuantity <= (product.lowStockThreshold || 10) && (
+                    <div className="absolute top-2 left-2">
+                      <span style={{
+                        background: 'rgba(234,88,12,0.92)',
+                        color: '#fff',
+                        fontSize: '0.7rem',
+                        fontWeight: 700,
+                        letterSpacing: '0.04em',
+                        padding: '3px 8px',
+                        borderRadius: 5,
+                        boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+                      }}>Only {product.stockQuantity} left</span>
                     </div>
                   )}
                 </div>
@@ -402,7 +454,8 @@ const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0
                           <span className="w-8 text-center text-xs font-semibold">{item.quantity}</span>
                           <button
                             onClick={() => updateQuantity(item.id, 1)}
-                            className="p-1.5 hover:bg-muted text-muted-foreground transition-colors border-none bg-transparent cursor-pointer rounded-r-md"
+                            disabled={item.quantity >= (item.stockQuantity || Infinity)}
+                            className="p-1.5 hover:bg-muted text-muted-foreground transition-colors border-none bg-transparent cursor-pointer rounded-r-md disabled:opacity-30 disabled:cursor-not-allowed"
                           >
                             <Plus className="h-3 w-3" />
                           </button>
@@ -427,7 +480,7 @@ const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0
               <span className="text-base text-muted-foreground font-medium">Subtotal</span>
               <span className="text-2xl font-bold text-foreground">${cartTotal.toFixed(2)}</span>
             </div>
-            <Button className="w-full h-12 text-base font-semibold shadow-md" size="lg">
+            <Button className="w-full h-12 text-base font-semibold shadow-md" size="lg" onClick={() => { setIsCartOpen(false); setIsCheckoutOpen(true); }}>
               Proceed to Checkout
             </Button>
             <p className="text-center text-xs text-muted-foreground mt-3 uppercase tracking-wider font-semibold">
@@ -436,6 +489,13 @@ const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0
           </div>
         )}
       </div>
+    <CheckoutModal
+      isOpen={isCheckoutOpen}
+      onClose={() => setIsCheckoutOpen(false)}
+      cart={cart}
+      cartTotal={cartTotal}
+      onOrderPlaced={() => setCart([])}
+    />
     </div>
   );
 };

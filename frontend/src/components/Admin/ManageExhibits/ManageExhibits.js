@@ -46,7 +46,7 @@ const ManageExhibits = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [sorting, setSorting] = useState([]);
   const [formData, setFormData] = useState({
-    name: '', area: '', habitat: '', capacity: 0, openingHours: '', isFeatured: false
+    name: '', area: '', habitat: '', capacity: 0, openingHours: '', description: '', isFeatured: false
   });
   const [imageFile, setImageFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
@@ -62,6 +62,7 @@ const ManageExhibits = () => {
         habitat: item.HabitatType || '',
         capacity: item.Capacity,
         openingHours: item.OpeningHours,
+        description: item.Description || '',
         isFeatured: item.IsFeatured === true || item.IsFeatured === 1,
         imageUrl: item.ImageUrl || null,
       }));
@@ -85,12 +86,12 @@ const ManageExhibits = () => {
   const handleOpenModal = (exhibit = null) => {
     if (exhibit) {
       setEditingExhibit(exhibit);
-      setFormData({ ...exhibit, isFeatured: exhibit.isFeatured === true || exhibit.isFeatured === 1 });
+      setFormData({ ...exhibit, description: exhibit.description || '', isFeatured: exhibit.isFeatured === true || exhibit.isFeatured === 1 });
       setPreviewUrl(exhibit.imageUrl ? `${API_BASE_URL}${exhibit.imageUrl}` : null);
       setImageFile(null);
     } else {
       setEditingExhibit(null);
-      setFormData({ name: '', area: '', habitat: '', capacity: 0, openingHours: '', isFeatured: false });
+      setFormData({ name: '', area: '', habitat: '', capacity: 0, openingHours: '', description: '', isFeatured: false });
       setPreviewUrl(null);
       setImageFile(null);
     }
@@ -134,6 +135,7 @@ const ManageExhibits = () => {
       HabitatType: formData.habitat,
       Capacity: formData.capacity,
       OpeningHours: formData.openingHours,
+      Description: formData.description || null,
     };
     try {
       let savedExhibitId = null;
@@ -377,6 +379,16 @@ const ManageExhibits = () => {
               </>
             );
           })()}
+        </div>
+        <div className="form-group">
+          <label>Description</label>
+          <textarea
+            placeholder="Describe this exhibit for visitors..."
+            value={formData.description}
+            onChange={e => setFormData({ ...formData, description: e.target.value })}
+            rows={3}
+            style={{ resize: 'vertical', minHeight: 80 }}
+          />
         </div>
         <div className="form-group">
           <label>Exhibit Image</label>

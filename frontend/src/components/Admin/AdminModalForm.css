@@ -195,6 +195,16 @@
   cursor: pointer;
   accent-color: var(--adm-accent);
 }
+
+/* ── Date / Time inputs — use browser dark calendar in dark mode ── */
+.admin-layout[data-theme="dark"] input[type="date"],
+.admin-layout[data-theme="dark"] input[type="time"],
+.admin-layout[data-theme="dark"] input[type="datetime-local"],
+.admin-modal-overlay[data-theme="dark"] input[type="date"],
+.admin-modal-overlay[data-theme="dark"] input[type="time"],
+.admin-modal-overlay[data-theme="dark"] input[type="datetime-local"] {
+  color-scheme: dark;
+}
 .form-group.checkbox-group label {
   cursor: pointer;
   margin: 0;

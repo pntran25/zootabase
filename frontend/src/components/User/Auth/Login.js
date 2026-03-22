@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { auth } from '../../../services/firebase';
+import { useAuth } from '../../../context/AuthContext';
 import loginImg from '../../../assets/images/login_lion.png';
 import brandLogo from '../../../assets/images/Logo.png';
 
@@ -9,11 +12,62 @@ const Login = () => {
   const [password, setPassword]   = useState('');
   const [showPass, setShowPass]   = useState(false);
   const [remember, setRemember]   = useState(false);
+  const [errorMsg, setErrorMsg]   = useState('');
+  const navigate = useNavigate();
+  const { userProfile } = useAuth();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Auth logic can be wired up here
-    alert(`Signing in as ${email}…`);
+    setErrorMsg('');
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const token = await userCredential.user.getIdToken(true);
+      
+      const response = await fetch('http://localhost:5000/api/auth/sync', {
+          method: 'POST',
+          headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+          }
+      });
+      
+      const data = await response.json();
+      if (data.isStaff) {
+          navigate('/admin');
+      } else {
+          navigate('/');
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMsg('Invalid email or password. Please try again.');
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      setErrorMsg('');
+      const provider = new GoogleAuthProvider();
+      const userCredential = await signInWithPopup(auth, provider);
+      const token = await userCredential.user.getIdToken(true);
+      
+      const response = await fetch('http://localhost:5000/api/auth/sync', {
+          method: 'POST',
+          headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+          }
+      });
+      
+      const data = await response.json();
+      if (data.isStaff) {
+          navigate('/admin');
+      } else {
+          navigate('/');
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMsg('Google sign-in failed. Please try again.');
+    }
   };
 
   return (
@@ -69,6 +123,12 @@ const Login = () => {
                 Enter your credentials to access your account
               </p>
             </div>
+
+            {errorMsg && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-md text-sm text-center">
+                {errorMsg}
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-4 flex flex-col">
               {/* Email Field */}
@@ -158,9 +218,13 @@ const Login = () => {
               </div>
 
               {/* Social Login */}
-              <div className="grid grid-cols-2 gap-4 mb-2">
-                <button type="button" className="h-11 w-full bg-background border border-border rounded-md hover:bg-muted/50 cursor-pointer transition-colors flex items-center justify-center text-sm font-medium text-foreground">
-                  <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24">
+              <div className="grid grid-cols-1 gap-4 mb-2">
+                <button 
+                  type="button" 
+                  onClick={handleGoogleLogin}
+                  className="h-11 w-full bg-background border border-border rounded-md hover:bg-muted/50 cursor-pointer transition-colors flex items-center justify-center text-sm font-medium text-foreground"
+                >
+                  <svg className="h-5 w-5 mr-3" viewBox="0 0 24 24">
                     <path
                       fill="#4285F4"
                       d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -178,13 +242,7 @@ const Login = () => {
                       d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                     />
                   </svg>
-                  Google
-                </button>
-                <button type="button" className="h-11 w-full bg-background border border-border rounded-md hover:bg-muted/50 cursor-pointer transition-colors flex items-center justify-center text-sm font-medium text-foreground">
-                  <svg className="h-5 w-5 mr-2 text-foreground" fill="currentColor" viewBox="0 0 384 512">
-                    <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/>
-                  </svg>
-                  Apple
+                  Continue with Google
                 </button>
               </div>
             </form>
