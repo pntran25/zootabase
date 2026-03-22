@@ -5,6 +5,11 @@ import { API_BASE_URL } from '../../../services/apiClient';
 import '../../User/Product/CheckoutModal.css';
 import './TicketCheckoutModal.css';
 
+const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
 const GooglePayIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -43,62 +48,48 @@ const PaymentIcons = () => (
   </div>
 );
 
-const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
-
 const TicketCheckoutModal = ({
   isOpen, onClose,
-  visitDate,       // { month, day, year }
-  ticketType,      // { id, name, prices }
-  quantities,      // { adult, child, senior }
-  addOns,          // [{ id, name, price }]
+  visitDate,
+  ticketType,
+  quantities,
+  addOns,
   subtotal, total,
   onOrderPlaced,
 }) => {
-  const [contact, setContact] = useState({ fullName: '', email: '', phone: '' });
+  const [contact, setContact] = useState({ email: '', fullName: '', address1: '', address2: '', city: '', state: '', zip: '', phone: '' });
   const [card, setCard] = useState({ number: '', expiry: '', cvv: '' });
-  const [billing, setBilling] = useState({ address1: '', address2: '', city: '', state: '', zip: '' });
+  const [billingSame, setBillingSame] = useState(true);
+  const [bill, setBill] = useState({ fullName: '', address1: '', address2: '', city: '', state: '', zip: '' });
   const [placing, setPlacing] = useState(false);
 
-  const setF = (setter, key, val) => setter(p => ({ ...p, [key]: val }));
+  const setC = (key, val) => setContact(p => ({ ...p, [key]: val }));
+  const setK = (key, val) => setCard(p => ({ ...p, [key]: val }));
+  const setB = (key, val) => setBill(p => ({ ...p, [key]: val }));
 
-  const fmtCard = v => {
-    const d = v.replace(/\D/g, '').slice(0, 16);
-    return d.match(/.{1,4}/g)?.join(' ') || d;
-  };
-  const fmtExpiry = v => {
-    const d = v.replace(/\D/g, '').slice(0, 4);
-    return d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d;
-  };
+  const fmtCard = v => { const d = v.replace(/\D/g, '').slice(0, 16); return d.match(/.{1,4}/g)?.join(' ') || d; };
+  const fmtExpiry = v => { const d = v.replace(/\D/g, '').slice(0, 4); return d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d; };
 
-  const visitDateStr = visitDate
-    ? `${MONTHS[visitDate.month]} ${visitDate.day}, ${visitDate.year}`
-    : '';
-
+  const visitDateStr = visitDate ? `${MONTHS[visitDate.month]} ${visitDate.day}, ${visitDate.year}` : '';
   const totalGuests = (quantities?.adult || 0) + (quantities?.child || 0) + (quantities?.senior || 0);
 
   const handlePlace = async () => {
-    if (!contact.fullName || !contact.email) {
-      toast.error('Please enter your name and email.');
+    if (!contact.email || !contact.fullName || !contact.address1 || !contact.city || !contact.state || !contact.zip) {
+      toast.error('Please fill in all required contact fields.');
       return;
     }
     if (!card.number || !card.expiry || !card.cvv) {
       toast.error('Please fill in your card details.');
       return;
     }
-    if (!billing.address1 || !billing.city || !billing.state || !billing.zip) {
-      toast.error('Please fill in your billing address.');
+    if (!billingSame && (!bill.fullName || !bill.address1 || !bill.city || !bill.state || !bill.zip)) {
+      toast.error('Please fill in all required billing fields.');
       return;
     }
 
     setPlacing(true);
     try {
       const cardLastFour = card.number.replace(/\D/g, '').slice(-4);
-      const billingAddress = `${billing.address1}${billing.address2 ? ', ' + billing.address2 : ''}, ${billing.city}, ${billing.state} ${billing.zip}`;
-
-      // ISO date string for the visit date
       const visitDateISO = visitDate
         ? `${visitDate.year}-${String(visitDate.month + 1).padStart(2, '0')}-${String(visitDate.day).padStart(2, '0')}`
         : null;
@@ -110,13 +101,24 @@ const TicketCheckoutModal = ({
           fullName: contact.fullName,
           email: contact.email,
           phone: contact.phone || null,
+          addressLine1: contact.address1,
+          addressLine2: contact.address2 || null,
+          city: contact.city,
+          stateProvince: contact.state,
+          zipCode: contact.zip,
+          billingSameAsContact: billingSame,
+          billingFullName: billingSame ? null : bill.fullName,
+          billingAddress1: billingSame ? null : bill.address1,
+          billingAddress2: billingSame ? null : bill.address2,
+          billingCity: billingSame ? null : bill.city,
+          billingState: billingSame ? null : bill.state,
+          billingZip: billingSame ? null : bill.zip,
           visitDate: visitDateISO,
           ticketType: ticketType?.name,
           adultQty: quantities?.adult || 0,
           childQty: quantities?.child || 0,
           seniorQty: quantities?.senior || 0,
           addOns: addOns || [],
-          billingAddress,
           cardLastFour,
           subtotal,
           total,
@@ -156,28 +158,52 @@ const TicketCheckoutModal = ({
           {/* ── LEFT: Form ── */}
           <div className="co-left">
 
-            {/* 1. Contact Info */}
+            {/* 1. Contact Information */}
             <div className="co-section">
               <div className="co-section-header">
                 <div className="co-step-num">1</div>
                 <span className="co-section-title">Contact Information</span>
               </div>
+
               <div className="co-row">
                 <div className="co-field">
-                  <label>Full Name <span style={{ color: '#ef4444' }}>*</span></label>
-                  <input type="text" placeholder="John Doe" value={contact.fullName}
-                    onChange={e => setF(setContact, 'fullName', e.target.value)} />
+                  <label>Email Address <span style={{ color: '#ef4444' }}>*</span></label>
+                  <input type="email" placeholder="example.user@email.com" value={contact.email} onChange={e => setC('email', e.target.value)} />
                 </div>
                 <div className="co-field">
-                  <label>Email Address <span style={{ color: '#ef4444' }}>*</span></label>
-                  <input type="email" placeholder="john@example.com" value={contact.email}
-                    onChange={e => setF(setContact, 'email', e.target.value)} />
+                  <label>Full Name <span style={{ color: '#ef4444' }}>*</span></label>
+                  <input type="text" placeholder="John Doe" value={contact.fullName} onChange={e => setC('fullName', e.target.value)} />
                 </div>
               </div>
+
+              <div className="co-field">
+                <label>Address Line 1 <span style={{ color: '#ef4444' }}>*</span></label>
+                <input type="text" placeholder="123 Forest Trail" value={contact.address1} onChange={e => setC('address1', e.target.value)} />
+              </div>
+
+              <div className="co-field">
+                <label>Address Line 2 <span style={{ color: '#999', fontWeight: 400 }}>(Optional)</span></label>
+                <input type="text" placeholder="Apt, Suite, Unit..." value={contact.address2} onChange={e => setC('address2', e.target.value)} />
+              </div>
+
+              <div className="co-row">
+                <div className="co-field" style={{ flex: 2 }}>
+                  <label>City <span style={{ color: '#ef4444' }}>*</span></label>
+                  <input type="text" placeholder="City" value={contact.city} onChange={e => setC('city', e.target.value)} />
+                </div>
+                <div className="co-field" style={{ flex: 1.2 }}>
+                  <label>State / Province <span style={{ color: '#ef4444' }}>*</span></label>
+                  <input type="text" placeholder="State" value={contact.state} onChange={e => setC('state', e.target.value)} />
+                </div>
+                <div className="co-field" style={{ flex: 1 }}>
+                  <label>ZIP Code <span style={{ color: '#ef4444' }}>*</span></label>
+                  <input type="text" placeholder="00000" value={contact.zip} onChange={e => setC('zip', e.target.value)} />
+                </div>
+              </div>
+
               <div className="co-field" style={{ maxWidth: '50%' }}>
-                <label>Phone <span style={{ color: '#999', fontWeight: 400 }}>(Optional)</span></label>
-                <input type="text" placeholder="(555) 000-0000" value={contact.phone}
-                  onChange={e => setF(setContact, 'phone', e.target.value)} />
+                <label>Phone Number <span style={{ color: '#999', fontWeight: 400 }}>(Optional)</span></label>
+                <input type="text" placeholder="Phone Number" value={contact.phone} onChange={e => setC('phone', e.target.value)} />
               </div>
             </div>
 
@@ -190,58 +216,68 @@ const TicketCheckoutModal = ({
               <div className="co-field">
                 <label>Card Number <span style={{ color: '#ef4444' }}>*</span></label>
                 <input type="text" placeholder="1234 5678 9012 3456"
-                  value={card.number} onChange={e => setCard(p => ({ ...p, number: fmtCard(e.target.value) }))}
+                  value={card.number} onChange={e => setK('number', fmtCard(e.target.value))}
                   style={{ fontFamily: 'monospace', letterSpacing: '0.05em' }} />
               </div>
               <div className="co-row">
                 <div className="co-field">
                   <label>Expiry Date <span style={{ color: '#ef4444' }}>*</span></label>
                   <input type="text" placeholder="MM/YY"
-                    value={card.expiry} onChange={e => setCard(p => ({ ...p, expiry: fmtExpiry(e.target.value) }))}
+                    value={card.expiry} onChange={e => setK('expiry', fmtExpiry(e.target.value))}
                     style={{ fontFamily: 'monospace' }} />
                 </div>
                 <div className="co-field">
                   <label>CVV <span style={{ color: '#ef4444' }}>*</span></label>
                   <input type="text" placeholder="123" maxLength={4}
-                    value={card.cvv} onChange={e => setCard(p => ({ ...p, cvv: e.target.value.replace(/\D/g, '').slice(0, 4) }))}
+                    value={card.cvv} onChange={e => setK('cvv', e.target.value.replace(/\D/g, '').slice(0, 4))}
                     style={{ fontFamily: 'monospace' }} />
                 </div>
               </div>
             </div>
 
-            {/* 3. Billing Address */}
+            {/* 3. Billing */}
             <div className="co-section" style={{ marginBottom: 0 }}>
               <div className="co-section-header">
                 <div className="co-step-num">3</div>
-                <span className="co-section-title">Billing Address</span>
+                <span className="co-section-title">Billing</span>
               </div>
-              <div className="co-field">
-                <label>Address Line 1 <span style={{ color: '#ef4444' }}>*</span></label>
-                <input type="text" placeholder="123 Forest Trail" value={billing.address1}
-                  onChange={e => setF(setBilling, 'address1', e.target.value)} />
-              </div>
-              <div className="co-field">
-                <label>Address Line 2 <span style={{ color: '#999', fontWeight: 400 }}>(Optional)</span></label>
-                <input type="text" placeholder="Apt, Suite, Unit..." value={billing.address2}
-                  onChange={e => setF(setBilling, 'address2', e.target.value)} />
-              </div>
-              <div className="co-row">
-                <div className="co-field" style={{ flex: 2 }}>
-                  <label>City <span style={{ color: '#ef4444' }}>*</span></label>
-                  <input type="text" placeholder="City" value={billing.city}
-                    onChange={e => setF(setBilling, 'city', e.target.value)} />
+              <label className="co-billing-check">
+                <input type="checkbox" checked={billingSame} onChange={e => setBillingSame(e.target.checked)} />
+                <span>Same as Contact Information</span>
+              </label>
+
+              {!billingSame && (
+                <div style={{ marginTop: 18 }}>
+                  <div className="co-row">
+                    <div className="co-field">
+                      <label>Full Name <span style={{ color: '#ef4444' }}>*</span></label>
+                      <input type="text" placeholder="John Doe" value={bill.fullName} onChange={e => setB('fullName', e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="co-field">
+                    <label>Address Line 1 <span style={{ color: '#ef4444' }}>*</span></label>
+                    <input type="text" placeholder="123 Forest Trail" value={bill.address1} onChange={e => setB('address1', e.target.value)} />
+                  </div>
+                  <div className="co-field">
+                    <label>Address Line 2 <span style={{ color: '#999', fontWeight: 400 }}>(Optional)</span></label>
+                    <input type="text" placeholder="Apt, Suite, Unit..." value={bill.address2} onChange={e => setB('address2', e.target.value)} />
+                  </div>
+                  <div className="co-row">
+                    <div className="co-field" style={{ flex: 2 }}>
+                      <label>City <span style={{ color: '#ef4444' }}>*</span></label>
+                      <input type="text" placeholder="City" value={bill.city} onChange={e => setB('city', e.target.value)} />
+                    </div>
+                    <div className="co-field" style={{ flex: 1.2 }}>
+                      <label>State / Province <span style={{ color: '#ef4444' }}>*</span></label>
+                      <input type="text" placeholder="State" value={bill.state} onChange={e => setB('state', e.target.value)} />
+                    </div>
+                    <div className="co-field" style={{ flex: 1 }}>
+                      <label>ZIP Code <span style={{ color: '#ef4444' }}>*</span></label>
+                      <input type="text" placeholder="00000" value={bill.zip} onChange={e => setB('zip', e.target.value)} />
+                    </div>
+                  </div>
                 </div>
-                <div className="co-field" style={{ flex: 1.2 }}>
-                  <label>State <span style={{ color: '#ef4444' }}>*</span></label>
-                  <input type="text" placeholder="State" value={billing.state}
-                    onChange={e => setF(setBilling, 'state', e.target.value)} />
-                </div>
-                <div className="co-field" style={{ flex: 1 }}>
-                  <label>ZIP Code <span style={{ color: '#ef4444' }}>*</span></label>
-                  <input type="text" placeholder="00000" value={billing.zip}
-                    onChange={e => setF(setBilling, 'zip', e.target.value)} />
-                </div>
-              </div>
+              )}
             </div>
           </div>
 
@@ -279,7 +315,6 @@ const TicketCheckoutModal = ({
                   <span>${(quantities.senior * ticketType.prices.senior).toFixed(2)}</span>
                 </div>
               )}
-
               {addOns && addOns.length > 0 && (
                 <>
                   <div className="tco-divider" />
