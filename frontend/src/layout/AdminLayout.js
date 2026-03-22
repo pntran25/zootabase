@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, PawPrint, Map, Ticket, ShoppingBag,
   Wrench, LogOut, TicketCheck, CalendarDays,
-  Sun, Moon, Users, LineChart, FileText
+  Sun, Moon, Users, LineChart, FileText, HeartPulse, ClipboardList
 } from 'lucide-react';
 import brandLogo from '../assets/images/Logo.png';
 import { Toaster, toast } from 'sonner';
@@ -14,8 +14,8 @@ import { API_BASE_URL } from '../services/apiClient';
 import './AdminLayout.css';
 
 const rolePermissions = {
-  'Super Admin': ['dashboard', 'animals', 'exhibits', 'attractions', 'events', 'tickets', 'shop', 'maintenance', 'staff', 'analytics', 'feedback', 'reports'],
-  'Caretaker': ['dashboard', 'animals', 'exhibits'],
+  'Super Admin': ['dashboard', 'animals', 'exhibits', 'attractions', 'events', 'tickets', 'shop', 'maintenance', 'staff', 'analytics', 'feedback', 'reports', 'animal-health', 'animal-report'],
+  'Caretaker': ['dashboard', 'animals', 'exhibits', 'animal-health', 'animal-report'],
   'Event Coordinator': ['dashboard', 'events'],
   'Ticket Staff': ['dashboard', 'tickets'],
   'Shop Manager': ['dashboard', 'shop', 'reports'],
@@ -126,8 +126,13 @@ const AdminLayout = () => {
           {renderLink('/admin/tickets', <Ticket size={18} className="nav-icon" />, 'Tickets', 'tickets')}
           {renderLink('/admin/shop', <ShoppingBag size={18} className="nav-icon" />, 'Shop', 'shop')}
           
+          <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Animal Care</p>
+
+          {renderLink('/admin/animal-health', <HeartPulse size={18} className="nav-icon" />, 'Health Tracking', 'animal-health')}
+
           <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Data Reports</p>
 
+          {renderLink('/admin/animal-report', <ClipboardList size={18} className="nav-icon" />, 'Animal Reports', 'animal-report')}
           {renderLink('/admin/reports', <FileText size={18} className="nav-icon" />, 'Transaction History', 'reports')}
 
           <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">System</p>
