@@ -214,6 +214,7 @@ async function runMigrations(pool) {
 		`IF COL_LENGTH('Animal','CreatedBy') IS NULL ALTER TABLE Animal ADD CreatedBy NVARCHAR(100) NULL`,
 		`IF COL_LENGTH('Animal','UpdatedBy') IS NULL ALTER TABLE Animal ADD UpdatedBy NVARCHAR(100) NULL`,
 		`IF COL_LENGTH('Animal','DeletedBy') IS NULL ALTER TABLE Animal ADD DeletedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('Animal','IsDisplay') IS NULL ALTER TABLE Animal ADD IsDisplay BIT NOT NULL DEFAULT 0`,
 		`IF COL_LENGTH('Exhibit','CreatedBy') IS NULL ALTER TABLE Exhibit ADD CreatedBy NVARCHAR(100) NULL`,
 		`IF COL_LENGTH('Exhibit','UpdatedBy') IS NULL ALTER TABLE Exhibit ADD UpdatedBy NVARCHAR(100) NULL`,
 		`IF COL_LENGTH('Exhibit','DeletedBy') IS NULL ALTER TABLE Exhibit ADD DeletedBy NVARCHAR(100) NULL`,

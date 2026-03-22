@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import '../AdminTable.css';
-import { PawPrint, Search, Plus, Edit2, Trash2, Image as ImageIcon, ChevronUp, ChevronDown, ChevronsUpDown, AlertTriangle, X, BookOpen } from 'lucide-react';
+import { PawPrint, Search, Plus, Edit2, Trash2, Image as ImageIcon, ChevronUp, ChevronDown, ChevronsUpDown, AlertTriangle, X, BookOpen, Eye, EyeOff } from 'lucide-react';
 import { useReactTable, getCoreRowModel, getSortedRowModel, getPaginationRowModel, flexRender } from '@tanstack/react-table';
 import { toast } from 'sonner';
 import AdminModalForm from '../AdminModalForm';
@@ -51,7 +51,7 @@ const ManageAnimals = () => {
   const [formData, setFormData] = useState({
     name: '', species: '', speciesDetail: '', exhibit: '', age: '', gender: 'Unknown',
     diet: '', health: 'Good', dateArrived: '', lifespan: '', weight: '', region: '', funFact: '',
-    isEndangered: false
+    isEndangered: false, isDisplay: false
   });
   const [imageFile, setImageFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
@@ -97,8 +97,8 @@ const ManageAnimals = () => {
 
   useEffect(() => { loadData(); }, []);
 
-  const filteredAnimals = useMemo(() =>
-    animals.filter(animal => {
+  const displayAnimals = useMemo(() =>
+    animals.filter(a => a.isDisplay === true || a.isDisplay === 1).filter(animal => {
       const matchesSearch =
         animal.name.toLowerCase().includes(search.toLowerCase()) ||
         animal.species.toLowerCase().includes(search.toLowerCase()) ||
@@ -107,6 +107,24 @@ const ManageAnimals = () => {
         animal.isEndangered === true || animal.isEndangered === 1;
       return matchesSearch && matchesEndangered;
     }), [animals, search, filterEndangered]);
+
+  const groupedAnimals = useMemo(() => {
+    const nonDisplay = animals.filter(a => !(a.isDisplay === true || a.isDisplay === 1));
+    const filtered = nonDisplay.filter(a =>
+      a.name.toLowerCase().includes(search.toLowerCase()) ||
+      a.species.toLowerCase().includes(search.toLowerCase()) ||
+      (a.animalCode || '').toLowerCase().includes(search.toLowerCase())
+    );
+    const groups = {};
+    for (const animal of filtered) {
+      const prefix = (animal.animalCode || '').split('-')[0] || 'other';
+      if (!groups[prefix]) groups[prefix] = { prefix, species: animal.species, animals: [] };
+      groups[prefix].animals.push(animal);
+    }
+    for (const g of Object.values(groups))
+      g.animals.sort((a, b) => (a.animalCode || '').localeCompare(b.animalCode || ''));
+    return Object.values(groups).sort((a, b) => a.prefix.localeCompare(b.prefix));
+  }, [animals, search]);
 
   const handleOpenModal = (animal = null) => {
     if (animal) {
@@ -120,6 +138,7 @@ const ManageAnimals = () => {
         lifespan: animal.lifespan || '', weight: animal.weight || '',
         region: animal.region || '', funFact: animal.funFact || '',
         isEndangered: animal.isEndangered === true || animal.isEndangered === 1,
+        isDisplay: animal.isDisplay === true || animal.isDisplay === 1,
       });
       setAnimalCodePreview(animal.animalCode || '');
       setIsNewSpecies(false);
@@ -128,7 +147,7 @@ const ManageAnimals = () => {
       setPreviewUrl(animal.imageUrl ? `${API_BASE_URL}${animal.imageUrl}` : null);
     } else {
       setEditingAnimal(null);
-      setFormData({ name: '', species: '', speciesDetail: '', exhibit: '', age: '', gender: 'Unknown', diet: '', health: 'Good', dateArrived: '', lifespan: '', weight: '', region: '', funFact: '', isEndangered: false });
+      setFormData({ name: '', species: '', speciesDetail: '', exhibit: '', age: '', gender: 'Unknown', diet: '', health: 'Good', dateArrived: '', lifespan: '', weight: '', region: '', funFact: '', isEndangered: false, isDisplay: false });
       setAnimalCodePreview('');
       setIsNewSpecies(false);
       setNewCodeSuffix('');
@@ -169,6 +188,40 @@ const ManageAnimals = () => {
     setDepartureReason('Deceased');
   };
 
+  const handleSetDisplay = async (animal) => {
+    try {
+      await animalService.updateAnimal(animal.id, {
+        name: animal.name, species: animal.species, speciesDetail: animal.speciesDetail,
+        exhibit: animal.exhibit, age: animal.age, gender: animal.gender,
+        diet: animal.diet, health: animal.health, dateArrived: animal.dateArrived,
+        lifespan: animal.lifespan, weight: animal.weight, region: animal.region,
+        funFact: animal.funFact, isEndangered: animal.isEndangered, isDisplay: true,
+      });
+      setAnimals(prev => prev.map(a => a.id === animal.id ? { ...a, isDisplay: true } : a));
+      toast.success(`${animal.name} added to display.`);
+    } catch (err) {
+      toast.error(err.message || 'Failed to update.');
+    }
+  };
+
+  const handleUnsetDisplay = async (id) => {
+    const animal = animals.find(a => a.id === id);
+    if (!animal) return;
+    try {
+      await animalService.updateAnimal(id, {
+        name: animal.name, species: animal.species, speciesDetail: animal.speciesDetail,
+        exhibit: animal.exhibit, age: animal.age, gender: animal.gender,
+        diet: animal.diet, health: animal.health, dateArrived: animal.dateArrived,
+        lifespan: animal.lifespan, weight: animal.weight, region: animal.region,
+        funFact: animal.funFact, isEndangered: animal.isEndangered, isDisplay: false,
+      });
+      setAnimals(prev => prev.map(a => a.id === id ? { ...a, isDisplay: false } : a));
+      toast.success('Removed from display.');
+    } catch (err) {
+      toast.error(err.message || 'Failed to update.');
+    }
+  };
+
   const confirmDeparture = async () => {
     try {
       await animalService.deleteAnimal(departureTarget.id, departureReason);
@@ -189,6 +242,7 @@ const ManageAnimals = () => {
     try {
       const payload = {
         ...formData,
+        isDisplay: formData.isDisplay,
         ...(!editingAnimal && isNewSpecies ? { codeSuffix: newCodeSuffix } : {}),
       };
       let savedAnimalId = null;
@@ -325,6 +379,13 @@ const ManageAnimals = () => {
       enableSorting: false,
       cell: ({ row }) => (
         <div className="action-buttons">
+          <button
+            onClick={() => handleUnsetDisplay(row.original.id)}
+            title="Remove from display"
+            style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.78rem', color: 'var(--adm-text-secondary)', padding: '5px 10px', border: '1px solid var(--adm-border)', borderRadius: 6, background: 'transparent', cursor: 'pointer' }}
+          >
+            <EyeOff size={13} /> Remove
+          </button>
           <button className="action-btn edit" onClick={() => handleOpenModal(row.original)}><Edit2 size={16} /></button>
           <button className="action-btn delete" onClick={() => handleDelete(row.original)}><Trash2 size={16} /></button>
         </div>
@@ -332,15 +393,15 @@ const ManageAnimals = () => {
     },
   ], [animals]);
 
-  const table = useReactTable({
-    data: filteredAnimals,
+  const displayTable = useReactTable({
+    data: displayAnimals,
     columns,
     state: { sorting },
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize: 10 }, sorting: [{ id: 'exhibit', desc: false }, { id: 'species', desc: false }] },
+    initialState: { pagination: { pageSize: 10 } },
   });
 
   const filteredLookup = speciesCodes.filter(sc => {
@@ -396,68 +457,195 @@ const ManageAnimals = () => {
         </div>
       </div>
 
-      <div className="admin-table-container">
-        <table className="admin-table">
-          <thead>
-            {table.getHeaderGroups().map(hg => (
-              <tr key={hg.id}>
-                {hg.headers.map(header => (
-                  <th key={header.id}
-                      onClick={header.column.getToggleSortingHandler()}
-                      data-sorted={header.column.getIsSorted() || undefined}
-                      style={header.column.columnDef.size ? { maxWidth: header.column.getSize() } : undefined}>
-                    {flexRender(header.column.columnDef.header, header.getContext())}
-                    <SortIcon column={header.column} />
-                  </th>
-                ))}
-              </tr>
-            ))}
-          </thead>
-          <tbody>
-            {isLoading ? (
-              <tr className="no-hover"><td colSpan={columns.length}>
-                <div className="admin-table-loading"><div className="admin-loading-spinner" /><p>Loading animals...</p></div>
-              </td></tr>
-            ) : table.getRowModel().rows.length === 0 ? (
-              <tr className="no-hover"><td colSpan={columns.length}>
-                <div className="admin-table-empty">
-                  <div className="admin-table-empty-icon"><PawPrint size={22} /></div>
-                  <p className="admin-table-empty-title">No animals found</p>
-                  <p className="admin-table-empty-desc">
-                    {search ? 'Try adjusting your search.' : 'Add your first animal to get started.'}
-                  </p>
-                </div>
-              </td></tr>
-            ) : (
-              table.getRowModel().rows.map(row => (
-                <tr key={row.id}>
-                  {row.getVisibleCells().map(cell => (
-                    <td key={cell.id}
-                        style={{
-                          ...(cell.column.columnDef.size ? { maxWidth: cell.column.getSize() } : {}),
-                          ...(cell.column.id === 'image' ? { paddingRight: 6 } : {}),
-                        }}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
+      {/* ── Section 1: Display Animals ── */}
+      <div style={{ marginBottom: 32 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+          <Eye size={18} style={{ color: 'var(--adm-accent)' }} />
+          <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--adm-text-primary)' }}>Display Animals</h2>
+          <span className="pill-badge" style={{ background: 'var(--adm-accent-bg, rgba(34,107,64,0.1))', color: 'var(--adm-accent)', fontSize: '0.78rem', padding: '2px 9px', borderRadius: 20 }}>
+            {displayAnimals.length}
+          </span>
+          <span style={{ fontSize: '0.82rem', color: 'var(--adm-text-secondary)', marginLeft: 2 }}>Shown on the public website with quick facts</span>
+        </div>
+        <div className="admin-table-container">
+          <table className="admin-table">
+            <thead>
+              {displayTable.getHeaderGroups().map(hg => (
+                <tr key={hg.id}>
+                  {hg.headers.map(header => (
+                    <th key={header.id}
+                        onClick={header.column.getToggleSortingHandler()}
+                        data-sorted={header.column.getIsSorted() || undefined}
+                        style={header.column.columnDef.size ? { maxWidth: header.column.getSize() } : undefined}>
+                      {flexRender(header.column.columnDef.header, header.getContext())}
+                      <SortIcon column={header.column} />
+                    </th>
                   ))}
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-        {!isLoading && table.getPageCount() > 1 && (
-          <div className="admin-table-pagination">
-            <span className="admin-pagination-info">Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()} · {filteredAnimals.length} records</span>
-            <div className="admin-pagination-controls">
-              <button className="admin-pagination-btn" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>←</button>
-              <button className="admin-pagination-btn" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>→</button>
+              ))}
+            </thead>
+            <tbody>
+              {isLoading ? (
+                <tr className="no-hover"><td colSpan={columns.length}>
+                  <div className="admin-table-loading"><div className="admin-loading-spinner" /><p>Loading animals...</p></div>
+                </td></tr>
+              ) : displayTable.getRowModel().rows.length === 0 ? (
+                <tr className="no-hover"><td colSpan={columns.length}>
+                  <div className="admin-table-empty" style={{ padding: '24px 0' }}>
+                    <div className="admin-table-empty-icon"><Eye size={22} /></div>
+                    <p className="admin-table-empty-title">No display animals set</p>
+                    <p className="admin-table-empty-desc">Click "Set as Display" on an animal below to feature it on the public site.</p>
+                  </div>
+                </td></tr>
+              ) : (
+                displayTable.getRowModel().rows.map(row => (
+                  <tr key={row.id}>
+                    {row.getVisibleCells().map(cell => (
+                      <td key={cell.id}
+                          style={{
+                            ...(cell.column.columnDef.size ? { maxWidth: cell.column.getSize() } : {}),
+                            ...(cell.column.id === 'image' ? { paddingRight: 6 } : {}),
+                          }}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+          {!isLoading && displayTable.getPageCount() > 1 && (
+            <div className="admin-table-pagination">
+              <span className="admin-pagination-info">Page {displayTable.getState().pagination.pageIndex + 1} of {displayTable.getPageCount()} · {displayAnimals.length} records</span>
+              <div className="admin-pagination-controls">
+                <button className="admin-pagination-btn" onClick={() => displayTable.previousPage()} disabled={!displayTable.getCanPreviousPage()}>←</button>
+                <button className="admin-pagination-btn" onClick={() => displayTable.nextPage()} disabled={!displayTable.getCanNextPage()}>→</button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Section 2: All Animals (grouped by species prefix) ── */}
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+          <PawPrint size={18} style={{ color: 'var(--adm-text-secondary)' }} />
+          <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--adm-text-primary)' }}>All Animals</h2>
+          <span className="pill-badge" style={{ fontSize: '0.78rem', padding: '2px 9px', borderRadius: 20 }}>
+            {animals.length}
+          </span>
+          <span style={{ fontSize: '0.82rem', color: 'var(--adm-text-secondary)', marginLeft: 2 }}>Grouped by species · click "Set as Display" to feature an animal</span>
+        </div>
+
+        {isLoading ? (
+          <div className="admin-table-loading"><div className="admin-loading-spinner" /><p>Loading animals...</p></div>
+        ) : groupedAnimals.length === 0 ? (
+          <div className="admin-table-empty">
+            <div className="admin-table-empty-icon"><PawPrint size={22} /></div>
+            <p className="admin-table-empty-title">No animals found</p>
+            <p className="admin-table-empty-desc">{search ? 'Try adjusting your search.' : 'Add your first animal to get started.'}</p>
+          </div>
+        ) : groupedAnimals.map(group => (
+          <div key={group.prefix} style={{ marginBottom: 20 }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '8px 14px', background: 'var(--adm-bg-surface-2)',
+              borderRadius: '8px 8px 0 0', border: '1px solid var(--adm-border)',
+              borderBottom: 'none',
+            }}>
+              <span style={{ fontWeight: 700, color: 'var(--adm-text-primary)', fontSize: '0.9rem' }}>{group.species}</span>
+              <span style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: 'var(--adm-accent)', background: 'var(--adm-accent-bg, rgba(34,107,64,0.1))', padding: '1px 7px', borderRadius: 20, fontWeight: 700 }}>{group.prefix}</span>
+              <span style={{ fontSize: '0.78rem', color: 'var(--adm-text-secondary)', marginLeft: 2 }}>{group.animals.length} animal{group.animals.length !== 1 ? 's' : ''}</span>
+            </div>
+            <div className="admin-table-container" style={{ borderRadius: '0 0 8px 8px', marginTop: 0 }}>
+              <table className="admin-table" style={{ borderRadius: 0 }}>
+                <thead>
+                  <tr>
+                    <th style={{ width: 52, minWidth: 52, maxWidth: 52 }}></th>
+                    <th>Animal ID</th>
+                    <th>Name</th>
+                    <th>Age / Sex</th>
+                    <th>Exhibit</th>
+                    <th>Modified By</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {group.animals.map(animal => (
+                    <tr key={animal.id}>
+                      <td style={{ paddingRight: 6, width: 52, minWidth: 52, maxWidth: 52 }}>
+                        {animal.imageUrl ? (
+                          <img src={`${API_BASE_URL}${animal.imageUrl}`} alt={animal.name}
+                            style={{ width: 40, height: 40, minWidth: 40, borderRadius: 8, objectFit: 'cover', border: '1.5px solid var(--adm-border)', display: 'block' }} />
+                        ) : (
+                          <div style={{ width: 40, height: 40, borderRadius: 8, background: 'var(--adm-bg-surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--adm-border)' }}>
+                            <ImageIcon size={16} style={{ color: 'var(--adm-text-muted)' }} />
+                          </div>
+                        )}
+                      </td>
+                      <td>
+                        {animal.animalCode
+                          ? <span style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: 'var(--adm-accent)', fontWeight: 700 }}>{animal.animalCode}</span>
+                          : <span className="text-secondary">—</span>}
+                      </td>
+                      <td><span className="font-medium text-dark">{animal.name || '—'}</span></td>
+                      <td>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.82rem' }}>
+                          <span className="text-secondary">{animal.age ? `${animal.age} yrs` : '—'}</span>
+                          <span className="text-secondary">{animal.gender || '—'}</span>
+                        </div>
+                      </td>
+                      <td>
+                        {animal.exhibit
+                          ? <span className="pill-badge outline">{animal.exhibit}</span>
+                          : <span style={{ color: 'var(--adm-text-muted)', fontSize: '0.8rem', fontStyle: 'italic' }}>Undecided</span>}
+                      </td>
+                      <td>
+                        {animal.updatedBy
+                          ? <span className="text-secondary" style={{ fontSize: '0.78rem' }}>Updated by <strong>{animal.updatedBy}</strong></span>
+                          : animal.createdBy
+                          ? <span className="text-secondary" style={{ fontSize: '0.78rem' }}>Created by <strong>{animal.createdBy}</strong></span>
+                          : <span className="text-secondary">—</span>}
+                      </td>
+                      <td>
+                        <div className="action-buttons">
+                          <button
+                            onClick={() => handleSetDisplay(animal)}
+                            title="Set as display animal"
+                            style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.78rem', color: 'var(--adm-accent)', padding: '5px 10px', border: '1px solid var(--adm-accent)', borderRadius: 6, background: 'transparent', cursor: 'pointer' }}
+                          >
+                            <Eye size={13} /> Display
+                          </button>
+                          <button className="action-btn edit" onClick={() => handleOpenModal(animal)}><Edit2 size={16} /></button>
+                          <button className="action-btn delete" onClick={() => handleDelete(animal)}><Trash2 size={16} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
-        )}
+        ))}
       </div>
 
       {/* ── Add / Edit Modal ── */}
       <AdminModalForm title={editingAnimal ? 'Edit Animal Record' : 'Add New Animal'} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSubmit={handleSubmit}>
+        {/* Display Animal toggle */}
+        <div style={{ background: 'var(--adm-bg-surface-2)', borderRadius: 8, padding: '10px 14px', marginBottom: 8, border: '1px solid var(--adm-border)' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', margin: 0 }}>
+            <input
+              type="checkbox"
+              checked={formData.isDisplay}
+              onChange={e => setFormData({ ...formData, isDisplay: e.target.checked })}
+              style={{ width: 16, height: 16, margin: 0, accentColor: 'var(--adm-accent)', flexShrink: 0 }}
+            />
+            <span style={{ fontWeight: 600, color: 'var(--adm-text-primary)' }}>Mark as Display Animal</span>
+            <span style={{ fontSize: '0.78rem', color: 'var(--adm-text-secondary)', fontWeight: 400 }}>
+              — appears on public website with quick facts
+            </span>
+          </label>
+        </div>
         <div className="form-row">
           <div className="form-group">
             <label>Name</label>
@@ -557,70 +745,74 @@ const ManageAnimals = () => {
             />
           </div>
         </div>
-        <div className="form-row">
-          <div className="form-group">
-            <label>Diet Type</label>
-            <input type="text" placeholder="e.g. Carnivore, Herbivore" value={formData.diet} onChange={e => setFormData({ ...formData, diet: e.target.value })} />
-          </div>
-          <div className="form-group">
-            <label>Health Status</label>
-            <AdminSelect
-              value={formData.health}
-              onChange={val => setFormData({ ...formData, health: val })}
-              options={['Excellent', 'Good', 'Fair', 'Needs Checkup', 'Critical']}
-            />
-          </div>
-        </div>
-        <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-          <input
-            type="checkbox"
-            id="isEndangered"
-            checked={formData.isEndangered}
-            onChange={e => setFormData({ ...formData, isEndangered: e.target.checked })}
-            style={{ width: 16, height: 16, margin: 0, accentColor: '#ef4444', flexShrink: 0 }}
-          />
-          <label htmlFor="isEndangered" style={{ margin: 0, cursor: 'pointer' }}>
-            Mark as <span style={{ color: '#ef4444', fontWeight: 700 }}>Endangered</span>
-          </label>
-        </div>
-        <div className="form-group">
-          <label>Profile Image</label>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 8 }}>
-            {previewUrl ? (
-              <img src={previewUrl} alt="Preview"
-                style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover', border: '1.5px solid var(--adm-border)', flexShrink: 0 }} />
-            ) : (
-              <div style={{ width: 64, height: 64, borderRadius: 8, background: 'var(--adm-bg-surface-2)', border: '1px dashed var(--adm-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <ImageIcon size={22} style={{ color: 'var(--adm-text-muted)' }} />
+        {formData.isDisplay && (
+          <>
+            <div className="form-row">
+              <div className="form-group">
+                <label>Diet Type</label>
+                <input type="text" placeholder="e.g. Carnivore, Herbivore" value={formData.diet} onChange={e => setFormData({ ...formData, diet: e.target.value })} />
               </div>
-            )}
-            <div style={{ flex: 1 }}>
-              <input type="file" accept="image/*" onChange={handleImageChange} style={{ display: 'block', width: '100%' }} />
-              <small className="text-secondary" style={{ marginTop: 4, display: 'block' }}>If no image is provided, a placeholder will be used.</small>
+              <div className="form-group">
+                <label>Health Status</label>
+                <AdminSelect
+                  value={formData.health}
+                  onChange={val => setFormData({ ...formData, health: val })}
+                  options={['Excellent', 'Good', 'Fair', 'Needs Checkup', 'Critical']}
+                />
+              </div>
             </div>
-          </div>
-        </div>
-        <p className="form-section-heading">Quick Facts (Hover Info)</p>
-        <div className="form-row">
-          <div className="form-group">
-            <label>Lifespan</label>
-            <input type="text" placeholder="e.g. 10–14 years" value={formData.lifespan} onChange={e => setFormData({ ...formData, lifespan: e.target.value })} />
-          </div>
-          <div className="form-group">
-            <label>Weight</label>
-            <input type="text" placeholder="e.g. 265–420 lbs" value={formData.weight} onChange={e => setFormData({ ...formData, weight: e.target.value })} />
-          </div>
-        </div>
-        <div className="form-row">
-          <div className="form-group">
-            <label>Region</label>
-            <input type="text" placeholder="e.g. Africa" value={formData.region} onChange={e => setFormData({ ...formData, region: e.target.value })} />
-          </div>
-          <div className="form-group">
-            <label>Interesting Fact</label>
-            <input type="text" placeholder="Short fun fact" value={formData.funFact} onChange={e => setFormData({ ...formData, funFact: e.target.value })} />
-          </div>
-        </div>
+            <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+              <input
+                type="checkbox"
+                id="isEndangered"
+                checked={formData.isEndangered}
+                onChange={e => setFormData({ ...formData, isEndangered: e.target.checked })}
+                style={{ width: 16, height: 16, margin: 0, accentColor: '#ef4444', flexShrink: 0 }}
+              />
+              <label htmlFor="isEndangered" style={{ margin: 0, cursor: 'pointer' }}>
+                Mark as <span style={{ color: '#ef4444', fontWeight: 700 }}>Endangered</span>
+              </label>
+            </div>
+            <div className="form-group">
+              <label>Profile Image</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 8 }}>
+                {previewUrl ? (
+                  <img src={previewUrl} alt="Preview"
+                    style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover', border: '1.5px solid var(--adm-border)', flexShrink: 0 }} />
+                ) : (
+                  <div style={{ width: 64, height: 64, borderRadius: 8, background: 'var(--adm-bg-surface-2)', border: '1px dashed var(--adm-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <ImageIcon size={22} style={{ color: 'var(--adm-text-muted)' }} />
+                  </div>
+                )}
+                <div style={{ flex: 1 }}>
+                  <input type="file" accept="image/*" onChange={handleImageChange} style={{ display: 'block', width: '100%' }} />
+                  <small className="text-secondary" style={{ marginTop: 4, display: 'block' }}>If no image is provided, a placeholder will be used.</small>
+                </div>
+              </div>
+            </div>
+            <p className="form-section-heading">Quick Facts (Hover Info)</p>
+            <div className="form-row">
+              <div className="form-group">
+                <label>Lifespan</label>
+                <input type="text" placeholder="e.g. 10–14 years" value={formData.lifespan} onChange={e => setFormData({ ...formData, lifespan: e.target.value })} />
+              </div>
+              <div className="form-group">
+                <label>Weight</label>
+                <input type="text" placeholder="e.g. 265–420 lbs" value={formData.weight} onChange={e => setFormData({ ...formData, weight: e.target.value })} />
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label>Region</label>
+                <input type="text" placeholder="e.g. Africa" value={formData.region} onChange={e => setFormData({ ...formData, region: e.target.value })} />
+              </div>
+              <div className="form-group">
+                <label>Interesting Fact</label>
+                <input type="text" placeholder="Short fun fact" value={formData.funFact} onChange={e => setFormData({ ...formData, funFact: e.target.value })} />
+              </div>
+            </div>
+          </>
+        )}
       </AdminModalForm>
 
       {/* ── Animal ID Lookup Modal ── */}
