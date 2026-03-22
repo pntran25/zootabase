@@ -122,6 +122,27 @@
   transition: background 0.3s ease, border-color 0.3s ease;
 }
 
+.admin-table-scroll-inner {
+  overflow-y: auto;
+}
+
+.admin-table-scroll-inner::-webkit-scrollbar {
+  width: 6px;
+}
+
+.admin-table-scroll-inner::-webkit-scrollbar-track {
+  background: var(--adm-bg-surface-2);
+}
+
+.admin-table-scroll-inner::-webkit-scrollbar-thumb {
+  background: var(--adm-border);
+  border-radius: 999px;
+}
+
+.admin-table-scroll-inner::-webkit-scrollbar-thumb:hover {
+  background: var(--adm-text-muted);
+}
+
 /* ── Table ──────────────────────────────────────────── */
 .admin-table {
   width: 100%;
