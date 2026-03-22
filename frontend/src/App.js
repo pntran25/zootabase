@@ -11,7 +11,7 @@ import ProductPage from './components/User/Product/ProductPage';
 import TransactionPage from './components/User/Transaction/TransactionPage';
 import TicketingPage from './components/User/Ticketing/TicketingPage';
 import Login from './components/User/Auth/Login';
-import Signup from './components/User/Auth/Signup';
+import Signup from './components/User/Auth/SignUp';
 
 // Admin Imports
 import AdminLayout from './layout/AdminLayout';

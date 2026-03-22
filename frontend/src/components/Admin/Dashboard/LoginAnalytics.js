@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { LineChart } from 'lucide-react';
 import { toast } from 'sonner';
+import { API_BASE_URL } from '../../../services/apiClient';
 import '../AdminTable.css';
 
 const roleColors = {
@@ -21,7 +22,7 @@ const LoginAnalytics = () => {
             try {
                 const { auth } = await import('../../../services/firebase');
                 const token = await auth.currentUser.getIdToken();
-                const res = await fetch('http://localhost:5000/api/analytics/logins', {
+                const res = await fetch(`${API_BASE_URL}/api/analytics/logins`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const data = await res.json();

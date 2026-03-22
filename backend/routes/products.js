@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const sql = require('mssql');
 const { connectToDb } = require('../services/admin');
+const { verifyToken } = require('../middleware/authMiddleware');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -14,7 +15,17 @@ const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, imageDir),
     filename: (req, file, cb) => cb(null, 'product-' + Date.now() + path.extname(file.originalname)),
 });
-const upload = multer({ storage });
+const upload = multer({
+    storage,
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        const allowed = /jpeg|jpg|png|gif|webp/;
+        if (allowed.test(path.extname(file.originalname).toLowerCase()) && allowed.test(file.mimetype)) {
+            return cb(null, true);
+        }
+        cb(new Error('Only image files (jpg, png, gif, webp) are allowed'));
+    }
+});
 
 // GET all products
 router.get('/api/products', async (req, res) => {
@@ -63,7 +74,7 @@ router.get('/api/products/low-stock', async (req, res) => {
 });
 
 // POST new product
-router.post('/api/products', async (req, res) => {
+router.post('/api/products', verifyToken, async (req, res) => {
     try {
         const { name, category, price, stockQuantity, lowStockThreshold } = req.body;
         const pool = await connectToDb();
@@ -88,7 +99,7 @@ router.post('/api/products', async (req, res) => {
 });
 
 // PUT update product
-router.put('/api/products/:id', async (req, res) => {
+router.put('/api/products/:id', verifyToken, async (req, res) => {
     try {
         const { name, category, price, stockQuantity, lowStockThreshold } = req.body;
         const pool = await connectToDb();
@@ -114,7 +125,7 @@ router.put('/api/products/:id', async (req, res) => {
 });
 
 // POST upload product image
-router.post('/api/products/:id/image', upload.single('image'), async (req, res) => {
+router.post('/api/products/:id/image', verifyToken, upload.single('image'), async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ error: 'No image file provided' });
         const imageUrl = '/images/Product_Images/' + req.file.filename;
@@ -131,7 +142,7 @@ router.post('/api/products/:id/image', upload.single('image'), async (req, res) 
 });
 
 // DELETE product (soft delete)
-router.delete('/api/products/:id', async (req, res) => {
+router.delete('/api/products/:id', verifyToken, async (req, res) => {
     try {
         const pool = await connectToDb();
         await pool.request()
