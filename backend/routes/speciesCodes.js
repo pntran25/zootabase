@@ -2,6 +2,7 @@ const express = require('express');
 const router  = express.Router();
 const sql     = require('mssql');
 const { connectToDb } = require('../services/admin');
+const { verifyToken } = require('../middleware/authMiddleware');
 
 // GET /api/species-codes — all entries
 router.get('/', async (req, res) => {
@@ -37,7 +38,7 @@ router.get('/next', async (req, res) => {
 });
 
 // POST /api/species-codes — create { speciesName, codeSuffix }
-router.post('/', async (req, res) => {
+router.post('/', verifyToken, async (req, res) => {
     try {
         const { speciesName, codeSuffix } = req.body;
         if (!speciesName || !codeSuffix) {

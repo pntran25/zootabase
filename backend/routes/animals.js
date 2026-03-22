@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const sql = require('mssql');
 const { connectToDb } = require('../services/admin');
+const { verifyToken } = require('../middleware/authMiddleware');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -21,7 +22,17 @@ const storage = multer.diskStorage({
         cb(null, 'animal-' + Date.now() + path.extname(file.originalname));
     }
 });
-const upload = multer({ storage: storage });
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        const allowed = /jpeg|jpg|png|gif|webp/;
+        if (allowed.test(path.extname(file.originalname).toLowerCase()) && allowed.test(file.mimetype)) {
+            return cb(null, true);
+        }
+        cb(new Error('Only image files (jpg, png, gif, webp) are allowed'));
+    }
+});
 
 // Helper to resolve HabitatID from Exhibit name
 async function resolveHabitatId(request, exhibitName) {
@@ -125,7 +136,7 @@ router.get('/', async (req, res) => {
 });
 
 // POST new animal
-router.post('/', async (req, res) => {
+router.post('/', verifyToken, async (req, res) => {
     try {
         const { name, species, speciesDetail, age, gender, diet, health, dateArrived, exhibit, lifespan, weight, region, funFact, isEndangered, codeSuffix } = req.body;
         const pool = await connectToDb();
@@ -204,7 +215,7 @@ router.post('/', async (req, res) => {
 });
 
 // PUT update animal
-router.put('/:id', async (req, res) => {
+router.put('/:id', verifyToken, async (req, res) => {
     try {
         const { id } = req.params;
         const { name, species, speciesDetail, age, gender, diet, health, dateArrived, exhibit, lifespan, weight, region, funFact, isEndangered } = req.body;
@@ -258,7 +269,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // PATCH endangered flag only (simple, no transaction needed)
-router.patch('/:id/endangered', async (req, res) => {
+router.patch('/:id/endangered', verifyToken, async (req, res) => {
     try {
         const { id } = req.params;
         const { isEndangered } = req.body;
@@ -275,7 +286,7 @@ router.patch('/:id/endangered', async (req, res) => {
 });
 
 // DELETE delete animal (soft-delete with departure reason)
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', verifyToken, async (req, res) => {
     try {
         const { id } = req.params;
         const reason = (req.body && req.body.reason) || 'Other';
@@ -292,7 +303,7 @@ router.delete('/:id', async (req, res) => {
 });
 
 // POST upload image
-router.post('/:id/image', upload.single('image'), async (req, res) => {
+router.post('/:id/image', verifyToken, upload.single('image'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'No image file provided' });

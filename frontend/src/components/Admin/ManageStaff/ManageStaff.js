@@ -4,6 +4,7 @@ import { Edit2, Plus, Trash2, Users } from 'lucide-react';
 import AdminModalForm from '../AdminModalForm';
 import AdminSelect from '../AdminSelect';
 import BirthDatePickerInput from '../BirthDatePickerInput';
+import { API_BASE_URL } from '../../../services/apiClient';
 import '../AdminTable.css';
 
 const ROLES = ['Super Admin', 'Caretaker', 'Event Coordinator', 'Ticket Staff', 'Shop Manager', 'Maintenance'];
@@ -43,7 +44,7 @@ const ManageStaff = () => {
   const fetchStaff = async () => {
     try {
       const token = await getToken();
-      const res = await fetch('http://localhost:5000/api/staff', {
+      const res = await fetch(`${API_BASE_URL}/api/staff`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
@@ -86,7 +87,7 @@ const ManageStaff = () => {
     if (!formData.ssn) { toast.error('SSN is required.'); return; }
     try {
       const token = await getToken();
-      const url    = editingStaff ? `http://localhost:5000/api/staff/${editingStaff.StaffID}` : 'http://localhost:5000/api/staff';
+      const url    = editingStaff ? `${API_BASE_URL}/api/staff/${editingStaff.StaffID}` : `${API_BASE_URL}/api/staff`;
       const method = editingStaff ? 'PUT' : 'POST';
       const res = await fetch(url, {
         method,
@@ -109,7 +110,7 @@ const ManageStaff = () => {
     if (!window.confirm(`Remove ${staff.FirstName} ${staff.LastName}? This cannot be undone.`)) return;
     try {
       const token = await getToken();
-      const res = await fetch(`http://localhost:5000/api/staff/${staff.StaffID}`, {
+      const res = await fetch(`${API_BASE_URL}/api/staff/${staff.StaffID}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });

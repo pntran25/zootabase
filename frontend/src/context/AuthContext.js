@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../services/firebase';
+import { API_BASE_URL } from '../services/apiClient';
 
 const AuthContext = createContext();
 
@@ -20,7 +21,7 @@ export const AuthProvider = ({ children }) => {
                     const idToken = await user.getIdToken(true);
                     
                     // First call the sync endpoint just in case it's a new login or sign up
-                    await fetch('http://localhost:5000/api/auth/sync', {
+                    await fetch(`${API_BASE_URL}/api/auth/sync`, {
                         method: 'POST',
                         headers: {
                             'Authorization': `Bearer ${idToken}`,
@@ -29,7 +30,7 @@ export const AuthProvider = ({ children }) => {
                     });
 
                     // Then fetch profile
-                    const response = await fetch('http://localhost:5000/api/auth/me', {
+                    const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
                         headers: {
                             'Authorization': `Bearer ${idToken}`
                         }
