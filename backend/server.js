@@ -24,6 +24,8 @@ const staffRouter = require('./routes/staff');
 const analyticsRouter = require('./routes/analytics');
 const ordersRouter = require('./routes/orders');
 const ticketOrdersRouter = require('./routes/ticketOrders');
+const membershipPlansRouter = require('./routes/membershipPlans');
+const membershipSubsRouter = require('./routes/membershipSubscriptions');
 const path = require('path');
 
 app.use('/api/exhibits', exhibitsRouter);
@@ -40,6 +42,8 @@ app.use('/api/staff', staffRouter);
 app.use('/api/analytics', analyticsRouter);
 app.use('/api/orders', ordersRouter);
 app.use('/api/ticket-orders', ticketOrdersRouter);
+app.use('/api/membership-plans', membershipPlansRouter);
+app.use('/api/membership-subscriptions', membershipSubsRouter);
 
 // Serve images from the frontend assets folder dynamically
 app.use('/images', express.static(path.join(__dirname, '../frontend/src/assets/images')));
@@ -181,6 +185,58 @@ async function runMigrations(pool) {
 		`IF COL_LENGTH('TicketOrders','BillingCity') IS NULL ALTER TABLE TicketOrders ADD BillingCity NVARCHAR(100) NULL`,
 		`IF COL_LENGTH('TicketOrders','BillingState') IS NULL ALTER TABLE TicketOrders ADD BillingState NVARCHAR(100) NULL`,
 		`IF COL_LENGTH('TicketOrders','BillingZip') IS NULL ALTER TABLE TicketOrders ADD BillingZip NVARCHAR(20) NULL`,
+		`IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='MembershipPlans' AND xtype='U')
+		  CREATE TABLE MembershipPlans (
+		    PlanID       INT IDENTITY(1,1) PRIMARY KEY,
+		    Name         NVARCHAR(100)  NOT NULL,
+		    Description  NVARCHAR(500)  NULL,
+		    MonthlyPrice DECIMAL(10,2)  NOT NULL DEFAULT 0,
+		    YearlyPrice  DECIMAL(10,2)  NOT NULL DEFAULT 0,
+		    Features     NVARCHAR(MAX)  NULL,
+		    IsPopular    BIT            NOT NULL DEFAULT 0,
+		    SortOrder    INT            NOT NULL DEFAULT 0,
+		    DeletedAt    DATETIME2      NULL,
+		    CreatedAt    DATETIME2      NOT NULL DEFAULT SYSUTCDATETIME()
+		  )`,
+		// Seed default plans if table is empty
+		`IF NOT EXISTS (SELECT 1 FROM MembershipPlans)
+		  INSERT INTO MembershipPlans (Name, Description, MonthlyPrice, YearlyPrice, Features, IsPopular, SortOrder) VALUES
+		  ('Individual', 'Perfect for solo adventurers', 9.99, 89.00,
+		   '[{"text":"Unlimited admission for 1 adult","included":true},{"text":"10% discount at Gift Shop","included":true},{"text":"10% discount at cafes","included":true},{"text":"Member-only newsletter","included":true},{"text":"Early access to events","included":true},{"text":"Free parking (weekdays)","included":true},{"text":"Guest passes","included":false},{"text":"Behind-the-scenes tours","included":false},{"text":"VIP lounge access","included":false}]',
+		   0, 1),
+		  ('Family', 'Best value for families', 19.99, 179.00,
+		   '[{"text":"Unlimited admission for 2 adults + 4 children","included":true},{"text":"4 guest passes per year","included":true},{"text":"15% discount at Gift Shop","included":true},{"text":"15% discount at cafes","included":true},{"text":"Member-only newsletter","included":true},{"text":"Early access to events","included":true},{"text":"Free parking (all days)","included":true},{"text":"Priority booking for camps","included":true},{"text":"Behind-the-scenes tours","included":false},{"text":"VIP lounge access","included":false}]',
+		   1, 2),
+		  ('Premium', 'The ultimate zoo experience', 35.99, 349.00,
+		   '[{"text":"Unlimited admission for 2 adults + 6 children","included":true},{"text":"12 guest passes per year","included":true},{"text":"20% discount at Gift Shop","included":true},{"text":"20% discount at cafes","included":true},{"text":"Member-only newsletter","included":true},{"text":"Early access to all events","included":true},{"text":"Free parking (all days)","included":true},{"text":"Priority booking for camps","included":true},{"text":"2 behind-the-scenes tours","included":true},{"text":"VIP lounge access","included":true},{"text":"Exclusive member events","included":true},{"text":"Complimentary stroller rental","included":true}]',
+		   0, 3)`,
+		`IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='MembershipSubscriptions' AND xtype='U')
+		  CREATE TABLE MembershipSubscriptions (
+		    SubID                INT IDENTITY(1,1) PRIMARY KEY,
+		    CustomerID           INT            NULL,
+		    PlanName             NVARCHAR(100)  NOT NULL,
+		    BillingPeriod        NVARCHAR(10)   NOT NULL,
+		    FullName             NVARCHAR(100)  NOT NULL,
+		    Email                NVARCHAR(200)  NOT NULL,
+		    Phone                NVARCHAR(30)   NULL,
+		    AddressLine1         NVARCHAR(200)  NULL,
+		    AddressLine2         NVARCHAR(200)  NULL,
+		    City                 NVARCHAR(100)  NULL,
+		    StateProvince        NVARCHAR(100)  NULL,
+		    ZipCode              NVARCHAR(20)   NULL,
+		    BillingSameAsContact BIT            NOT NULL DEFAULT 1,
+		    BillingFullName      NVARCHAR(100)  NULL,
+		    BillingAddress1      NVARCHAR(200)  NULL,
+		    BillingAddress2      NVARCHAR(200)  NULL,
+		    BillingCity          NVARCHAR(100)  NULL,
+		    BillingState         NVARCHAR(100)  NULL,
+		    BillingZip           NVARCHAR(20)   NULL,
+		    CardLastFour         NVARCHAR(4)    NULL,
+		    Total                DECIMAL(10,2)  NOT NULL,
+		    StartDate            DATE           NOT NULL,
+		    EndDate              DATE           NOT NULL,
+		    PlacedAt             DATETIME2      NOT NULL DEFAULT SYSUTCDATETIME()
+		  )`,
 	];
 
 	for (const sql of steps) {

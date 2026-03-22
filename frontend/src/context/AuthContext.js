@@ -2,6 +2,8 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../services/firebase';
 
+const API_BASE_URL = (process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000').replace(/\/$/, '');
+
 const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
@@ -13,14 +15,17 @@ export const AuthProvider = ({ children }) => {
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
+            // Always set loading=true at the start so ProtectedRoute waits
+            // for the profile fetch before deciding whether to redirect.
+            setLoading(true);
             setCurrentUser(user);
             if (user) {
                 // Fetch the user's role and details from SQL backend
                 try {
                     const idToken = await user.getIdToken(true);
-                    
+
                     // First call the sync endpoint just in case it's a new login or sign up
-                    await fetch('http://localhost:5000/api/auth/sync', {
+                    await fetch(`${API_BASE_URL}/api/auth/sync`, {
                         method: 'POST',
                         headers: {
                             'Authorization': `Bearer ${idToken}`,
@@ -29,12 +34,12 @@ export const AuthProvider = ({ children }) => {
                     });
 
                     // Then fetch profile
-                    const response = await fetch('http://localhost:5000/api/auth/me', {
+                    const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
                         headers: {
                             'Authorization': `Bearer ${idToken}`
                         }
                     });
-                    
+
                     if (response.ok) {
                         const profile = await response.json();
                         setUserProfile(profile);

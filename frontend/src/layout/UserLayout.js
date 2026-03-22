@@ -1,17 +1,30 @@
 import React, { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { Toaster } from 'sonner';
+import { useAuth } from '../context/AuthContext';
+import { auth } from '../services/firebase';
 import './UserLayout.css';
 import Footer from './Footer';
 import brandLogo from '../assets/images/Logo.png';
 
 const UserIcon = () => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} style={{ width: '1rem', height: '1rem' }}><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>;
 const TicketIcon = () => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} style={{ width: '1rem', height: '1rem' }}><path strokeLinecap="round" strokeLinejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" /></svg>;
+const CrownIcon = () => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} style={{ width: '0.95rem', height: '0.95rem' }}><path strokeLinecap="round" strokeLinejoin="round" d="M2 19h20M4 19l2-9 5 4 3-7 3 7 5-4 2 9" /></svg>;
 const MenuIcon = () => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} style={{ width: '1.5rem', height: '1.5rem' }}><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>;
 const XIcon = () => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} style={{ width: '1.5rem', height: '1.5rem' }}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>;
 
 const UserLayout = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const { currentUser, userProfile } = useAuth();
+
+  const firstName = userProfile?.FullName?.split(' ')[0]
+    || currentUser?.displayName?.split(' ')[0]
+    || currentUser?.email?.split('@')[0]
+    || 'there';
+
+  const handleLogout = async () => {
+    try { await auth.signOut(); } catch {}
+  };
 
   return (
     <div className="ww-user-layout" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
@@ -32,10 +45,18 @@ const UserLayout = () => {
             <NavLink to="/animals" className={({ isActive }) => `ww-nav-link ${isActive ? 'active' : ''}`}>Animals</NavLink>
             <NavLink to="/events" className={({ isActive }) => `ww-nav-link ${isActive ? 'active' : ''}`}>Events</NavLink>
             <NavLink to="/products" className={({ isActive }) => `ww-nav-link ${isActive ? 'active' : ''}`}>Gift Shop</NavLink>
+            <NavLink to="/membership" className={({ isActive }) => `ww-nav-link ${isActive ? 'active' : ''}`}>Membership</NavLink>
           </nav>
 
           <div className="ww-header-actions">
-            <NavLink to="/login" className="ww-btn-login"><UserIcon /> Login</NavLink>
+            {currentUser ? (
+              <div className="ww-user-greeting">
+                <span className="ww-greeting-text">Hello, {firstName}!</span>
+                <button className="ww-btn-signout" onClick={handleLogout}>Sign Out</button>
+              </div>
+            ) : (
+              <NavLink to="/login" className="ww-btn-login"><UserIcon /> Login</NavLink>
+            )}
             <NavLink to="/ticketing" className="ww-btn-tickets"><TicketIcon /> Buy Tickets</NavLink>
           </div>
 

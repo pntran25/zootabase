@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { FileText, Search, X, ShoppingBag, Ticket, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { FileText, Search, X, ShoppingBag, Ticket, CreditCard, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import { useReactTable, getCoreRowModel, getSortedRowModel, getPaginationRowModel, flexRender } from '@tanstack/react-table';
 import { toast } from 'sonner';
 import { apiGet } from '../../../services/apiClient';
@@ -211,16 +211,85 @@ const TicketDetailModal = ({ ticketOrderId, onClose }) => {
             </div>
           )}
 
-          {order.BillingAddress && (
+          <div className="dr-totals">
+            <div className="dr-totals-row"><span>Subtotal</span><span>${Number(order.Subtotal).toFixed(2)}</span></div>
+            <div className="dr-totals-row dr-totals-grand"><span>Total</span><span>${Number(order.Total).toFixed(2)}</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── Membership Detail Modal ────────────────────────────────────────
+const MembershipDetailModal = ({ subId, onClose }) => {
+  const [sub, setSub] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    apiGet(`/api/membership-subscriptions/${subId}`)
+      .then(data => { setSub(data); setLoading(false); })
+      .catch(err => { toast.error(err.message || 'Failed to load membership details.'); onClose(); });
+  }, [subId, onClose]);
+
+  if (loading) return (
+    <div className="dr-modal-overlay" onClick={onClose}>
+      <div className="dr-modal"><div className="dr-modal-loading">Loading...</div></div>
+    </div>
+  );
+
+  const { date, time } = fmtPlaced(sub.PlacedAt);
+  return (
+    <div className="dr-modal-overlay" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="dr-modal">
+        <div className="dr-modal-header">
+          <div className="dr-modal-title-group">
+            <CreditCard size={18} />
+            <div>
+              <h2 className="dr-modal-title">Membership #{sub.SubID}</h2>
+              <p className="dr-modal-subtitle">{date} at {time}</p>
+            </div>
+          </div>
+          <button className="dr-modal-close" onClick={onClose}><X size={18} /></button>
+        </div>
+        <div className="dr-modal-body">
+          <div className="dr-detail-section">
+            <p className="dr-detail-section-title">Member</p>
+            <div className="dr-detail-grid">
+              <div><span className="dr-detail-label">Name</span><span className="dr-detail-value">{sub.FullName}</span></div>
+              <div><span className="dr-detail-label">Email</span><span className="dr-detail-value">{sub.Email}</span></div>
+              {sub.Phone && <div><span className="dr-detail-label">Phone</span><span className="dr-detail-value">{sub.Phone}</span></div>}
+              {sub.CardLastFour && <div><span className="dr-detail-label">Card</span><span className="dr-detail-value dr-card">•••• {sub.CardLastFour}</span></div>}
+            </div>
+          </div>
+
+          <div className="dr-detail-section">
+            <p className="dr-detail-section-title">Membership Details</p>
+            <div className="dr-detail-grid">
+              <div><span className="dr-detail-label">Plan</span><span className="dr-detail-value">{sub.PlanName}</span></div>
+              <div><span className="dr-detail-label">Billing</span><span className="dr-detail-value" style={{ textTransform: 'capitalize' }}>{sub.BillingPeriod}</span></div>
+              <div><span className="dr-detail-label">Start</span><span className="dr-detail-value">{fmtVisit(sub.StartDate)}</span></div>
+              <div><span className="dr-detail-label">Expires</span><span className="dr-detail-value">{fmtVisit(sub.EndDate)}</span></div>
+            </div>
+          </div>
+
+          <div className="dr-detail-section">
+            <p className="dr-detail-section-title">Address</p>
+            <p className="dr-detail-value">{sub.AddressLine1}{sub.AddressLine2 ? `, ${sub.AddressLine2}` : ''}</p>
+            <p className="dr-detail-value">{sub.City}, {sub.StateProvince} {sub.ZipCode}</p>
+          </div>
+
+          {!sub.BillingSameAsContact && sub.BillingAddress1 && (
             <div className="dr-detail-section">
               <p className="dr-detail-section-title">Billing Address</p>
-              <p className="dr-detail-value">{order.BillingAddress}</p>
+              {sub.BillingFullName && <p className="dr-detail-value">{sub.BillingFullName}</p>}
+              <p className="dr-detail-value">{sub.BillingAddress1}{sub.BillingAddress2 ? `, ${sub.BillingAddress2}` : ''}</p>
+              <p className="dr-detail-value">{sub.BillingCity}, {sub.BillingState} {sub.BillingZip}</p>
             </div>
           )}
 
           <div className="dr-totals">
-            <div className="dr-totals-row"><span>Subtotal</span><span>${Number(order.Subtotal).toFixed(2)}</span></div>
-            <div className="dr-totals-row dr-totals-grand"><span>Total</span><span>${Number(order.Total).toFixed(2)}</span></div>
+            <div className="dr-totals-row dr-totals-grand"><span>Total Charged</span><span>${Number(sub.Total).toFixed(2)}</span></div>
           </div>
         </div>
       </div>
@@ -306,6 +375,12 @@ const DataReports = () => {
   const [selectedTicketOrderId, setSelectedTicketOrderId] = useState(null);
   const [ticketSorting, setTicketSorting] = useState([{ id: 'PlacedAt', desc: true }]);
 
+  // Memberships
+  const [memberships, setMemberships] = useState([]);
+  const [membershipsLoading, setMembershipsLoading] = useState(true);
+  const [selectedSubId, setSelectedSubId] = useState(null);
+  const [membershipsSorting, setMembershipsSorting] = useState([{ id: 'PlacedAt', desc: true }]);
+
   useEffect(() => {
     apiGet('/api/orders')
       .then(data => { setOrders(data); setOrdersLoading(false); })
@@ -313,6 +388,9 @@ const DataReports = () => {
     apiGet('/api/ticket-orders')
       .then(data => { setTicketOrders(data); setTicketLoading(false); })
       .catch(err => { toast.error(err.message || 'Failed to load ticket orders.'); setTicketLoading(false); });
+    apiGet('/api/membership-subscriptions')
+      .then(data => { setMemberships(data); setMembershipsLoading(false); })
+      .catch(err => { toast.error(err.message || 'Failed to load memberships.'); setMembershipsLoading(false); });
   }, []);
 
   const filteredOrders = useMemo(() =>
@@ -329,6 +407,14 @@ const DataReports = () => {
       o.TicketType?.toLowerCase().includes(search.toLowerCase()) ||
       String(o.TicketOrderID).includes(search)
     ), [ticketOrders, search]);
+
+  const filteredMemberships = useMemo(() =>
+    memberships.filter(m =>
+      m.FullName?.toLowerCase().includes(search.toLowerCase()) ||
+      m.Email?.toLowerCase().includes(search.toLowerCase()) ||
+      m.PlanName?.toLowerCase().includes(search.toLowerCase()) ||
+      String(m.SubID).includes(search)
+    ), [memberships, search]);
 
   const shopColumns = useMemo(() => [
     { accessorKey: 'OrderID', header: 'Order #', size: 80, cell: info => <span className="dr-order-id">#{info.getValue()}</span> },
@@ -355,7 +441,29 @@ const DataReports = () => {
     { id: 'actions', header: '', enableSorting: false, size: 110, cell: info => <button className="dr-details-btn" onClick={() => setSelectedTicketOrderId(info.row.original.TicketOrderID)}>View Details</button> },
   ], []);
 
-  const activeCount = activeTab === 'shop' ? filteredOrders.length : filteredTickets.length;
+  const membershipColumns = useMemo(() => [
+    { accessorKey: 'SubID', header: 'Sub #', size: 80, cell: info => <span className="dr-order-id">#{info.getValue()}</span> },
+    { accessorKey: 'FullName', header: 'Member', cell: info => <span style={{ fontWeight: 600 }}>{info.getValue()}</span> },
+    { accessorKey: 'Email', header: 'Email', cell: info => <span style={{ color: 'var(--adm-text-secondary)', fontSize: '0.82rem' }}>{info.getValue()}</span> },
+    { accessorKey: 'PlanName', header: 'Plan', cell: info => <span style={{ fontWeight: 600, color: 'var(--adm-accent)' }}>{info.getValue()}</span> },
+    { accessorKey: 'BillingPeriod', header: 'Billing', size: 90, cell: info => (
+        <span style={{ background: info.getValue() === 'yearly' ? '#dcfce7' : '#dbeafe', color: info.getValue() === 'yearly' ? '#166534' : '#1e40af', padding: '2px 8px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 700, textTransform: 'capitalize' }}>
+          {info.getValue()}
+        </span>
+      )
+    },
+    { accessorKey: 'PlacedAt', header: 'Purchased', cell: info => {
+        const { date, time } = fmtPlaced(info.getValue());
+        return <span style={{ fontSize: '0.82rem' }}>{date}<br /><span style={{ color: 'var(--adm-text-secondary)' }}>{time}</span></span>;
+      }
+    },
+    { accessorKey: 'Total', header: 'Total', cell: info => <span className="dr-total-badge">${Number(info.getValue()).toFixed(2)}</span> },
+    { id: 'actions', header: '', enableSorting: false, size: 110, cell: info => <button className="dr-details-btn" onClick={() => setSelectedSubId(info.row.original.SubID)}>View Details</button> },
+  ], []);
+
+  const activeCount = activeTab === 'shop' ? filteredOrders.length
+    : activeTab === 'tickets' ? filteredTickets.length
+    : filteredMemberships.length;
 
   return (
     <div className="admin-page">
@@ -376,6 +484,9 @@ const DataReports = () => {
         <button className={`dr-tab${activeTab === 'tickets' ? ' active' : ''}`} onClick={() => { setActiveTab('tickets'); setSearch(''); }}>
           <Ticket size={14} /> Ticket Sales
         </button>
+        <button className={`dr-tab${activeTab === 'memberships' ? ' active' : ''}`} onClick={() => { setActiveTab('memberships'); setSearch(''); }}>
+          <CreditCard size={14} /> Memberships
+        </button>
       </div>
 
       <div className="admin-table-toolbar">
@@ -383,7 +494,11 @@ const DataReports = () => {
           <Search size={15} className="search-icon" />
           <input
             className="admin-search-input"
-            placeholder={activeTab === 'shop' ? 'Search by name, email, or order #...' : 'Search by name, email, or ticket type...'}
+            placeholder={
+              activeTab === 'shop' ? 'Search by name, email, or order #...' :
+              activeTab === 'tickets' ? 'Search by name, email, or ticket type...' :
+              'Search by name, email, or plan...'
+            }
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -400,7 +515,7 @@ const DataReports = () => {
           loading={ordersLoading}
           emptyText={search ? 'No orders match your search.' : 'No shop orders yet.'}
         />
-      ) : (
+      ) : activeTab === 'tickets' ? (
         <ReportTable
           data={filteredTickets}
           columns={ticketColumns}
@@ -409,10 +524,20 @@ const DataReports = () => {
           loading={ticketLoading}
           emptyText={search ? 'No ticket orders match your search.' : 'No ticket sales yet.'}
         />
+      ) : (
+        <ReportTable
+          data={filteredMemberships}
+          columns={membershipColumns}
+          sorting={membershipsSorting}
+          setSorting={setMembershipsSorting}
+          loading={membershipsLoading}
+          emptyText={search ? 'No memberships match your search.' : 'No memberships purchased yet.'}
+        />
       )}
 
       {selectedOrderId && <OrderDetailModal orderId={selectedOrderId} onClose={() => setSelectedOrderId(null)} />}
       {selectedTicketOrderId && <TicketDetailModal ticketOrderId={selectedTicketOrderId} onClose={() => setSelectedTicketOrderId(null)} />}
+      {selectedSubId && <MembershipDetailModal subId={selectedSubId} onClose={() => setSelectedSubId(null)} />}
     </div>
   );
 };
