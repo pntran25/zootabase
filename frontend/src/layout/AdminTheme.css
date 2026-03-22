@@ -1,0 +1,121 @@
+/* =====================================================
+   AdminTheme.css — CSS Design Tokens + Utility Keyframes
+   WildWoods Admin UI
+   ===================================================== */
+
+/* ── Light Mode (default) ───────────────────────────── */
+:root {
+  --adm-bg-base:        #f1f5f9;
+  --adm-bg-surface:     #ffffff;
+  --adm-bg-surface-2:   #f8fafc;
+  --adm-bg-hover:       #f1f5f9;
+  --adm-bg-topbar:      #ffffff;
+  --adm-bg-sidebar:     #ffffff;
+  --adm-bg-sidebar-hover: #f4f4f5;
+
+  --adm-border:         #e2e8f0;
+  --adm-border-light:   #f1f5f9;
+  --adm-border-sidebar: #e4e4e7;
+
+  --adm-text-primary:   #0f172a;
+  --adm-text-secondary: #64748b;
+  --adm-text-muted:     #94a3b8;
+  --adm-text-sidebar:   #52525b;
+  --adm-text-sidebar-active: #10b981;
+
+  /* Sidebar text — flip between light/dark modes */
+  --adm-sidebar-brand-color:  #111827;
+  --adm-sidebar-name-color:   #374151;
+  --adm-sidebar-hover-color:  #111827;
+  --adm-sidebar-shadow: 1px 0 0 #e4e4e7;
+
+  --adm-accent:         #10b981;
+  --adm-accent-hover:   #059669;
+  --adm-accent-dim:     rgba(16, 185, 129, 0.12);
+  --adm-accent-glow:    rgba(16, 185, 129, 0.18);
+
+  --adm-shadow-sm:      0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --adm-shadow-md:      0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
+  --adm-shadow-card:    0 1px 3px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  --adm-shadow-modal:   0 24px 48px rgba(0, 0, 0, 0.14), 0 8px 24px rgba(0, 0, 0, 0.08);
+
+  --adm-topbar-height:  60px;
+  --adm-sidebar-width:  256px;
+  --adm-radius-sm:      6px;
+  --adm-radius-md:      10px;
+  --adm-radius-lg:      16px;
+  --adm-radius-xl:      20px;
+}
+
+/* ── Dark Mode Overrides ────────────────────────────── */
+.admin-layout[data-theme="dark"] {
+  /* Main area — near black, fully neutral grey */
+  --adm-bg-base:        #0f0f0f;
+  --adm-bg-surface:     #171717;
+  --adm-bg-surface-2:   #1e1e1e;
+  --adm-bg-hover:       #242424;
+  --adm-bg-topbar:      #141414;
+
+  /* Sidebar — neutral dark grey, no blue tint */
+  --adm-bg-sidebar:       #222224;
+  --adm-bg-sidebar-hover: #2c2c2e;
+
+  --adm-border:         #2a2a2a;
+  --adm-border-light:   #1f1f1f;
+  --adm-border-sidebar: #333333;
+
+  /* Sidebar text — readable on neutral grey */
+  --adm-sidebar-brand-color:  #ebebeb;
+  --adm-sidebar-name-color:   #d2d2d2;
+  --adm-sidebar-hover-color:  #ebebeb;
+  --adm-sidebar-shadow: none;
+  --adm-text-sidebar:   #8c8c8c;
+
+  --adm-text-primary:   #eeeeee;
+  --adm-text-secondary: #909090;
+  --adm-text-muted:     #555555;
+
+  --adm-shadow-sm:      0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --adm-shadow-md:      0 4px 16px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3);
+  --adm-shadow-card:    0 1px 3px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  --adm-shadow-modal:   0 24px 64px rgba(0, 0, 0, 0.7), 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+/* ── Modal overlay dark theme (fixed positioning breaks var inheritance) ── */
+.admin-modal-overlay[data-theme="dark"] {
+  --adm-bg-base:        #0f0f0f;
+  --adm-bg-surface:     #171717;
+  --adm-bg-surface-2:   #1e1e1e;
+  --adm-bg-hover:       #242424;
+  --adm-border:         #2a2a2a;
+  --adm-border-light:   #1f1f1f;
+  --adm-text-primary:   #eeeeee;
+  --adm-text-secondary: #909090;
+  --adm-text-muted:     #555555;
+  --adm-accent:         #10b981;
+  --adm-accent-hover:   #059669;
+  --adm-accent-dim:     rgba(16, 185, 129, 0.12);
+  --adm-radius-sm:      6px;
+  --adm-radius-md:      10px;
+  --adm-radius-lg:      16px;
+  --adm-shadow-modal:   0 24px 64px rgba(0, 0, 0, 0.7), 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+/* ── Utility Keyframes ──────────────────────────────── */
+
+/* Loading spinner */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Pulse glow on active nav indicator */
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+  50%       { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+}
+
+/* Status dot pulse (online indicator) */
+@keyframes statusPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
