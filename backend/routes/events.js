@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const sql = require('mssql');
 const { connectToDb } = require('../services/admin');
+const { optionalAuth } = require('../middleware/authMiddleware');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -87,6 +88,8 @@ router.get('/api/events', async (req, res) => {
                 category: row.Category || '',
                 isFeatured: row.IsFeatured === true || row.IsFeatured === 1,
                 price: row.Price || 0,
+                createdBy: row.CreatedBy || null,
+                updatedBy: row.UpdatedBy || null,
             };
         });
         
@@ -98,9 +101,10 @@ router.get('/api/events', async (req, res) => {
 });
 
 // POST new event
-router.post('/api/events', async (req, res) => {
+router.post('/api/events', optionalAuth, async (req, res) => {
     try {
         let { name, date, endDate, startTime, endTime, exhibit, capacity, description, category, isFeatured, price } = req.body;
+        const adminName = req.userProfile ? `${req.userProfile.FirstName} ${req.userProfile.LastName}`.trim() : null;
 
         // Ensure time has seconds for SQL TIME(0) format
         if (startTime.length === 5) startTime += ':00';
@@ -126,11 +130,12 @@ router.post('/api/events', async (req, res) => {
                 .input('category', sql.NVarChar, category || '')
                 .input('isFeatured', sql.Bit, isFeatured ? 1 : 0)
                 .input('price', sql.Decimal(10, 2), parseFloat(price || 0))
+                .input('createdBy', sql.NVarChar, adminName)
                 .query(`
                     DECLARE @Out TABLE (id INT);
-                    INSERT INTO Event (EventName, EventDate, EndDate, StartTime, EndTime, ExhibitID, Capacity, Description, Category, IsFeatured, Price)
+                    INSERT INTO Event (EventName, EventDate, EndDate, StartTime, EndTime, ExhibitID, Capacity, Description, Category, IsFeatured, Price, CreatedBy)
                     OUTPUT INSERTED.EventID INTO @Out
-                    VALUES (@name, @date, @endDate, @startTime, @endTime, @exhId, @capacity, @description, @category, @isFeatured, @price);
+                    VALUES (@name, @date, @endDate, @startTime, @endTime, @exhId, @capacity, @description, @category, @isFeatured, @price, @createdBy);
                     SELECT id FROM @Out;
                 `);
 
@@ -147,9 +152,10 @@ router.post('/api/events', async (req, res) => {
 });
 
 // PUT update event
-router.put('/api/events/:id', async (req, res) => {
+router.put('/api/events/:id', optionalAuth, async (req, res) => {
     try {
         let { name, date, endDate, startTime, endTime, exhibit, capacity, description, category, isFeatured, price } = req.body;
+        const adminName = req.userProfile ? `${req.userProfile.FirstName} ${req.userProfile.LastName}`.trim() : null;
 
         if (startTime.length === 5) startTime += ':00';
         if (endTime.length === 5) endTime += ':00';
@@ -175,13 +181,14 @@ router.put('/api/events/:id', async (req, res) => {
                 .input('category', sql.NVarChar, category || '')
                 .input('isFeatured', sql.Bit, isFeatured ? 1 : 0)
                 .input('price', sql.Decimal(10, 2), parseFloat(price || 0))
+                .input('updatedBy', sql.NVarChar, adminName)
                 .query(`
                     UPDATE Event
                     SET EventName = @name, EventDate = @date, EndDate = @endDate,
                         StartTime = @startTime, EndTime = @endTime, ExhibitID = @exhId,
                         Capacity = @capacity, Description = @description, Category = @category,
                         IsFeatured = @isFeatured, Price = @price,
-                        UpdatedAt = SYSUTCDATETIME()
+                        UpdatedAt = SYSUTCDATETIME(), UpdatedBy = @updatedBy
                     WHERE EventID = @id
                 `);
 
@@ -198,12 +205,14 @@ router.put('/api/events/:id', async (req, res) => {
 });
 
 // DELETE event (soft delete)
-router.delete('/api/events/:id', async (req, res) => {
+router.delete('/api/events/:id', optionalAuth, async (req, res) => {
     try {
+        const adminName = req.userProfile ? `${req.userProfile.FirstName} ${req.userProfile.LastName}`.trim() : null;
         const pool = await connectToDb();
         await pool.request()
             .input('id', sql.Int, parseInt(req.params.id, 10))
-            .query('UPDATE Event SET DeletedAt = SYSUTCDATETIME() WHERE EventID = @id');
+            .input('deletedBy', sql.NVarChar, adminName)
+            .query('UPDATE Event SET DeletedAt = SYSUTCDATETIME(), DeletedBy = @deletedBy WHERE EventID = @id');
             
         res.json({ success: true });
     } catch (error) {

@@ -1,6 +1,17 @@
+import { auth } from './firebase';
+
 const API_BASE_URL = (process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000').replace(/\/$/, '');
 
 const buildUrl = (path) => `${API_BASE_URL}${path}`;
+
+async function getAuthHeaders() {
+  try {
+    const token = auth.currentUser ? await auth.currentUser.getIdToken() : null;
+    return token ? { 'Authorization': `Bearer ${token}` } : {};
+  } catch {
+    return {};
+  }
+}
 
 /**
  * Converts a technical HTTP status + raw server error message into a
@@ -106,9 +117,10 @@ export const apiGet = async (path) => {
 export const apiPost = async (path, payload) => {
   let response;
   try {
+    const authHeaders = await getAuthHeaders();
     response = await fetch(buildUrl(path), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify(payload),
     });
   } catch {
@@ -123,9 +135,10 @@ export const apiPost = async (path, payload) => {
 export const apiPut = async (path, payload) => {
   let response;
   try {
+    const authHeaders = await getAuthHeaders();
     response = await fetch(buildUrl(path), {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify(payload),
     });
   } catch {
@@ -140,9 +153,11 @@ export const apiPut = async (path, payload) => {
 export const apiDelete = async (path, payload) => {
   let response;
   try {
+    const authHeaders = await getAuthHeaders();
     response = await fetch(buildUrl(path), {
       method: 'DELETE',
-      ...(payload ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) } : {}),
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
+      ...(payload ? { body: JSON.stringify(payload) } : {}),
     });
   } catch {
     throw new Error(humanizeError(0));

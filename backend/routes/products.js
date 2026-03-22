@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const sql = require('mssql');
 const { connectToDb } = require('../services/admin');
+const { optionalAuth } = require('../middleware/authMiddleware');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -29,6 +30,8 @@ router.get('/api/products', async (req, res) => {
             stockQuantity: row.StockQuantity,
             lowStockThreshold: row.LowStockThreshold ?? 10,
             imageUrl: row.ImageUrl || null,
+            createdBy: row.CreatedBy || null,
+            updatedBy: row.UpdatedBy || null,
         }));
         res.json(mappedResult);
     } catch (error) {
@@ -63,9 +66,10 @@ router.get('/api/products/low-stock', async (req, res) => {
 });
 
 // POST new product
-router.post('/api/products', async (req, res) => {
+router.post('/api/products', optionalAuth, async (req, res) => {
     try {
         const { name, category, price, stockQuantity, lowStockThreshold } = req.body;
+        const adminName = req.userProfile ? `${req.userProfile.FirstName} ${req.userProfile.LastName}`.trim() : null;
         const pool = await connectToDb();
         const result = await pool.request()
             .input('name', sql.NVarChar, name)
@@ -73,11 +77,12 @@ router.post('/api/products', async (req, res) => {
             .input('price', sql.Decimal(10, 2), price)
             .input('stockQuantity', sql.Int, parseInt(stockQuantity, 10))
             .input('lowStockThreshold', sql.Int, parseInt(lowStockThreshold ?? 10, 10))
+            .input('createdBy', sql.NVarChar, adminName)
             .query(`
                 DECLARE @Out TABLE (ProductID INT);
-                INSERT INTO Product (ProductName, Category, Price, StockQuantity, LowStockThreshold)
+                INSERT INTO Product (ProductName, Category, Price, StockQuantity, LowStockThreshold, CreatedBy)
                 OUTPUT INSERTED.ProductID INTO @Out
-                VALUES (@name, @category, @price, @stockQuantity, @lowStockThreshold);
+                VALUES (@name, @category, @price, @stockQuantity, @lowStockThreshold, @createdBy);
                 SELECT ProductID FROM @Out;
             `);
         res.status(201).json({ id: result.recordset[0].ProductID.toString(), ...req.body });
@@ -88,9 +93,10 @@ router.post('/api/products', async (req, res) => {
 });
 
 // PUT update product
-router.put('/api/products/:id', async (req, res) => {
+router.put('/api/products/:id', optionalAuth, async (req, res) => {
     try {
         const { name, category, price, stockQuantity, lowStockThreshold } = req.body;
+        const adminName = req.userProfile ? `${req.userProfile.FirstName} ${req.userProfile.LastName}`.trim() : null;
         const pool = await connectToDb();
         await pool.request()
             .input('id', sql.Int, parseInt(req.params.id, 10))
@@ -99,11 +105,13 @@ router.put('/api/products/:id', async (req, res) => {
             .input('price', sql.Decimal(10, 2), price)
             .input('stockQuantity', sql.Int, parseInt(stockQuantity, 10))
             .input('lowStockThreshold', sql.Int, parseInt(lowStockThreshold ?? 10, 10))
+            .input('updatedBy', sql.NVarChar, adminName)
             .query(`
                 UPDATE Product
                 SET ProductName = @name, Category = @category,
                     Price = @price, StockQuantity = @stockQuantity,
-                    LowStockThreshold = @lowStockThreshold, UpdatedAt = SYSUTCDATETIME()
+                    LowStockThreshold = @lowStockThreshold, UpdatedAt = SYSUTCDATETIME(),
+                    UpdatedBy = @updatedBy
                 WHERE ProductID = @id
             `);
         res.json({ success: true });
@@ -131,12 +139,14 @@ router.post('/api/products/:id/image', upload.single('image'), async (req, res) 
 });
 
 // DELETE product (soft delete)
-router.delete('/api/products/:id', async (req, res) => {
+router.delete('/api/products/:id', optionalAuth, async (req, res) => {
     try {
+        const adminName = req.userProfile ? `${req.userProfile.FirstName} ${req.userProfile.LastName}`.trim() : null;
         const pool = await connectToDb();
         await pool.request()
             .input('id', sql.Int, parseInt(req.params.id, 10))
-            .query('UPDATE Product SET DeletedAt = SYSUTCDATETIME() WHERE ProductID = @id');
+            .input('deletedBy', sql.NVarChar, adminName)
+            .query('UPDATE Product SET DeletedAt = SYSUTCDATETIME(), DeletedBy = @deletedBy WHERE ProductID = @id');
         res.json({ success: true });
     } catch (error) {
         console.error('Error deleting product:', error);

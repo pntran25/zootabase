@@ -14,10 +14,10 @@ import './AdminLayout.css';
 
 const rolePermissions = {
   'Super Admin': ['dashboard', 'animals', 'exhibits', 'attractions', 'events', 'tickets', 'shop', 'maintenance', 'staff', 'analytics', 'feedback', 'reports', 'memberships'],
-  'Caretaker': ['dashboard', 'animals', 'exhibits'],
-  'Event Coordinator': ['dashboard', 'events'],
-  'Ticket Staff': ['dashboard', 'tickets'],
-  'Shop Manager': ['dashboard', 'shop', 'reports'],
+  'Caretaker': ['dashboard', 'animals', 'exhibits', 'maintenance'],
+  'Event Coordinator': ['dashboard', 'events', 'maintenance'],
+  'Ticket Staff': ['dashboard', 'tickets', 'maintenance'],
+  'Shop Manager': ['dashboard', 'shop', 'reports', 'maintenance'],
   'Maintenance': ['dashboard', 'maintenance']
 };
 
@@ -34,7 +34,7 @@ const AdminLayout = () => {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    const API = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
+    const API = (process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000').replace(/\/$/, '');
     const check = () => {
       fetch(`${API}/health`, { signal: AbortSignal.timeout(4000) })
         .then(r => setIsConnected(r.ok))
@@ -124,14 +124,11 @@ const AdminLayout = () => {
           {renderLink('/admin/events', <CalendarDays size={18} className="nav-icon" />, 'Events', 'events')}
           {renderLink('/admin/tickets', <Ticket size={18} className="nav-icon" />, 'Tickets', 'tickets')}
           {renderLink('/admin/shop', <ShoppingBag size={18} className="nav-icon" />, 'Shop', 'shop')}
-          
+          {renderLink('/admin/memberships', <CreditCard size={18} className="nav-icon" />, 'Manage Plans', 'memberships')}
+
           <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Data Reports</p>
 
           {renderLink('/admin/reports', <FileText size={18} className="nav-icon" />, 'Transaction History', 'reports')}
-
-          <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Memberships</p>
-
-          {renderLink('/admin/memberships', <CreditCard size={18} className="nav-icon" />, 'Manage Plans', 'memberships')}
 
           <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">System</p>
 

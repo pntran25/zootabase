@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const sql = require('mssql');
 const { connectToDb } = require('../services/admin');
+const { optionalAuth } = require('../middleware/authMiddleware');
 
 // Helper to resolve or create Exhibit based on name
 async function getOrCreateExhibitId(request, exhibitName) {
@@ -81,7 +82,9 @@ router.get('/api/maintenance', async (req, res) => {
             description: row.Description,
             dateSubmitted: row.RequestDate ? row.RequestDate.toISOString().split('T')[0] : '',
             status: row.Status,
-            reportedBy: row.StaffName || 'Unknown Staff'
+            reportedBy: row.StaffName || 'Unknown Staff',
+            createdBy: row.CreatedBy || null,
+            updatedBy: row.UpdatedBy || null,
         }));
         
         res.json(mappedResult);
@@ -92,9 +95,10 @@ router.get('/api/maintenance', async (req, res) => {
 });
 
 // POST new maintenance request
-router.post('/api/maintenance', async (req, res) => {
+router.post('/api/maintenance', optionalAuth, async (req, res) => {
     try {
         const { exhibit, description, dateSubmitted, status, reportedBy } = req.body;
+        const adminName = req.userProfile ? `${req.userProfile.FirstName} ${req.userProfile.LastName}`.trim() : null;
         
         const pool = await connectToDb();
         const transaction = new sql.Transaction(pool);
@@ -111,11 +115,12 @@ router.post('/api/maintenance', async (req, res) => {
                 .input('reqDate', sql.Date, dateSubmitted)
                 .input('status', sql.NVarChar, status)
                 .input('staffId', sql.Int, staffId)
+                .input('createdBy', sql.NVarChar, adminName)
                 .query(`
                     DECLARE @Out TABLE (RequestID INT);
-                    INSERT INTO MaintenanceRequest (ExhibitID, Description, RequestDate, Status, StaffID)
+                    INSERT INTO MaintenanceRequest (ExhibitID, Description, RequestDate, Status, StaffID, CreatedBy)
                     OUTPUT INSERTED.RequestID INTO @Out
-                    VALUES (@exhId, @desc, @reqDate, @status, @staffId);
+                    VALUES (@exhId, @desc, @reqDate, @status, @staffId, @createdBy);
                     SELECT RequestID FROM @Out;
                 `);
 
@@ -132,9 +137,10 @@ router.post('/api/maintenance', async (req, res) => {
 });
 
 // PUT update maintenance request
-router.put('/api/maintenance/:id', async (req, res) => {
+router.put('/api/maintenance/:id', optionalAuth, async (req, res) => {
     try {
         const { exhibit, description, dateSubmitted, status, reportedBy } = req.body;
+        const adminName = req.userProfile ? `${req.userProfile.FirstName} ${req.userProfile.LastName}`.trim() : null;
         
         const pool = await connectToDb();
         const transaction = new sql.Transaction(pool);
@@ -152,10 +158,12 @@ router.put('/api/maintenance/:id', async (req, res) => {
                 .input('reqDate', sql.Date, dateSubmitted)
                 .input('status', sql.NVarChar, status)
                 .input('staffId', sql.Int, staffId)
+                .input('updatedBy', sql.NVarChar, adminName)
                 .query(`
-                    UPDATE MaintenanceRequest 
-                    SET ExhibitID = @exhId, Description = @desc, RequestDate = @reqDate, 
-                        Status = @status, StaffID = @staffId, UpdatedAt = SYSUTCDATETIME()
+                    UPDATE MaintenanceRequest
+                    SET ExhibitID = @exhId, Description = @desc, RequestDate = @reqDate,
+                        Status = @status, StaffID = @staffId, UpdatedAt = SYSUTCDATETIME(),
+                        UpdatedBy = @updatedBy
                     WHERE RequestID = @id
                 `);
 
@@ -172,12 +180,14 @@ router.put('/api/maintenance/:id', async (req, res) => {
 });
 
 // DELETE maintenance request (soft delete)
-router.delete('/api/maintenance/:id', async (req, res) => {
+router.delete('/api/maintenance/:id', optionalAuth, async (req, res) => {
     try {
+        const adminName = req.userProfile ? `${req.userProfile.FirstName} ${req.userProfile.LastName}`.trim() : null;
         const pool = await connectToDb();
         await pool.request()
             .input('id', sql.Int, parseInt(req.params.id, 10))
-            .query('UPDATE MaintenanceRequest SET DeletedAt = SYSUTCDATETIME() WHERE RequestID = @id');
+            .input('deletedBy', sql.NVarChar, adminName)
+            .query('UPDATE MaintenanceRequest SET DeletedAt = SYSUTCDATETIME(), DeletedBy = @deletedBy WHERE RequestID = @id');
             
         res.json({ success: true });
     } catch (error) {
