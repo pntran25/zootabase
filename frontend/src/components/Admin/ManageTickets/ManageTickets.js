@@ -107,6 +107,17 @@ const ManageTickets = () => {
       cell: info => <span className="font-medium text-dark" style={{ display: 'block', textAlign: 'right' }}>${Number(info.getValue() || 0).toFixed(2)}</span>,
     },
     {
+      id: 'modifiedBy',
+      header: 'Modified By',
+      enableSorting: false,
+      cell: ({ row }) => {
+        const { createdBy, updatedBy } = row.original;
+        if (updatedBy) return <span className="text-secondary" style={{ fontSize: '0.78rem' }}>Updated by <strong>{updatedBy}</strong></span>;
+        if (createdBy) return <span className="text-secondary" style={{ fontSize: '0.78rem' }}>Created by <strong>{createdBy}</strong></span>;
+        return <span className="text-secondary">—</span>;
+      },
+    },
+    {
       id: 'actions',
       header: 'Actions',
       enableSorting: false,

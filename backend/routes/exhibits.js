@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const sql = require('mssql');
 const { connectToDb } = require('../services/admin');
+const { optionalAuth } = require('../middleware/authMiddleware');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -36,6 +37,8 @@ router.get('/', async (req, res) => {
                 e.ImageUrl,
                 e.IsFeatured,
                 e.Description,
+                e.CreatedBy,
+                e.UpdatedBy,
                 a.AreaName,
                 h.HabitatType
             FROM Exhibit e
@@ -51,9 +54,10 @@ router.get('/', async (req, res) => {
 });
 
 // POST new exhibit
-router.post('/', async (req, res) => {
+router.post('/', optionalAuth, async (req, res) => {
     try {
         const { ExhibitName, AreaName, HabitatType, Capacity, OpeningHours, Description } = req.body;
+        const adminName = req.userProfile ? `${req.userProfile.FirstName} ${req.userProfile.LastName}`.trim() : null;
         const pool = await connectToDb();
 
         // Use a transaction since we might need to create an Area and a Habitat
@@ -84,10 +88,11 @@ router.post('/', async (req, res) => {
                 .input('paramCapacity', sql.Int, Capacity)
                 .input('paramOpeningHours', sql.NVarChar, OpeningHours)
                 .input('paramDescription', sql.NVarChar(1000), Description || null)
+                .input('paramCreatedBy', sql.NVarChar, adminName)
                 .query(`
-                    INSERT INTO Exhibit (ExhibitName, AreaID, Capacity, OpeningHours, Description)
+                    INSERT INTO Exhibit (ExhibitName, AreaID, Capacity, OpeningHours, Description, CreatedBy)
                     OUTPUT INSERTED.ExhibitID
-                    VALUES (@paramExhibitName, @paramAreaId, @paramCapacity, @paramOpeningHours, @paramDescription)
+                    VALUES (@paramExhibitName, @paramAreaId, @paramCapacity, @paramOpeningHours, @paramDescription, @paramCreatedBy)
                 `);
             const exhibitId = exhibitResult.recordset[0].ExhibitID;
 
@@ -124,10 +129,11 @@ router.post('/', async (req, res) => {
 });
 
 // PUT update exhibit
-router.put('/:id', async (req, res) => {
+router.put('/:id', optionalAuth, async (req, res) => {
     try {
         const { id } = req.params;
         const { ExhibitName, AreaName, HabitatType, Capacity, OpeningHours, Description } = req.body;
+        const adminName = req.userProfile ? `${req.userProfile.FirstName} ${req.userProfile.LastName}`.trim() : null;
         const pool = await connectToDb();
 
         const transaction = new sql.Transaction(pool);
@@ -158,6 +164,7 @@ router.put('/:id', async (req, res) => {
                 .input('paramCapacity', sql.Int, Capacity)
                 .input('paramOpeningHours', sql.NVarChar, OpeningHours)
                 .input('paramDescription', sql.NVarChar(1000), Description || null)
+                .input('paramUpdatedBy', sql.NVarChar, adminName)
                 .query(`
                     UPDATE Exhibit
                     SET ExhibitName = @paramExhibitName,
@@ -165,7 +172,8 @@ router.put('/:id', async (req, res) => {
                         Capacity = @paramCapacity,
                         OpeningHours = @paramOpeningHours,
                         Description = @paramDescription,
-                        UpdatedAt = SYSUTCDATETIME()
+                        UpdatedAt = SYSUTCDATETIME(),
+                        UpdatedBy = @paramUpdatedBy
                     WHERE ExhibitID = @paramId AND DeletedAt IS NULL
                 `);
 
@@ -223,9 +231,10 @@ router.patch('/:id/featured', async (req, res) => {
 });
 
 // DELETE delete exhibit (soft delete)
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', optionalAuth, async (req, res) => {
     try {
         const { id } = req.params;
+        const adminName = req.userProfile ? `${req.userProfile.FirstName} ${req.userProfile.LastName}`.trim() : null;
         const pool = await connectToDb();
 
         // Unlink any animals assigned to habitats under this exhibit
@@ -241,7 +250,8 @@ router.delete('/:id', async (req, res) => {
 
         await pool.request()
             .input('id', sql.Int, id)
-            .query('UPDATE Exhibit SET DeletedAt = SYSUTCDATETIME() WHERE ExhibitID = @id');
+            .input('deletedBy', sql.NVarChar, adminName)
+            .query('UPDATE Exhibit SET DeletedAt = SYSUTCDATETIME(), DeletedBy = @deletedBy WHERE ExhibitID = @id');
 
         res.json({ message: 'Exhibit deleted successfully' });
     } catch (err) {

@@ -10,6 +10,16 @@ const PORT = parseInt(process.env.PORT, 10) || 5000;
 app.use(cors());
 app.use(express.json());
 
+let isDatabaseConnected = false;
+
+app.get('/health', (req, res) => {
+	const statusCode = isDatabaseConnected ? 200 : 503;
+	res.status(statusCode).json({
+		status: 'ok',
+		database: isDatabaseConnected ? 'connected' : 'disconnected'
+	});
+});
+
 const exhibitsRouter = require('./routes/exhibits');
 const animalsRouter = require('./routes/animals');
 const attractionsRouter = require('./routes/attractions');
@@ -47,16 +57,6 @@ app.use('/api/membership-subscriptions', membershipSubsRouter);
 
 // Serve images from the frontend assets folder dynamically
 app.use('/images', express.static(path.join(__dirname, '../frontend/src/assets/images')));
-
-let isDatabaseConnected = false;
-
-app.get('/health', (req, res) => {
-	const statusCode = isDatabaseConnected ? 200 : 503;
-	res.status(statusCode).json({
-		status: 'ok',
-		database: isDatabaseConnected ? 'connected' : 'disconnected'
-	});
-});
 
 async function runMigrations(pool) {
 	const steps = [
@@ -210,6 +210,28 @@ async function runMigrations(pool) {
 		  ('Premium', 'The ultimate zoo experience', 35.99, 349.00,
 		   '[{"text":"Unlimited admission for 2 adults + 6 children","included":true},{"text":"12 guest passes per year","included":true},{"text":"20% discount at Gift Shop","included":true},{"text":"20% discount at cafes","included":true},{"text":"Member-only newsletter","included":true},{"text":"Early access to all events","included":true},{"text":"Free parking (all days)","included":true},{"text":"Priority booking for camps","included":true},{"text":"2 behind-the-scenes tours","included":true},{"text":"VIP lounge access","included":true},{"text":"Exclusive member events","included":true},{"text":"Complimentary stroller rental","included":true}]',
 		   0, 3)`,
+		// Audit columns — CreatedBy / UpdatedBy / DeletedBy
+		`IF COL_LENGTH('Animal','CreatedBy') IS NULL ALTER TABLE Animal ADD CreatedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('Animal','UpdatedBy') IS NULL ALTER TABLE Animal ADD UpdatedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('Animal','DeletedBy') IS NULL ALTER TABLE Animal ADD DeletedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('Exhibit','CreatedBy') IS NULL ALTER TABLE Exhibit ADD CreatedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('Exhibit','UpdatedBy') IS NULL ALTER TABLE Exhibit ADD UpdatedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('Exhibit','DeletedBy') IS NULL ALTER TABLE Exhibit ADD DeletedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('Attraction','CreatedBy') IS NULL ALTER TABLE Attraction ADD CreatedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('Attraction','UpdatedBy') IS NULL ALTER TABLE Attraction ADD UpdatedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('Attraction','DeletedBy') IS NULL ALTER TABLE Attraction ADD DeletedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('Event','CreatedBy') IS NULL ALTER TABLE Event ADD CreatedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('Event','UpdatedBy') IS NULL ALTER TABLE Event ADD UpdatedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('Event','DeletedBy') IS NULL ALTER TABLE Event ADD DeletedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('Product','CreatedBy') IS NULL ALTER TABLE Product ADD CreatedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('Product','UpdatedBy') IS NULL ALTER TABLE Product ADD UpdatedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('Product','DeletedBy') IS NULL ALTER TABLE Product ADD DeletedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('TicketType','CreatedBy') IS NULL ALTER TABLE TicketType ADD CreatedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('TicketType','UpdatedBy') IS NULL ALTER TABLE TicketType ADD UpdatedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('TicketType','DeletedBy') IS NULL ALTER TABLE TicketType ADD DeletedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('MaintenanceRequest','CreatedBy') IS NULL ALTER TABLE MaintenanceRequest ADD CreatedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('MaintenanceRequest','UpdatedBy') IS NULL ALTER TABLE MaintenanceRequest ADD UpdatedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('MaintenanceRequest','DeletedBy') IS NULL ALTER TABLE MaintenanceRequest ADD DeletedBy NVARCHAR(100) NULL`,
 		`IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='MembershipSubscriptions' AND xtype='U')
 		  CREATE TABLE MembershipSubscriptions (
 		    SubID                INT IDENTITY(1,1) PRIMARY KEY,
