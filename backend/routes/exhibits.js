@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const sql = require('mssql');
 const { connectToDb } = require('../services/admin');
+const { verifyToken } = require('../middleware/authMiddleware');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -21,7 +22,17 @@ const storage = multer.diskStorage({
         cb(null, 'exhibit-' + Date.now() + path.extname(file.originalname));
     }
 });
-const upload = multer({ storage: storage });
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        const allowed = /jpeg|jpg|png|gif|webp/;
+        if (allowed.test(path.extname(file.originalname).toLowerCase()) && allowed.test(file.mimetype)) {
+            return cb(null, true);
+        }
+        cb(new Error('Only image files (jpg, png, gif, webp) are allowed'));
+    }
+});
 
 // GET all exhibits
 router.get('/', async (req, res) => {
@@ -51,7 +62,7 @@ router.get('/', async (req, res) => {
 });
 
 // POST new exhibit
-router.post('/', async (req, res) => {
+router.post('/', verifyToken, async (req, res) => {
     try {
         const { ExhibitName, AreaName, HabitatType, Capacity, OpeningHours, Description } = req.body;
         const pool = await connectToDb();
@@ -124,7 +135,7 @@ router.post('/', async (req, res) => {
 });
 
 // PUT update exhibit
-router.put('/:id', async (req, res) => {
+router.put('/:id', verifyToken, async (req, res) => {
     try {
         const { id } = req.params;
         const { ExhibitName, AreaName, HabitatType, Capacity, OpeningHours, Description } = req.body;
@@ -206,7 +217,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // PATCH featured flag only
-router.patch('/:id/featured', async (req, res) => {
+router.patch('/:id/featured', verifyToken, async (req, res) => {
     try {
         const { id } = req.params;
         const { isFeatured } = req.body;
@@ -223,7 +234,7 @@ router.patch('/:id/featured', async (req, res) => {
 });
 
 // DELETE delete exhibit (soft delete)
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', verifyToken, async (req, res) => {
     try {
         const { id } = req.params;
         const pool = await connectToDb();
@@ -251,7 +262,7 @@ router.delete('/:id', async (req, res) => {
 });
 
 // POST upload exhibit image
-router.post('/:id/image', upload.single('image'), async (req, res) => {
+router.post('/:id/image', verifyToken, upload.single('image'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'No image file provided' });

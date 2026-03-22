@@ -7,8 +7,18 @@ const { connectToDb } = require('./services/admin');
 const app = express();
 const PORT = parseInt(process.env.PORT, 10) || 5000;
 
-app.use(cors());
-app.use(express.json());
+// CORS: allow only known origins in production
+const allowedOrigins = process.env.CORS_ORIGINS
+	? process.env.CORS_ORIGINS.split(',')
+	: ['http://localhost:3000'];
+app.use(cors({
+	origin: (origin, cb) => {
+		// Allow requests with no origin (mobile apps, curl, Postman in dev)
+		if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+		cb(new Error('Not allowed by CORS'));
+	}
+}));
+app.use(express.json({ limit: '1mb' }));
 
 const exhibitsRouter = require('./routes/exhibits');
 const animalsRouter = require('./routes/animals');
@@ -182,6 +192,14 @@ async function startServer() {
 
 	app.listen(PORT, () => {
 		console.log(`Backend server running on port ${PORT}`);
+	});
+}
+
+// In production, strip raw DB error details from 500 responses
+if (process.env.NODE_ENV === 'production') {
+	app.use((err, req, res, _next) => {
+		console.error(err);
+		res.status(err.status || 500).json({ error: 'Internal server error' });
 	});
 }
 

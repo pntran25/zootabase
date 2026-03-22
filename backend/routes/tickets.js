@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const sql = require('mssql');
 const { connectToDb } = require('../services/admin');
+const { verifyToken } = require('../middleware/authMiddleware');
 
 // GET all ticket types
 router.get('/api/tickets', async (req, res) => {
@@ -25,7 +26,7 @@ router.get('/api/tickets', async (req, res) => {
 });
 
 // POST new ticket type
-router.post('/api/tickets', async (req, res) => {
+router.post('/api/tickets', verifyToken, async (req, res) => {
     try {
         const { type, category, desc, price } = req.body;
         const pool = await connectToDb();
@@ -51,7 +52,7 @@ router.post('/api/tickets', async (req, res) => {
 });
 
 // PUT update ticket type
-router.put('/api/tickets/:id', async (req, res) => {
+router.put('/api/tickets/:id', verifyToken, async (req, res) => {
     try {
         const { type, category, desc, price } = req.body;
         const pool = await connectToDb();
@@ -77,7 +78,7 @@ router.put('/api/tickets/:id', async (req, res) => {
 });
 
 // DELETE ticket type (soft delete)
-router.delete('/api/tickets/:id', async (req, res) => {
+router.delete('/api/tickets/:id', verifyToken, async (req, res) => {
     try {
         const pool = await connectToDb();
         await pool.request()

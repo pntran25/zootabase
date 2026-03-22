@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, ArrowLeft, User } from 'lucide-react';
 import { createUserWithEmailAndPassword, updateProfile, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { auth } from '../../../services/firebase';
+import { API_BASE_URL } from '../../../services/apiClient';
 import loginImg from '../../../assets/images/login_lion.png';
 import brandLogo from '../../../assets/images/Logo.png';
 
@@ -16,7 +17,7 @@ const Signup = () => {
 
   const handleSyncTokens = async (userCredential) => {
     const token = await userCredential.user.getIdToken(true);
-    const response = await fetch('http://localhost:5000/api/auth/sync', {
+    const response = await fetch(`${API_BASE_URL}/api/auth/sync`, {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${token}`,

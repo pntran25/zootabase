@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const sql = require('mssql');
 const { connectToDb } = require('../services/admin');
+const { verifyToken } = require('../middleware/authMiddleware');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -13,10 +14,20 @@ const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, imageDir),
     filename: (req, file, cb) => cb(null, 'event-' + Date.now() + path.extname(file.originalname)),
 });
-const upload = multer({ storage });
+const upload = multer({
+    storage,
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        const allowed = /jpeg|jpg|png|gif|webp/;
+        if (allowed.test(path.extname(file.originalname).toLowerCase()) && allowed.test(file.mimetype)) {
+            return cb(null, true);
+        }
+        cb(new Error('Only image files (jpg, png, gif, webp) are allowed'));
+    }
+});
 
 // Helper to resolve or create Exhibit based on name
-async function getOrCreateExhibitId(request, exhibitName) {
+async function resolveOrCreateExhibit(request, exhibitName) {
     // Try to find existing
     const exhRes = await request
         .input('exhName', sql.NVarChar, exhibitName)
@@ -98,7 +109,7 @@ router.get('/api/events', async (req, res) => {
 });
 
 // POST new event
-router.post('/api/events', async (req, res) => {
+router.post('/api/events', verifyToken, async (req, res) => {
     try {
         let { name, date, endDate, startTime, endTime, exhibit, capacity, description, category, isFeatured, price } = req.body;
 
@@ -147,7 +158,7 @@ router.post('/api/events', async (req, res) => {
 });
 
 // PUT update event
-router.put('/api/events/:id', async (req, res) => {
+router.put('/api/events/:id', verifyToken, async (req, res) => {
     try {
         let { name, date, endDate, startTime, endTime, exhibit, capacity, description, category, isFeatured, price } = req.body;
 
@@ -198,7 +209,7 @@ router.put('/api/events/:id', async (req, res) => {
 });
 
 // DELETE event (soft delete)
-router.delete('/api/events/:id', async (req, res) => {
+router.delete('/api/events/:id', verifyToken, async (req, res) => {
     try {
         const pool = await connectToDb();
         await pool.request()
@@ -213,7 +224,7 @@ router.delete('/api/events/:id', async (req, res) => {
 });
 
 // POST upload event image
-router.post('/api/events/:id/image', upload.single('image'), async (req, res) => {
+router.post('/api/events/:id/image', verifyToken, upload.single('image'), async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ error: 'No image file provided' });
         const imageUrl = '/images/Event_Images/' + req.file.filename;
