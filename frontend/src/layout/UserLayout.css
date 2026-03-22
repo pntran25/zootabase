@@ -1,0 +1,156 @@
+/* ── WildWoods Header — Redesigned Navbar matching Zoo UI Redesing ── */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+.ww-user-layout {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.ww-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(48px) saturate(180%);
+  -webkit-backdrop-filter: blur(48px) saturate(180%);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
+}
+
+.ww-header-container {
+  display: flex;
+  height: 4rem; /* h-16 */
+  max-width: 80rem; /* max-w-7xl */
+  margin: 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1rem; /* px-4 */
+}
+
+@media (min-width: 1024px) {
+  .ww-header-container {
+    padding: 0 2rem; /* lg:px-8 */
+  }
+}
+
+/* ── Brand / Logo ── */
+.ww-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem; /* gap-2 */
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.ww-logo-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem; /* w-10 */
+  height: 2.5rem; /* h-10 */
+  border-radius: 9999px; /* rounded-full */
+  background: oklch(0.45 0.12 145); /* primary */
+  font-weight: 700;
+  font-size: 1.125rem; /* text-lg */
+  color: oklch(0.98 0.005 90); /* primary-foreground */
+}
+
+.ww-logo-text {
+  font-size: 1.25rem; /* text-xl */
+  font-weight: 700; /* font-bold */
+  letter-spacing: -0.025em; /* tracking-tight */
+  color: oklch(0.15 0.02 60); /* foreground */
+}
+
+/* ── Center Nav Links (Desktop) ── */
+.ww-header-nav {
+  display: none;
+  align-items: center;
+  gap: 2rem; /* gap-8 */
+}
+
+@media (min-width: 1024px) {
+  .ww-header-nav {
+    display: flex;
+  }
+}
+
+.ww-nav-link {
+  color: oklch(0.5 0.02 60); /* muted-foreground */
+  text-decoration: none;
+  font-size: 0.875rem; /* text-sm */
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.ww-nav-link:hover, .ww-nav-link.active {
+  color: oklch(0.15 0.02 60); /* foreground */
+}
+
+/* ── Right-side Action Buttons ── */
+.ww-header-actions {
+  display: none;
+  align-items: center;
+  gap: 0.75rem; /* gap-3 */
+}
+
+@media (min-width: 1024px) {
+  .ww-header-actions {
+    display: flex;
+  }
+}
+
+.ww-btn-login {
+  text-decoration: none;
+  color: oklch(0.15 0.02 60); /* text-foreground */
+  border-radius: 0.375rem; /* rounded-md */
+  padding: 0 0.75rem; /* px-3 */
+  height: 2.25rem; /* h-9 */
+  font-size: 0.875rem; /* text-sm */
+  font-weight: 500;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background 0.2s ease;
+}
+
+.ww-btn-login:hover {
+  background: rgba(0, 0, 0, 0.05); /* hover:bg-accent roughly */
+}
+
+.ww-btn-tickets {
+  text-decoration: none;
+  color: oklch(0.98 0.005 90); /* primary-foreground */
+  background: oklch(0.45 0.12 145); /* primary */
+  border: none;
+  border-radius: 0.375rem; /* rounded-md */
+  padding: 0 0.75rem; /* px-3 */
+  height: 2.25rem; /* h-9 */
+  font-size: 0.875rem; /* text-sm */
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: opacity 0.2s ease;
+}
+
+.ww-btn-tickets:hover {
+  opacity: 0.9;
+}
+
+.ww-mobile-toggle {
+  display: block;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+}
+
+@media (min-width: 1024px) {
+  .ww-mobile-toggle {
+    display: none;
+  }
+}
