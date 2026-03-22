@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import '../AdminTable.css';
 import { PawPrint, Search, Plus, Edit2, Trash2, Image as ImageIcon, ChevronUp, ChevronDown, ChevronsUpDown, AlertTriangle, X, BookOpen, Eye, EyeOff } from 'lucide-react';
-import { useReactTable, getCoreRowModel, getSortedRowModel, getPaginationRowModel, flexRender } from '@tanstack/react-table';
+import { useReactTable, getCoreRowModel, getSortedRowModel, flexRender } from '@tanstack/react-table';
 import { toast } from 'sonner';
 import AdminModalForm from '../AdminModalForm';
 import DatePickerInput from '../DatePickerInput';
@@ -188,20 +188,10 @@ const ManageAnimals = () => {
     setDepartureReason('Deceased');
   };
 
-  const handleSetDisplay = async (animal) => {
-    try {
-      await animalService.updateAnimal(animal.id, {
-        name: animal.name, species: animal.species, speciesDetail: animal.speciesDetail,
-        exhibit: animal.exhibit, age: animal.age, gender: animal.gender,
-        diet: animal.diet, health: animal.health, dateArrived: animal.dateArrived,
-        lifespan: animal.lifespan, weight: animal.weight, region: animal.region,
-        funFact: animal.funFact, isEndangered: animal.isEndangered, isDisplay: true,
-      });
-      setAnimals(prev => prev.map(a => a.id === animal.id ? { ...a, isDisplay: true } : a));
-      toast.success(`${animal.name} added to display.`);
-    } catch (err) {
-      toast.error(err.message || 'Failed to update.');
-    }
+  const handleSetDisplay = (animal) => {
+    handleOpenModal(animal);
+    setFormData(prev => ({ ...prev, isDisplay: true }));
+    toast.info('Fill in the image and quick facts, then save to feature this animal on the public site.');
   };
 
   const handleUnsetDisplay = async (id) => {
@@ -400,8 +390,6 @@ const ManageAnimals = () => {
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize: 10 } },
   });
 
   const filteredLookup = speciesCodes.filter(sc => {
@@ -468,8 +456,9 @@ const ManageAnimals = () => {
           <span style={{ fontSize: '0.82rem', color: 'var(--adm-text-secondary)', marginLeft: 2 }}>Shown on the public website with quick facts</span>
         </div>
         <div className="admin-table-container">
+          <div className="admin-table-scroll-inner" style={{ maxHeight: 480 }}>
           <table className="admin-table">
-            <thead>
+            <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
               {displayTable.getHeaderGroups().map(hg => (
                 <tr key={hg.id}>
                   {hg.headers.map(header => (
@@ -514,15 +503,7 @@ const ManageAnimals = () => {
               )}
             </tbody>
           </table>
-          {!isLoading && displayTable.getPageCount() > 1 && (
-            <div className="admin-table-pagination">
-              <span className="admin-pagination-info">Page {displayTable.getState().pagination.pageIndex + 1} of {displayTable.getPageCount()} · {displayAnimals.length} records</span>
-              <div className="admin-pagination-controls">
-                <button className="admin-pagination-btn" onClick={() => displayTable.previousPage()} disabled={!displayTable.getCanPreviousPage()}>←</button>
-                <button className="admin-pagination-btn" onClick={() => displayTable.nextPage()} disabled={!displayTable.getCanNextPage()}>→</button>
-              </div>
-            </div>
-          )}
+          </div>
         </div>
       </div>
 
@@ -561,7 +542,6 @@ const ManageAnimals = () => {
               <table className="admin-table" style={{ borderRadius: 0 }}>
                 <thead>
                   <tr>
-                    <th style={{ width: 52, minWidth: 52, maxWidth: 52 }}></th>
                     <th>Animal ID</th>
                     <th>Name</th>
                     <th>Age / Sex</th>
@@ -573,16 +553,6 @@ const ManageAnimals = () => {
                 <tbody>
                   {group.animals.map(animal => (
                     <tr key={animal.id}>
-                      <td style={{ paddingRight: 6, width: 52, minWidth: 52, maxWidth: 52 }}>
-                        {animal.imageUrl ? (
-                          <img src={`${API_BASE_URL}${animal.imageUrl}`} alt={animal.name}
-                            style={{ width: 40, height: 40, minWidth: 40, borderRadius: 8, objectFit: 'cover', border: '1.5px solid var(--adm-border)', display: 'block' }} />
-                        ) : (
-                          <div style={{ width: 40, height: 40, borderRadius: 8, background: 'var(--adm-bg-surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--adm-border)' }}>
-                            <ImageIcon size={16} style={{ color: 'var(--adm-text-muted)' }} />
-                          </div>
-                        )}
-                      </td>
                       <td>
                         {animal.animalCode
                           ? <span style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: 'var(--adm-accent)', fontWeight: 700 }}>{animal.animalCode}</span>
