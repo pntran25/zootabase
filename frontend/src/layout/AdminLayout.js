@@ -134,7 +134,7 @@ const AdminLayout = () => {
           <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Data Reports</p>
 
           {renderLink('/admin/animal-report', <ClipboardList size={18} className="nav-icon" />, 'Animal Reports', 'animal-report')}
-          {renderLink('/admin/reports', <FileText size={18} className="nav-icon" />, 'Transaction History', 'reports')}
+          {renderLink('/admin/reports', <FileText size={18} className="nav-icon" />, 'Transaction Reports', 'reports')}
 
           <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">System</p>
 
