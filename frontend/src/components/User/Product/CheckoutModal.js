@@ -59,10 +59,10 @@ const PaymentIcons = ({ size = 'sm' }) => (
 );
 
 const CheckoutModal = ({ isOpen, onClose, cart, cartTotal, membershipDiscount = 0, onOrderPlaced }) => {
-  const [ship, setShip] = useState({ email: '', fullName: '', address1: '', address2: '', city: '', state: '', zip: '', phone: '' });
+  const [ship, setShip] = useState({ email: '', firstName: '', lastName: '', address1: '', address2: '', city: '', state: '', zip: '', phone: '' });
   const [card, setCard] = useState({ number: '', expiry: '', cvv: '' });
   const [billingSame, setBillingSame] = useState(true);
-  const [bill, setBill] = useState({ fullName: '', address1: '', address2: '', city: '', state: '', zip: '' });
+  const [bill, setBill] = useState({ firstName: '', lastName: '', address1: '', address2: '', city: '', state: '', zip: '' });
   const setB = (key, val) => setBill(p => ({ ...p, [key]: val }));
   const [placing, setPlacing] = useState(false);
 
@@ -83,9 +83,15 @@ const CheckoutModal = ({ isOpen, onClose, cart, cartTotal, membershipDiscount = 
     const d = v.replace(/\D/g, '').slice(0, 4);
     return d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d;
   };
+  const fmtPhone = (v) => {
+    const d = v.replace(/\D/g, '').slice(0, 10);
+    if (d.length < 4) return d;
+    if (d.length < 7) return `(${d.slice(0, 3)}) ${d.slice(3)}`;
+    return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
+  };
 
   const handlePlace = async () => {
-    if (!ship.email || !ship.fullName || !ship.address1 || !ship.city || !ship.state || !ship.zip) {
+    if (!ship.email || !ship.firstName || !ship.lastName || !ship.address1 || !ship.city || !ship.state || !ship.zip) {
       toast.error('Please fill in all required shipping fields.');
       return;
     }
@@ -93,7 +99,7 @@ const CheckoutModal = ({ isOpen, onClose, cart, cartTotal, membershipDiscount = 
       toast.error('Please fill in your card details.');
       return;
     }
-    if (!billingSame && (!bill.fullName || !bill.address1 || !bill.city || !bill.state || !bill.zip)) {
+    if (!billingSame && (!bill.firstName || !bill.lastName || !bill.address1 || !bill.city || !bill.state || !bill.zip)) {
       toast.error('Please fill in all required billing fields.');
       return;
     }
@@ -107,11 +113,11 @@ const CheckoutModal = ({ isOpen, onClose, cart, cartTotal, membershipDiscount = 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          fullName: ship.fullName, email: ship.email, phone: ship.phone,
+          firstName: ship.firstName, lastName: ship.lastName, email: ship.email, phone: ship.phone,
           addressLine1: ship.address1, addressLine2: ship.address2,
           city: ship.city, stateProvince: ship.state, zipCode: ship.zip,
           billingSameAsShipping: billingSame,
-          billingFullName: billingSame ? null : bill.fullName,
+          billingFullName: billingSame ? null : `${bill.firstName} ${bill.lastName}`.trim(),
           billingAddress1: billingSame ? null : bill.address1,
           billingAddress2: billingSame ? null : bill.address2,
           billingCity: billingSame ? null : bill.city,
@@ -164,13 +170,17 @@ const CheckoutModal = ({ isOpen, onClose, cart, cartTotal, membershipDiscount = 
 
               <div className="co-row">
                 <div className="co-field">
-                  <label>Email Address <span style={{ color: '#ef4444' }}>*</span></label>
-                  <input type="email" placeholder="example.user@email.com" value={ship.email} onChange={e => setS('email', e.target.value)} />
+                  <label>First Name <span style={{ color: '#ef4444' }}>*</span></label>
+                  <input type="text" placeholder="John" value={ship.firstName} onChange={e => setS('firstName', e.target.value)} />
                 </div>
                 <div className="co-field">
-                  <label>Full Name <span style={{ color: '#ef4444' }}>*</span></label>
-                  <input type="text" placeholder="John Doe" value={ship.fullName} onChange={e => setS('fullName', e.target.value)} />
+                  <label>Last Name <span style={{ color: '#ef4444' }}>*</span></label>
+                  <input type="text" placeholder="Doe" value={ship.lastName} onChange={e => setS('lastName', e.target.value)} />
                 </div>
+              </div>
+              <div className="co-field">
+                <label>Email Address <span style={{ color: '#ef4444' }}>*</span></label>
+                <input type="email" placeholder="example.user@email.com" value={ship.email} onChange={e => setS('email', e.target.value)} />
               </div>
 
               <div className="co-field">
@@ -200,7 +210,7 @@ const CheckoutModal = ({ isOpen, onClose, cart, cartTotal, membershipDiscount = 
 
               <div className="co-field" style={{ maxWidth: '50%' }}>
                 <label>Phone Number <span style={{ color: '#999', fontWeight: 400 }}>(Optional)</span></label>
-                <input type="text" placeholder="Phone Number" value={ship.phone} onChange={e => setS('phone', e.target.value)} />
+                <input type="text" placeholder="(555) 123-4567" value={ship.phone} onChange={e => setS('phone', fmtPhone(e.target.value))} />
               </div>
             </div>
 
@@ -265,8 +275,12 @@ const CheckoutModal = ({ isOpen, onClose, cart, cartTotal, membershipDiscount = 
                 <div style={{ marginTop: 18 }}>
                   <div className="co-row">
                     <div className="co-field">
-                      <label>Full Name <span style={{ color: '#ef4444' }}>*</span></label>
-                      <input type="text" placeholder="John Doe" value={bill.fullName} onChange={e => setB('fullName', e.target.value)} />
+                      <label>First Name <span style={{ color: '#ef4444' }}>*</span></label>
+                      <input type="text" placeholder="John" value={bill.firstName} onChange={e => setB('firstName', e.target.value)} />
+                    </div>
+                    <div className="co-field">
+                      <label>Last Name <span style={{ color: '#ef4444' }}>*</span></label>
+                      <input type="text" placeholder="Doe" value={bill.lastName} onChange={e => setB('lastName', e.target.value)} />
                     </div>
                   </div>
                   <div className="co-field">
