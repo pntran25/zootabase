@@ -305,3 +305,170 @@
   font-weight: 800;
   color: var(--adm-accent);
 }
+
+/* ── Overview Tab ─────────────────────────────────────────── */
+.ov-root {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.ov-loading {
+  text-align: center;
+  padding: 60px 0;
+  color: var(--adm-text-secondary);
+  font-size: 0.88rem;
+}
+
+/* Date bar */
+.ov-date-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.ov-preset-btns {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ov-preset-btn {
+  padding: 6px 14px;
+  border-radius: 7px;
+  border: 1px solid var(--adm-border);
+  background: var(--adm-bg-surface);
+  color: var(--adm-text-secondary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.ov-preset-btn.active {
+  background: var(--adm-accent);
+  color: #fff;
+  border-color: var(--adm-accent);
+}
+
+.ov-preset-btn:hover:not(.active) {
+  background: var(--adm-bg-hover);
+  color: var(--adm-text-primary);
+}
+
+.ov-custom-range {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ov-range-sep {
+  color: var(--adm-text-secondary);
+  font-size: 0.82rem;
+}
+
+/* KPI grid */
+.ov-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 1100px) {
+  .ov-kpi-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 700px) {
+  .ov-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+.ov-kpi-card {
+  background: var(--adm-bg-surface-2);
+  border: 1px solid var(--adm-border);
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ov-kpi-label {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--adm-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.ov-kpi-value {
+  margin: 3px 0 0;
+  font-size: 1.55rem;
+  font-weight: 800;
+  color: var(--adm-text-primary);
+  line-height: 1.1;
+}
+
+.ov-kpi-sub {
+  margin: 0;
+  font-size: 0.74rem;
+  color: var(--adm-text-secondary);
+}
+
+/* Chart rows */
+.ov-charts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 800px) {
+  .ov-charts-row { grid-template-columns: 1fr; }
+}
+
+.ov-chart-card,
+.ov-chart-full {
+  background: var(--adm-bg-surface-2);
+  border: 1px solid var(--adm-border);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.ov-chart-title {
+  margin: 0 0 2px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--adm-text-primary);
+}
+
+.ov-chart-sub {
+  margin: 0 0 14px;
+  font-size: 0.74rem;
+  color: var(--adm-text-secondary);
+}
+
+.ov-no-data {
+  text-align: center;
+  padding: 50px 0;
+  color: var(--adm-text-secondary);
+  font-size: 0.82rem;
+}
+
+/* Tooltip */
+.ov-tooltip {
+  background: var(--adm-bg-surface);
+  border: 1px solid var(--adm-border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.82rem;
+  color: var(--adm-text-primary);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.ov-tooltip-label {
+  margin: 0 0 5px;
+  font-weight: 700;
+  font-size: 0.78rem;
+  color: var(--adm-text-secondary);
+}
