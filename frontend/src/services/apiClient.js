@@ -1,6 +1,17 @@
+import { auth } from './firebase';
+
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
 
 const buildUrl = (path) => `${API_BASE_URL}${path}`;
+
+export async function getAuthHeaders() {
+  const user = auth.currentUser;
+  if (user) {
+    const token = await user.getIdToken();
+    return { Authorization: `Bearer ${token}` };
+  }
+  return {};
+}
 
 /**
  * Converts a technical HTTP status + raw server error message into a
@@ -93,7 +104,10 @@ async function extractAndHumanize(response, fallbackStatus) {
 export const apiGet = async (path) => {
   let response;
   try {
-    response = await fetch(buildUrl(path));
+    const authHeaders = await getAuthHeaders();
+    response = await fetch(buildUrl(path), {
+      headers: { ...authHeaders },
+    });
   } catch {
     throw new Error(humanizeError(0));
   }
@@ -106,9 +120,10 @@ export const apiGet = async (path) => {
 export const apiPost = async (path, payload) => {
   let response;
   try {
+    const authHeaders = await getAuthHeaders();
     response = await fetch(buildUrl(path), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify(payload),
     });
   } catch {
@@ -123,9 +138,10 @@ export const apiPost = async (path, payload) => {
 export const apiPut = async (path, payload) => {
   let response;
   try {
+    const authHeaders = await getAuthHeaders();
     response = await fetch(buildUrl(path), {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify(payload),
     });
   } catch {
@@ -140,9 +156,11 @@ export const apiPut = async (path, payload) => {
 export const apiDelete = async (path, payload) => {
   let response;
   try {
+    const authHeaders = await getAuthHeaders();
     response = await fetch(buildUrl(path), {
       method: 'DELETE',
-      ...(payload ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) } : {}),
+      headers: { ...authHeaders, ...(payload ? { 'Content-Type': 'application/json' } : {}) },
+      ...(payload ? { body: JSON.stringify(payload) } : {}),
     });
   } catch {
     throw new Error(humanizeError(0));

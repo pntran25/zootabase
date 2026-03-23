@@ -1,12 +1,35 @@
 import './App.css';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Header from './layout/Header';
-import HomePage from './components/Home/HomePage';
-import AttractionPage from './components/Attraction/AttractionPage';
-import TicketPage from './components/Ticket/TicketPage';
-import ProductPage from './components/Product/ProductPage';
-import TransactionPage from './components/Transaction/TransactionPage';
-import TicketingPage from './components/Ticketing/TicketingPage';
+import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom';
+import UserLayout from './layout/UserLayout';
+import HomePage from './components/User/Home/HomePage';
+import EventsPage from './components/User/Attraction/EventsPage';
+import AttractionPage from './components/User/Attraction/AttractionPage';
+import ExhibitPage from './components/User/Exhibit/ExhibitPage';
+import AnimalPage from './components/User/Animal/AnimalPage';
+import TicketPage from './components/User/Ticket/TicketPage';
+import ProductPage from './components/User/Product/ProductPage';
+import TransactionPage from './components/User/Transaction/TransactionPage';
+import TicketingPage from './components/User/Ticketing/TicketingPage';
+import Login from './components/User/Auth/Login';
+import Signup from './components/User/Auth/SignUp';
+
+// Admin Imports
+import AdminLayout from './layout/AdminLayout';
+import Dashboard from './components/Admin/Dashboard/Dashboard';
+import ManageAnimals from './components/Admin/ManageAnimals/ManageAnimals';
+import ManageExhibits from './components/Admin/ManageExhibits/ManageExhibits';
+import ManageAttractions from './components/Admin/ManageAttractions/ManageAttractions';
+import ManageEvents from './components/Admin/ManageEvents/ManageEvents';
+import ManageTickets from './components/Admin/ManageTickets/ManageTickets';
+import ManageShop from './components/Admin/ManageShop/ManageShop';
+import ManageMaintenance from './components/Admin/ManageMaintenance/ManageMaintenance';
+import GuestFeedback from './components/Admin/GuestFeedback/GuestFeedback';
+import ProtectedRoute from './components/Admin/ProtectedRoute';
+import ManageStaff from './components/Admin/ManageStaff/ManageStaff';
+import LoginAnalytics from './components/Admin/Dashboard/LoginAnalytics';
+import DataReports from './components/Admin/DataReports/DataReports';
+
+const allStaffRoles = ['Super Admin', 'Caretaker', 'Event Coordinator', 'Ticket Staff', 'Shop Manager', 'Maintenance'];
 
 function App() {
   return (

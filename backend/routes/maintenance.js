@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const sql = require('mssql');
 const { connectToDb } = require('../services/admin');
+const { verifyToken } = require('../middleware/authMiddleware');
 
 // Helper to resolve or create Exhibit based on name
 async function getOrCreateExhibitId(request, exhibitName) {
@@ -92,7 +93,7 @@ router.get('/api/maintenance', async (req, res) => {
 });
 
 // POST new maintenance request
-router.post('/api/maintenance', async (req, res) => {
+router.post('/api/maintenance', verifyToken, async (req, res) => {
     try {
         const { exhibit, description, dateSubmitted, status, reportedBy } = req.body;
         
@@ -132,7 +133,7 @@ router.post('/api/maintenance', async (req, res) => {
 });
 
 // PUT update maintenance request
-router.put('/api/maintenance/:id', async (req, res) => {
+router.put('/api/maintenance/:id', verifyToken, async (req, res) => {
     try {
         const { exhibit, description, dateSubmitted, status, reportedBy } = req.body;
         
@@ -172,7 +173,7 @@ router.put('/api/maintenance/:id', async (req, res) => {
 });
 
 // DELETE maintenance request (soft delete)
-router.delete('/api/maintenance/:id', async (req, res) => {
+router.delete('/api/maintenance/:id', verifyToken, async (req, res) => {
     try {
         const pool = await connectToDb();
         await pool.request()

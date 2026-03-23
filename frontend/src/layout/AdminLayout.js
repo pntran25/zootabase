@@ -10,6 +10,7 @@ import { Toaster, toast } from 'sonner';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { auth } from '../services/firebase';
+import { API_BASE_URL } from '../services/apiClient';
 import './AdminLayout.css';
 
 const rolePermissions = {
@@ -34,9 +35,8 @@ const AdminLayout = () => {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    const API = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
     const check = () => {
-      fetch(`${API}/health`, { signal: AbortSignal.timeout(4000) })
+      fetch(`${API_BASE_URL}/health`, { signal: AbortSignal.timeout(4000) })
         .then(r => setIsConnected(r.ok))
         .catch(() => setIsConnected(false));
     };

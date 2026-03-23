@@ -7,16 +7,21 @@ const sql = require('mssql');
 router.post('/', async (req, res) => {
     const {
         fullName, email, phone,
+        addressLine1, addressLine2, city, stateProvince, zipCode,
+        billingSameAsContact,
+        billingFullName, billingAddress1, billingAddress2, billingCity, billingState, billingZip,
         visitDate, ticketType,
         adultQty, childQty, seniorQty,
         addOns,
-        billingAddress,
         cardLastFour,
         subtotal, total,
     } = req.body;
 
     if (!fullName || !email || !visitDate || !ticketType) {
         return res.status(400).json({ error: 'Missing required fields.' });
+    }
+    if (!addressLine1 || !city || !stateProvince || !zipCode) {
+        return res.status(400).json({ error: 'Missing required address fields.' });
     }
     if ((adultQty + childQty + seniorQty) < 1) {
         return res.status(400).json({ error: 'At least one ticket is required.' });
@@ -25,27 +30,46 @@ router.post('/', async (req, res) => {
     try {
         const pool = await connectToDb();
         const result = await pool.request()
-            .input('FullName',       sql.NVarChar(100),     fullName)
-            .input('Email',          sql.NVarChar(200),     email)
-            .input('Phone',          sql.NVarChar(30),      phone || null)
-            .input('VisitDate',      sql.Date,              new Date(visitDate))
-            .input('TicketType',     sql.NVarChar(100),     ticketType)
-            .input('AdultQty',       sql.Int,               adultQty || 0)
-            .input('ChildQty',       sql.Int,               childQty || 0)
-            .input('SeniorQty',      sql.Int,               seniorQty || 0)
-            .input('AddOns',         sql.NVarChar(sql.MAX), addOns ? JSON.stringify(addOns) : null)
-            .input('BillingAddress', sql.NVarChar(500),     billingAddress || null)
-            .input('CardLastFour',   sql.NVarChar(4),       cardLastFour || null)
-            .input('Subtotal',       sql.Decimal(10, 2),    subtotal)
-            .input('Total',          sql.Decimal(10, 2),    total)
+            .input('FullName',            sql.NVarChar(100),     fullName)
+            .input('Email',               sql.NVarChar(200),     email)
+            .input('Phone',               sql.NVarChar(30),      phone || null)
+            .input('AddressLine1',        sql.NVarChar(200),     addressLine1)
+            .input('AddressLine2',        sql.NVarChar(200),     addressLine2 || null)
+            .input('City',                sql.NVarChar(100),     city)
+            .input('StateProvince',       sql.NVarChar(100),     stateProvince)
+            .input('ZipCode',             sql.NVarChar(20),      zipCode)
+            .input('BillingSameAsContact',sql.Bit,               billingSameAsContact !== false ? 1 : 0)
+            .input('BillingFullName',     sql.NVarChar(100),     billingSameAsContact !== false ? null : (billingFullName || null))
+            .input('BillingAddress1',     sql.NVarChar(200),     billingSameAsContact !== false ? null : (billingAddress1 || null))
+            .input('BillingAddress2',     sql.NVarChar(200),     billingSameAsContact !== false ? null : (billingAddress2 || null))
+            .input('BillingCity',         sql.NVarChar(100),     billingSameAsContact !== false ? null : (billingCity || null))
+            .input('BillingState',        sql.NVarChar(100),     billingSameAsContact !== false ? null : (billingState || null))
+            .input('BillingZip',          sql.NVarChar(20),      billingSameAsContact !== false ? null : (billingZip || null))
+            .input('VisitDate',           sql.Date,              new Date(visitDate))
+            .input('TicketType',          sql.NVarChar(100),     ticketType)
+            .input('AdultQty',            sql.Int,               adultQty || 0)
+            .input('ChildQty',            sql.Int,               childQty || 0)
+            .input('SeniorQty',           sql.Int,               seniorQty || 0)
+            .input('AddOns',              sql.NVarChar(sql.MAX), addOns ? JSON.stringify(addOns) : null)
+            .input('CardLastFour',        sql.NVarChar(4),       cardLastFour || null)
+            .input('Subtotal',            sql.Decimal(10, 2),    subtotal)
+            .input('Total',               sql.Decimal(10, 2),    total)
             .query(`
                 INSERT INTO TicketOrders
-                    (FullName, Email, Phone, VisitDate, TicketType, AdultQty, ChildQty, SeniorQty,
-                     AddOns, BillingAddress, CardLastFour, Subtotal, Total)
+                    (FullName, Email, Phone,
+                     AddressLine1, AddressLine2, City, StateProvince, ZipCode,
+                     BillingSameAsContact, BillingFullName, BillingAddress1, BillingAddress2,
+                     BillingCity, BillingState, BillingZip,
+                     VisitDate, TicketType, AdultQty, ChildQty, SeniorQty,
+                     AddOns, CardLastFour, Subtotal, Total)
                 OUTPUT INSERTED.TicketOrderID
                 VALUES
-                    (@FullName, @Email, @Phone, @VisitDate, @TicketType, @AdultQty, @ChildQty, @SeniorQty,
-                     @AddOns, @BillingAddress, @CardLastFour, @Subtotal, @Total)
+                    (@FullName, @Email, @Phone,
+                     @AddressLine1, @AddressLine2, @City, @StateProvince, @ZipCode,
+                     @BillingSameAsContact, @BillingFullName, @BillingAddress1, @BillingAddress2,
+                     @BillingCity, @BillingState, @BillingZip,
+                     @VisitDate, @TicketType, @AdultQty, @ChildQty, @SeniorQty,
+                     @AddOns, @CardLastFour, @Subtotal, @Total)
             `);
 
         res.status(201).json({ success: true, ticketOrderId: result.recordset[0].TicketOrderID });
