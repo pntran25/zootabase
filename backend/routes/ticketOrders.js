@@ -6,18 +6,18 @@ const sql = require('mssql');
 // POST /api/ticket-orders — place a ticket order
 router.post('/', async (req, res) => {
     const {
-        fullName, email, phone,
+        firstName, lastName, email, phone,
         addressLine1, addressLine2, city, stateProvince, zipCode,
         billingSameAsContact,
         billingFullName, billingAddress1, billingAddress2, billingCity, billingState, billingZip,
         visitDate, ticketType,
         adultQty, childQty, seniorQty,
+        adultUnitPrice, childUnitPrice, seniorUnitPrice,
         addOns,
         cardLastFour,
         subtotal, total,
     } = req.body;
-
-    if (!fullName || !email || !visitDate || !ticketType) {
+    if (!firstName || !lastName || !email || !visitDate || !ticketType) {
         return res.status(400).json({ error: 'Missing required fields.' });
     }
     if (!addressLine1 || !city || !stateProvince || !zipCode) {
@@ -30,7 +30,8 @@ router.post('/', async (req, res) => {
     try {
         const pool = await connectToDb();
         const result = await pool.request()
-            .input('FullName',            sql.NVarChar(100),     fullName)
+            .input('FirstName',           sql.NVarChar(50),      firstName)
+            .input('LastName',            sql.NVarChar(50),      lastName)
             .input('Email',               sql.NVarChar(200),     email)
             .input('Phone',               sql.NVarChar(30),      phone || null)
             .input('AddressLine1',        sql.NVarChar(200),     addressLine1)
@@ -50,25 +51,30 @@ router.post('/', async (req, res) => {
             .input('AdultQty',            sql.Int,               adultQty || 0)
             .input('ChildQty',            sql.Int,               childQty || 0)
             .input('SeniorQty',           sql.Int,               seniorQty || 0)
+            .input('AdultUnitPrice',      sql.Decimal(10, 2),    adultUnitPrice  || null)
+            .input('ChildUnitPrice',      sql.Decimal(10, 2),    childUnitPrice  || null)
+            .input('SeniorUnitPrice',     sql.Decimal(10, 2),    seniorUnitPrice || null)
             .input('AddOns',              sql.NVarChar(sql.MAX), addOns ? JSON.stringify(addOns) : null)
             .input('CardLastFour',        sql.NVarChar(4),       cardLastFour || null)
             .input('Subtotal',            sql.Decimal(10, 2),    subtotal)
             .input('Total',               sql.Decimal(10, 2),    total)
             .query(`
                 INSERT INTO TicketOrders
-                    (FullName, Email, Phone,
+                    (FirstName, LastName, Email, Phone,
                      AddressLine1, AddressLine2, City, StateProvince, ZipCode,
                      BillingSameAsContact, BillingFullName, BillingAddress1, BillingAddress2,
                      BillingCity, BillingState, BillingZip,
                      VisitDate, TicketType, AdultQty, ChildQty, SeniorQty,
+                     AdultUnitPrice, ChildUnitPrice, SeniorUnitPrice,
                      AddOns, CardLastFour, Subtotal, Total)
                 OUTPUT INSERTED.TicketOrderID
                 VALUES
-                    (@FullName, @Email, @Phone,
+                    (@FirstName, @LastName, @Email, @Phone,
                      @AddressLine1, @AddressLine2, @City, @StateProvince, @ZipCode,
                      @BillingSameAsContact, @BillingFullName, @BillingAddress1, @BillingAddress2,
                      @BillingCity, @BillingState, @BillingZip,
                      @VisitDate, @TicketType, @AdultQty, @ChildQty, @SeniorQty,
+                     @AdultUnitPrice, @ChildUnitPrice, @SeniorUnitPrice,
                      @AddOns, @CardLastFour, @Subtotal, @Total)
             `);
 
@@ -79,16 +85,48 @@ router.post('/', async (req, res) => {
     }
 });
 
-// GET /api/ticket-orders — list all (admin)
+// GET /api/ticket-orders — paginated + filtered list (admin)
 router.get('/', async (req, res) => {
     try {
+        const limit  = Math.min(parseInt(req.query.limit)  || 100, 200);
+        const offset = parseInt(req.query.offset) || 0;
+        const search   = (req.query.search   || '').trim();
+        const dateFrom = req.query.dateFrom || null;
+        const dateTo   = req.query.dateTo   || null;
+
         const pool = await connectToDb();
-        const result = await pool.request().query(
-            `SELECT TicketOrderID, FullName, Email, VisitDate, TicketType,
-                    AdultQty, ChildQty, SeniorQty, Total, CardLastFour, PlacedAt
-             FROM TicketOrders ORDER BY PlacedAt DESC`
-        );
-        res.json(result.recordset);
+
+        const conditions = [];
+        if (search)   conditions.push(`(CONCAT(ISNULL(FirstName,''),' ',ISNULL(LastName,'')) LIKE @search OR Email LIKE @search OR CAST(TicketOrderID AS NVARCHAR) LIKE @search)`);
+        if (dateFrom) conditions.push(`PlacedAt >= @dateFrom`);
+        if (dateTo)   conditions.push(`PlacedAt <= @dateTo`);
+        const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
+
+        const addFilters = (r) => {
+            if (search)   r.input('search',   sql.NVarChar,  `%${search}%`);
+            if (dateFrom) r.input('dateFrom', sql.DateTime2, new Date(dateFrom));
+            if (dateTo)   r.input('dateTo',   sql.DateTime2, new Date(dateTo));
+            return r;
+        };
+
+        const [dataResult, countResult] = await Promise.all([
+            addFilters(pool.request())
+                .input('limit',  sql.Int, limit)
+                .input('offset', sql.Int, offset)
+                .query(`
+                    SELECT TicketOrderID, FirstName, LastName,
+                           CONCAT(ISNULL(FirstName,''),' ',ISNULL(LastName,'')) AS FullName,
+                           Email, VisitDate, TicketType,
+                           AdultQty, ChildQty, SeniorQty, Total, CardLastFour, PlacedAt
+                    FROM TicketOrders ${where}
+                    ORDER BY PlacedAt DESC
+                    OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY
+                `),
+            addFilters(pool.request())
+                .query(`SELECT COUNT(*) AS total FROM TicketOrders ${where}`),
+        ]);
+
+        res.json({ rows: dataResult.recordset, total: countResult.recordset[0].total });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -100,7 +138,7 @@ router.get('/:id', async (req, res) => {
         const pool = await connectToDb();
         const result = await pool.request()
             .input('id', sql.Int, parseInt(req.params.id, 10))
-            .query(`SELECT * FROM TicketOrders WHERE TicketOrderID = @id`);
+            .query(`SELECT *, CONCAT(ISNULL(FirstName,''),' ',ISNULL(LastName,'')) AS FullName FROM TicketOrders WHERE TicketOrderID = @id`);
         if (!result.recordset.length) return res.status(404).json({ error: 'Ticket order not found.' });
         const row = result.recordset[0];
         let addOns = [];

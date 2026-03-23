@@ -33,10 +33,12 @@ const Login = () => {
       });
       
       const data = await response.json();
-      if (data.isStaff) {
-          navigate('/admin');
+      const intent = sessionStorage.getItem('membership-intent');
+      if (intent && !data.isStaff) {
+        sessionStorage.removeItem('membership-intent');
+        navigate('/membership');
       } else {
-          navigate('/');
+        navigate(data.isStaff ? '/admin' : '/');
       }
     } catch (err) {
       console.error(err);
@@ -60,10 +62,12 @@ const Login = () => {
       });
       
       const data = await response.json();
-      if (data.isStaff) {
-          navigate('/admin');
+      const intent = sessionStorage.getItem('membership-intent');
+      if (intent && !data.isStaff) {
+        sessionStorage.removeItem('membership-intent');
+        navigate('/membership');
       } else {
-          navigate('/');
+        navigate(data.isStaff ? '/admin' : '/');
       }
     } catch (err) {
       console.error(err);

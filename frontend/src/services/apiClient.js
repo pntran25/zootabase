@@ -1,16 +1,16 @@
 import { auth } from './firebase';
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = (process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000').replace(/\/$/, '');
 
 const buildUrl = (path) => `${API_BASE_URL}${path}`;
 
-export async function getAuthHeaders() {
-  const user = auth.currentUser;
-  if (user) {
-    const token = await user.getIdToken();
-    return { Authorization: `Bearer ${token}` };
+async function getAuthHeaders() {
+  try {
+    const token = auth.currentUser ? await auth.currentUser.getIdToken() : null;
+    return token ? { 'Authorization': `Bearer ${token}` } : {};
+  } catch {
+    return {};
   }
-  return {};
 }
 
 /**
@@ -159,7 +159,7 @@ export const apiDelete = async (path, payload) => {
     const authHeaders = await getAuthHeaders();
     response = await fetch(buildUrl(path), {
       method: 'DELETE',
-      headers: { ...authHeaders, ...(payload ? { 'Content-Type': 'application/json' } : {}) },
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
       ...(payload ? { body: JSON.stringify(payload) } : {}),
     });
   } catch {

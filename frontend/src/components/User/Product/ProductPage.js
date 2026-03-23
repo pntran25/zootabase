@@ -1,6 +1,8 @@
 import { useEffect, useState, useMemo } from 'react';
 import { getAllProducts } from '../../../services/productService';
 import { API_BASE_URL } from '../../../services/apiClient';
+import { useAuth } from '../../../context/AuthContext';
+import { auth } from '../../../services/firebase';
 import giftShopHeroImg from '../../../assets/images/gift-shop-hero.jpg';
 import './ProductPage.css';
 import { Search, ShoppingCart, Filter, Plus, Minus, X, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -57,6 +59,7 @@ function enrichProduct(product) {
 }
 
 const ProductPage = () => {
+  const { currentUser } = useAuth();
   const [products, setProducts] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All Products');
@@ -66,7 +69,25 @@ const ProductPage = () => {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [categoryPage, setCategoryPage] = useState(0);
+  const [membershipDiscount, setMembershipDiscount] = useState(0);
   const CAT_PAGE_SIZE = 3;
+
+  // Fetch the logged-in user's active membership discount
+  useEffect(() => {
+    if (!currentUser) { setMembershipDiscount(0); return; }
+    (async () => {
+      try {
+        const token = await auth.currentUser.getIdToken();
+        const res = await fetch(`${API_BASE_URL}/api/membership-subscriptions/active`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        setMembershipDiscount(data.active ? (data.giftShopDiscount || 0) : 0);
+      } catch {
+        setMembershipDiscount(0);
+      }
+    })();
+  }, [currentUser]);
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -494,6 +515,7 @@ const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0
       onClose={() => setIsCheckoutOpen(false)}
       cart={cart}
       cartTotal={cartTotal}
+      membershipDiscount={membershipDiscount}
       onOrderPlaced={() => setCart([])}
     />
     </div>
