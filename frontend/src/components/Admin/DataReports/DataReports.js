@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { FileText, Search, X, ShoppingBag, Ticket, CreditCard, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { FileText, Search, X, ShoppingBag, Ticket, CreditCard, ChevronUp, ChevronDown, ChevronsUpDown, LayoutDashboard } from 'lucide-react';
+import OverviewTab from './OverviewTab';
 import { useReactTable, getCoreRowModel, getSortedRowModel, flexRender } from '@tanstack/react-table';
 import { toast } from 'sonner';
 import { apiGet } from '../../../services/apiClient';
@@ -384,7 +385,7 @@ const computeDateRange = (dateFilter, customStart, customEnd) => {
 
 // ── Main Page ──────────────────────────────────────────────────────
 const DataReports = () => {
-  const [activeTab, setActiveTab] = useState('shop');
+  const [activeTab, setActiveTab] = useState('overview');
   const [search, setSearch] = useState('');
   const [dateFilter, setDateFilter] = useState('today');
   const [customStart, setCustomStart] = useState('');
@@ -523,6 +524,9 @@ const DataReports = () => {
       </div>
 
       <div className="dr-tabs">
+        <button className={`dr-tab${activeTab === 'overview' ? ' active' : ''}`} onClick={() => setActiveTab('overview')}>
+          <LayoutDashboard size={14} /> Overview
+        </button>
         <button className={`dr-tab${activeTab === 'shop' ? ' active' : ''}`} onClick={() => { setActiveTab('shop'); setSearch(''); setDateFilter('today'); setCustomStart(''); setCustomEnd(''); }}>
           <ShoppingBag size={14} /> Gift Shop Orders
         </button>
@@ -534,7 +538,9 @@ const DataReports = () => {
         </button>
       </div>
 
-      <div className="admin-table-toolbar">
+      {activeTab === 'overview' && <OverviewTab />}
+
+      <div className="admin-table-toolbar" style={{ display: activeTab === 'overview' ? 'none' : undefined }}>
         <div className="admin-search-container">
           <Search size={15} className="search-icon" />
           <input
@@ -552,7 +558,7 @@ const DataReports = () => {
       </div>
 
       {/* Date filter row — right-aligned above the table */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+      <div style={{ display: activeTab === 'overview' ? 'none' : 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, marginBottom: 10 }}>
         {dateFilter === 'custom' && (
           <>
             <AdminDatePicker
@@ -584,39 +590,41 @@ const DataReports = () => {
         />
       </div>
 
-      {activeTab === 'shop' ? (
-        <ReportTable
-          data={orderRows}
-          columns={shopColumns}
-          sorting={ordersSorting}
-          setSorting={setOrdersSorting}
-          loading={ordersLoading}
-          emptyText={search ? 'No orders match your search.' : 'No shop orders today.'}
-          serverTotal={orderTotal}
-          onLoadMore={() => fetchPage('/api/orders', orderOffset, true, setOrderRows, setOrderTotal, setOrderOffset, setOrdersLoading, 'Failed to load shop orders.')}
-        />
-      ) : activeTab === 'tickets' ? (
-        <ReportTable
-          data={ticketRows}
-          columns={ticketColumns}
-          sorting={ticketSorting}
-          setSorting={setTicketSorting}
-          loading={ticketLoading}
-          emptyText={search ? 'No ticket orders match your search.' : 'No ticket sales today.'}
-          serverTotal={ticketTotal}
-          onLoadMore={() => fetchPage('/api/ticket-orders', ticketOffset, true, setTicketRows, setTicketTotal, setTicketOffset, setTicketLoading, 'Failed to load ticket orders.')}
-        />
-      ) : (
-        <ReportTable
-          data={membershipRows}
-          columns={membershipColumns}
-          sorting={membershipsSorting}
-          setSorting={setMembershipsSorting}
-          loading={membershipsLoading}
-          emptyText={search ? 'No memberships match your search.' : 'No memberships today.'}
-          serverTotal={membershipTotal}
-          onLoadMore={() => fetchPage('/api/membership-subscriptions', membershipOffset, true, setMembershipRows, setMembershipTotal, setMembershipOffset, setMembershipsLoading, 'Failed to load memberships.')}
-        />
+      {activeTab !== 'overview' && (
+        activeTab === 'shop' ? (
+          <ReportTable
+            data={orderRows}
+            columns={shopColumns}
+            sorting={ordersSorting}
+            setSorting={setOrdersSorting}
+            loading={ordersLoading}
+            emptyText={search ? 'No orders match your search.' : 'No shop orders today.'}
+            serverTotal={orderTotal}
+            onLoadMore={() => fetchPage('/api/orders', orderOffset, true, setOrderRows, setOrderTotal, setOrderOffset, setOrdersLoading, 'Failed to load shop orders.')}
+          />
+        ) : activeTab === 'tickets' ? (
+          <ReportTable
+            data={ticketRows}
+            columns={ticketColumns}
+            sorting={ticketSorting}
+            setSorting={setTicketSorting}
+            loading={ticketLoading}
+            emptyText={search ? 'No ticket orders match your search.' : 'No ticket sales today.'}
+            serverTotal={ticketTotal}
+            onLoadMore={() => fetchPage('/api/ticket-orders', ticketOffset, true, setTicketRows, setTicketTotal, setTicketOffset, setTicketLoading, 'Failed to load ticket orders.')}
+          />
+        ) : (
+          <ReportTable
+            data={membershipRows}
+            columns={membershipColumns}
+            sorting={membershipsSorting}
+            setSorting={setMembershipsSorting}
+            loading={membershipsLoading}
+            emptyText={search ? 'No memberships match your search.' : 'No memberships today.'}
+            serverTotal={membershipTotal}
+            onLoadMore={() => fetchPage('/api/membership-subscriptions', membershipOffset, true, setMembershipRows, setMembershipTotal, setMembershipOffset, setMembershipsLoading, 'Failed to load memberships.')}
+          />
+        )
       )}
 
       {selectedOrderId && <OrderDetailModal orderId={selectedOrderId} onClose={() => setSelectedOrderId(null)} />}

@@ -61,6 +61,8 @@ const ManageMaintenance = () => {
         status: log.status,
         reportedBy: log.reportedBy,
         priority: 'Medium',
+        createdBy: log.createdBy || null,
+        updatedBy: log.updatedBy || null,
       }));
       setLogs(mapped);
     } catch (err) {
