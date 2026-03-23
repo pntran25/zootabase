@@ -3,18 +3,19 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, PawPrint, Map, Ticket, ShoppingBag,
   Wrench, LogOut, TicketCheck, CalendarDays,
-  Sun, Moon, Users, LineChart, FileText, CreditCard
+  Sun, Moon, Users, LineChart, FileText, HeartPulse, ClipboardList, CreditCard
 } from 'lucide-react';
 import brandLogo from '../assets/images/Logo.png';
 import { Toaster, toast } from 'sonner';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { auth } from '../services/firebase';
+import { API_BASE_URL } from '../services/apiClient';
 import './AdminLayout.css';
 
 const rolePermissions = {
-  'Super Admin': ['dashboard', 'animals', 'exhibits', 'attractions', 'events', 'tickets', 'shop', 'maintenance', 'staff', 'analytics', 'feedback', 'reports', 'memberships'],
-  'Caretaker': ['dashboard', 'animals', 'exhibits', 'maintenance'],
+  'Super Admin': ['dashboard', 'animals', 'exhibits', 'attractions', 'events', 'tickets', 'shop', 'maintenance', 'staff', 'analytics', 'feedback', 'reports', 'memberships', 'animal-health', 'animal-report'],
+  'Caretaker': ['dashboard', 'animals', 'exhibits', 'maintenance', 'animal-health', 'animal-report'],
   'Event Coordinator': ['dashboard', 'events', 'maintenance'],
   'Ticket Staff': ['dashboard', 'tickets', 'maintenance'],
   'Shop Manager': ['dashboard', 'shop', 'reports', 'maintenance'],
@@ -36,7 +37,7 @@ const AdminLayout = () => {
   useEffect(() => {
     const API = (process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000').replace(/\/$/, '');
     const check = () => {
-      fetch(`${API}/health`, { signal: AbortSignal.timeout(4000) })
+      fetch(`${API_BASE_URL}/health`, { signal: AbortSignal.timeout(4000) })
         .then(r => setIsConnected(r.ok))
         .catch(() => setIsConnected(false));
     };
@@ -124,10 +125,15 @@ const AdminLayout = () => {
           {renderLink('/admin/events', <CalendarDays size={18} className="nav-icon" />, 'Events', 'events')}
           {renderLink('/admin/tickets', <Ticket size={18} className="nav-icon" />, 'Tickets', 'tickets')}
           {renderLink('/admin/shop', <ShoppingBag size={18} className="nav-icon" />, 'Shop', 'shop')}
+          
+          <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Animal Care</p>
+
+          {renderLink('/admin/animal-health', <HeartPulse size={18} className="nav-icon" />, 'Health Tracking', 'animal-health')}
           {renderLink('/admin/memberships', <CreditCard size={18} className="nav-icon" />, 'Manage Plans', 'memberships')}
 
           <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Data Reports</p>
 
+          {renderLink('/admin/animal-report', <ClipboardList size={18} className="nav-icon" />, 'Animal Reports', 'animal-report')}
           {renderLink('/admin/reports', <FileText size={18} className="nav-icon" />, 'Transaction History', 'reports')}
 
           <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">System</p>

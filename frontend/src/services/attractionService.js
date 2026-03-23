@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiPut, apiDelete, API_BASE_URL, humanizeError } from './apiClient';
+import { apiGet, apiPost, apiPut, apiDelete, API_BASE_URL, humanizeError, getAuthHeaders } from './apiClient';
 
 export const getAllAttractions = () => apiGet('/api/attractions');
 export const createAttraction = (data) => apiPost('/api/attractions', data);
@@ -10,8 +10,10 @@ export const uploadAttractionImage = async (id, file) => {
     formData.append('image', file);
     let response;
     try {
+        const authHeaders = await getAuthHeaders();
         response = await fetch(`${API_BASE_URL}/api/attractions/${id}/image`, {
             method: 'POST',
+            headers: { ...authHeaders },
             body: formData,
         });
     } catch {

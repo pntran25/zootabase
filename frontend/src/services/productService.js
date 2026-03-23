@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiPut, apiDelete, API_BASE_URL } from './apiClient';
+import { apiGet, apiPost, apiPut, apiDelete, API_BASE_URL, getAuthHeaders } from './apiClient';
 
 export const getAllProducts = () => apiGet('/api/products');
 export const createProduct = (data) => apiPost('/api/products', data);
@@ -9,8 +9,10 @@ export const getLowStockProducts = () => apiGet('/api/products/low-stock');
 export const uploadProductImage = async (id, file) => {
     const formData = new FormData();
     formData.append('image', file);
+    const authHeaders = await getAuthHeaders();
     const response = await fetch(`${API_BASE_URL}/api/products/${id}/image`, {
         method: 'POST',
+        headers: { ...authHeaders },
         body: formData,
     });
     if (!response.ok) {

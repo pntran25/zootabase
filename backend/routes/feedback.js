@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const sql = require('mssql');
 const { connectToDb } = require('../services/admin');
+const { verifyToken } = require('../middleware/authMiddleware');
 
 // GET all feedback
 router.get('/api/feedback', async (req, res) => {
@@ -51,7 +52,7 @@ router.post('/api/feedback', async (req, res) => {
 });
 
 // DELETE feedback
-router.delete('/api/feedback/:id', async (req, res) => {
+router.delete('/api/feedback/:id', verifyToken, async (req, res) => {
     try {
         const pool = await connectToDb();
         await pool.request()

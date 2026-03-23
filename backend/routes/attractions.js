@@ -17,7 +17,17 @@ const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, imageDir),
     filename: (req, file, cb) => cb(null, 'attraction-' + Date.now() + path.extname(file.originalname)),
 });
-const upload = multer({ storage });
+const upload = multer({
+    storage,
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        const allowed = /jpeg|jpg|png|gif|webp/;
+        if (allowed.test(path.extname(file.originalname).toLowerCase()) && allowed.test(file.mimetype)) {
+            return cb(null, true);
+        }
+        cb(new Error('Only image files (jpg, png, gif, webp) are allowed'));
+    }
+});
 
 // GET all attractions
 router.get('/api/attractions', async (req, res) => {
@@ -116,7 +126,7 @@ router.put('/api/attractions/:id', optionalAuth, async (req, res) => {
 });
 
 // POST upload image
-router.post('/api/attractions/:id/image', upload.single('image'), async (req, res) => {
+router.post('/api/attractions/:id/image', verifyToken, upload.single('image'), async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ error: 'No image file provided' });
         const pool = await connectToDb();

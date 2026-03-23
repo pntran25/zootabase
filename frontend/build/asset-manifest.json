@@ -1,5 +1,8 @@
 {
   "files": {
+    "main.css": "/static/css/main.0c90983c.css",
+    "main.js": "/static/js/main.575719cc.js",
+    "static/js/453.64aababc.chunk.js": "/static/js/453.64aababc.chunk.js",
     "main.css": "/static/css/main.ac9a819e.css",
     "main.js": "/static/js/main.390705fb.js",
     "static/js/453.64aababc.chunk.js": "/static/js/453.64aababc.chunk.js",
@@ -16,6 +19,13 @@
     "static/media/AppleGaramond-Bold.ttf": "/static/media/AppleGaramond-Bold.f39aff89cda1a68cae06.ttf",
     "static/media/AppleGaramond-Italic.ttf": "/static/media/AppleGaramond-Italic.1544e40873b51450ee55.ttf",
     "index.html": "/index.html",
+    "main.0c90983c.css.map": "/static/css/main.0c90983c.css.map",
+    "main.575719cc.js.map": "/static/js/main.575719cc.js.map",
+    "453.64aababc.chunk.js.map": "/static/js/453.64aababc.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.0c90983c.css",
+    "static/js/main.575719cc.js"
     "main.ac9a819e.css.map": "/static/css/main.ac9a819e.css.map",
     "main.390705fb.js.map": "/static/js/main.390705fb.js.map",
     "453.64aababc.chunk.js.map": "/static/js/453.64aababc.chunk.js.map"

@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiPut, apiDelete, API_BASE_URL, humanizeError } from './apiClient';
+import { apiGet, apiPost, apiPut, apiDelete, API_BASE_URL, humanizeError, getAuthHeaders } from './apiClient';
 
 const getAllAnimals = async () => {
     try {
@@ -53,9 +53,10 @@ const deleteAnimal = async (id, reason) => {
 const setEndangered = async (id, isEndangered) => {
     let response;
     try {
+        const authHeaders = await getAuthHeaders();
         response = await fetch(`${API_BASE_URL}/api/animals/${id}/endangered`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...authHeaders },
             body: JSON.stringify({ isEndangered }),
         });
     } catch {
@@ -74,8 +75,10 @@ const uploadAnimalImage = async (id, file) => {
     formData.append('image', file);
     let response;
     try {
+        const authHeaders = await getAuthHeaders();
         response = await fetch(`${API_BASE_URL}/api/animals/${id}/image`, {
             method: 'POST',
+            headers: { ...authHeaders },
             body: formData,
         });
     } catch {
