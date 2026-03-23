@@ -50,7 +50,7 @@ const AnimalPage = () => {
   useEffect(() => {
     (async () => {
       try {
-        const data = await animalService.getAllAnimals();
+        const data = await animalService.getDisplayAnimals();
         setAnimals(data);
       } catch (err) {
         console.error('Error fetching animals:', err);
@@ -64,26 +64,10 @@ const AnimalPage = () => {
   if (loading) return <div className="flex h-screen items-center justify-center text-lg text-muted-foreground">Loading animals...</div>;
   if (error) return <div className="flex h-screen items-center justify-center text-red-500">{error}</div>;
 
-  // Deduplicate by species — prefer the entry with an image, then sort exhibit → species
-  const dedupedAnimals = (() => {
-    const seen = new Map();
-    for (const a of animals) {
-      const key = (a.species || a.name || '').toLowerCase();
-      if (!seen.has(key) || (a.imageUrl && !seen.get(key).imageUrl)) {
-        seen.set(key, a);
-      }
-    }
-    return [...seen.values()].sort((a, b) => {
-      const ex = (a.exhibit || '').localeCompare(b.exhibit || '');
-      if (ex !== 0) return ex;
-      return (a.species || '').localeCompare(b.species || '');
-    });
-  })();
-
-  const dynamicCategories = ["All Animals", ...Array.from(new Set(dedupedAnimals.map(a => a.species).filter(Boolean)))];
+  const dynamicCategories = ["All Animals", ...Array.from(new Set(animals.map(a => a.species).filter(Boolean)))];
   const conservationStatuses = ["All", "Critically Endangered", "Endangered", "Vulnerable", "Near Threatened", "Least Concern"];
 
-  const filteredAnimals = dedupedAnimals.filter(animal => {
+  const filteredAnimals = animals.filter(animal => {
     const badge = getStatusBadge(animal.health);
     const matchesCategory = selectedCategory === "All Animals" || animal.species === selectedCategory;
     const matchesStatus = selectedStatus === "All" || badge.label === selectedStatus;

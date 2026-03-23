@@ -20,6 +20,16 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '1mb' }));
 
+let isDatabaseConnected = false;
+
+app.get('/health', (req, res) => {
+	const statusCode = isDatabaseConnected ? 200 : 503;
+	res.status(statusCode).json({
+		status: 'ok',
+		database: isDatabaseConnected ? 'connected' : 'disconnected'
+	});
+});
+
 const exhibitsRouter = require('./routes/exhibits');
 const animalsRouter = require('./routes/animals');
 const attractionsRouter = require('./routes/attractions');
@@ -35,6 +45,9 @@ const analyticsRouter = require('./routes/analytics');
 const ordersRouter = require('./routes/orders');
 const ticketOrdersRouter = require('./routes/ticketOrders');
 const animalHealthRouter = require('./routes/animalHealth');
+const membershipPlansRouter = require('./routes/membershipPlans');
+const membershipSubsRouter = require('./routes/membershipSubscriptions');
+const dashboardRouter = require('./routes/dashboard');
 const path = require('path');
 
 app.use('/api/exhibits', exhibitsRouter);
@@ -52,19 +65,14 @@ app.use('/api/staff', staffRouter);
 app.use('/api/analytics', analyticsRouter);
 app.use('/api/orders', ordersRouter);
 app.use('/api/ticket-orders', ticketOrdersRouter);
+app.use('/api/ticket-packages', require('./routes/ticketPackages'));
+app.use('/api/ticket-addons',   require('./routes/ticketAddons'));
+app.use('/api/membership-plans', membershipPlansRouter);
+app.use('/api/membership-subscriptions', membershipSubsRouter);
+app.use('/api/dashboard', dashboardRouter);
 
 // Serve images from the frontend assets folder dynamically
 app.use('/images', express.static(path.join(__dirname, '../frontend/src/assets/images')));
-
-let isDatabaseConnected = false;
-
-app.get('/health', (req, res) => {
-	const statusCode = isDatabaseConnected ? 200 : 503;
-	res.status(statusCode).json({
-		status: 'ok',
-		database: isDatabaseConnected ? 'connected' : 'disconnected'
-	});
-});
 
 async function runMigrations(pool) {
 	const steps = [
@@ -205,6 +213,137 @@ async function runMigrations(pool) {
 		    ResolvedAt   DATETIME2(0) NULL,
 		    CONSTRAINT FK_HealthAlert_Animal FOREIGN KEY (AnimalID) REFERENCES Animal(AnimalID)
 		  )`,
+		`IF COL_LENGTH('TicketOrders','AdultUnitPrice') IS NULL ALTER TABLE TicketOrders ADD AdultUnitPrice DECIMAL(10,2) NULL`,
+		`IF COL_LENGTH('TicketOrders','ChildUnitPrice') IS NULL ALTER TABLE TicketOrders ADD ChildUnitPrice DECIMAL(10,2) NULL`,
+		`IF COL_LENGTH('TicketOrders','SeniorUnitPrice') IS NULL ALTER TABLE TicketOrders ADD SeniorUnitPrice DECIMAL(10,2) NULL`,
+		`IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='TicketPackage' AND xtype='U')
+		  CREATE TABLE TicketPackage (
+		    PackageID     INT IDENTITY(1,1) PRIMARY KEY,
+		    Name          NVARCHAR(100)  NOT NULL,
+		    Description   NVARCHAR(500)  NULL,
+		    AdultPrice    DECIMAL(10,2)  NOT NULL DEFAULT 0,
+		    ChildPrice    DECIMAL(10,2)  NOT NULL DEFAULT 0,
+		    SeniorPrice   DECIMAL(10,2)  NOT NULL DEFAULT 0,
+		    IsMostPopular BIT            NOT NULL DEFAULT 0,
+		    Features      NVARCHAR(MAX)  NULL,
+		    SortOrder     INT            NOT NULL DEFAULT 0,
+		    CreatedAt     DATETIME2      NOT NULL DEFAULT SYSUTCDATETIME(),
+		    UpdatedAt     DATETIME2      NULL,
+		    DeletedAt     DATETIME2      NULL
+		  )`,
+		`IF NOT EXISTS (SELECT 1 FROM TicketPackage WHERE DeletedAt IS NULL)
+		  INSERT INTO TicketPackage (Name,Description,AdultPrice,ChildPrice,SeniorPrice,IsMostPopular,Features,SortOrder) VALUES
+		    (N'General Admission',N'Full day access to all exhibits and daily shows',29.99,19.99,24.99,0,N'["All outdoor and indoor exhibits","Daily animal shows & talks","Playground access","Free zoo map"]',1),
+		    (N'Premium Experience',N'Skip the lines and enjoy exclusive perks',49.99,34.99,44.99,1,N'["Everything in General Admission","Skip-the-line access","Reserved seating at shows","Free train & carousel rides","10% off dining & gifts","Complimentary parking"]',2),
+		    (N'VIP Safari',N'The ultimate zoo experience with behind-the-scenes access',99.99,79.99,89.99,0,N'["Everything in Premium","Behind-the-scenes tour","Animal feeding experience","Private guide for 2 hours","$20 food voucher","Exclusive VIP lounge access","Souvenir gift bag"]',3)`,
+		`IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='TicketAddon' AND xtype='U')
+		  CREATE TABLE TicketAddon (
+		    AddonID     INT IDENTITY(1,1) PRIMARY KEY,
+		    Name        NVARCHAR(100)  NOT NULL,
+		    Description NVARCHAR(200)  NULL,
+		    Price       DECIMAL(10,2)  NOT NULL DEFAULT 0,
+		    SortOrder   INT            NOT NULL DEFAULT 0,
+		    CreatedAt   DATETIME2      NOT NULL DEFAULT SYSUTCDATETIME(),
+		    UpdatedAt   DATETIME2      NULL,
+		    DeletedAt   DATETIME2      NULL
+		  )`,
+		`IF NOT EXISTS (SELECT 1 FROM TicketAddon WHERE DeletedAt IS NULL)
+		  INSERT INTO TicketAddon (Name,Description,Price,SortOrder) VALUES
+		    (N'Preferred Parking',N'Close to entrance',10.00,1),
+		    (N'Train Ride Pass',N'Unlimited rides',8.00,2),
+		    (N'Carousel Pass',N'Unlimited rides',6.00,3),
+		    (N'Animal Feeding',N'Giraffe & goat feeding',15.00,4),
+		    (N'Photo Package',N'3 printed photos + digital',25.00,5)`,
+		`IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='MembershipPlans' AND xtype='U')
+		  CREATE TABLE MembershipPlans (
+		    PlanID       INT IDENTITY(1,1) PRIMARY KEY,
+		    Name         NVARCHAR(100)  NOT NULL,
+		    Description  NVARCHAR(500)  NULL,
+		    MonthlyPrice DECIMAL(10,2)  NOT NULL DEFAULT 0,
+		    YearlyPrice  DECIMAL(10,2)  NOT NULL DEFAULT 0,
+		    Features     NVARCHAR(MAX)  NULL,
+		    IsPopular    BIT            NOT NULL DEFAULT 0,
+		    SortOrder    INT            NOT NULL DEFAULT 0,
+		    DeletedAt    DATETIME2      NULL,
+		    CreatedAt    DATETIME2      NOT NULL DEFAULT SYSUTCDATETIME()
+		  )`,
+		// Seed default plans if table is empty
+		`IF NOT EXISTS (SELECT 1 FROM MembershipPlans)
+		  INSERT INTO MembershipPlans (Name, Description, MonthlyPrice, YearlyPrice, Features, IsPopular, SortOrder) VALUES
+		  ('Individual', 'Perfect for solo adventurers', 9.99, 89.00,
+		   '[{"text":"Unlimited admission for 1 adult","included":true},{"text":"10% discount at Gift Shop","included":true},{"text":"10% discount at cafes","included":true},{"text":"Member-only newsletter","included":true},{"text":"Early access to events","included":true},{"text":"Free parking (weekdays)","included":true},{"text":"Guest passes","included":false},{"text":"Behind-the-scenes tours","included":false},{"text":"VIP lounge access","included":false}]',
+		   0, 1),
+		  ('Family', 'Best value for families', 19.99, 179.00,
+		   '[{"text":"Unlimited admission for 2 adults + 4 children","included":true},{"text":"4 guest passes per year","included":true},{"text":"15% discount at Gift Shop","included":true},{"text":"15% discount at cafes","included":true},{"text":"Member-only newsletter","included":true},{"text":"Early access to events","included":true},{"text":"Free parking (all days)","included":true},{"text":"Priority booking for camps","included":true},{"text":"Behind-the-scenes tours","included":false},{"text":"VIP lounge access","included":false}]',
+		   1, 2),
+		  ('Premium', 'The ultimate zoo experience', 35.99, 349.00,
+		   '[{"text":"Unlimited admission for 2 adults + 6 children","included":true},{"text":"12 guest passes per year","included":true},{"text":"20% discount at Gift Shop","included":true},{"text":"20% discount at cafes","included":true},{"text":"Member-only newsletter","included":true},{"text":"Early access to all events","included":true},{"text":"Free parking (all days)","included":true},{"text":"Priority booking for camps","included":true},{"text":"2 behind-the-scenes tours","included":true},{"text":"VIP lounge access","included":true},{"text":"Exclusive member events","included":true},{"text":"Complimentary stroller rental","included":true}]',
+		   0, 3)`,
+		// Audit columns — CreatedBy / UpdatedBy / DeletedBy
+		`IF COL_LENGTH('Animal','CreatedBy') IS NULL ALTER TABLE Animal ADD CreatedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('Animal','UpdatedBy') IS NULL ALTER TABLE Animal ADD UpdatedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('Animal','DeletedBy') IS NULL ALTER TABLE Animal ADD DeletedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('Animal','IsDisplay') IS NULL ALTER TABLE Animal ADD IsDisplay BIT NOT NULL DEFAULT 0`,
+		`IF COL_LENGTH('Exhibit','CreatedBy') IS NULL ALTER TABLE Exhibit ADD CreatedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('Exhibit','UpdatedBy') IS NULL ALTER TABLE Exhibit ADD UpdatedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('Exhibit','DeletedBy') IS NULL ALTER TABLE Exhibit ADD DeletedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('Attraction','CreatedBy') IS NULL ALTER TABLE Attraction ADD CreatedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('Attraction','UpdatedBy') IS NULL ALTER TABLE Attraction ADD UpdatedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('Attraction','DeletedBy') IS NULL ALTER TABLE Attraction ADD DeletedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('Event','CreatedBy') IS NULL ALTER TABLE Event ADD CreatedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('Event','UpdatedBy') IS NULL ALTER TABLE Event ADD UpdatedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('Event','DeletedBy') IS NULL ALTER TABLE Event ADD DeletedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('Product','CreatedBy') IS NULL ALTER TABLE Product ADD CreatedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('Product','UpdatedBy') IS NULL ALTER TABLE Product ADD UpdatedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('Product','DeletedBy') IS NULL ALTER TABLE Product ADD DeletedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('TicketType','CreatedBy') IS NULL ALTER TABLE TicketType ADD CreatedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('TicketType','UpdatedBy') IS NULL ALTER TABLE TicketType ADD UpdatedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('TicketType','DeletedBy') IS NULL ALTER TABLE TicketType ADD DeletedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('MaintenanceRequest','CreatedBy') IS NULL ALTER TABLE MaintenanceRequest ADD CreatedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('MaintenanceRequest','UpdatedBy') IS NULL ALTER TABLE MaintenanceRequest ADD UpdatedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('MaintenanceRequest','DeletedBy') IS NULL ALTER TABLE MaintenanceRequest ADD DeletedBy NVARCHAR(100) NULL`,
+		`IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='MembershipSubscriptions' AND xtype='U')
+		  CREATE TABLE MembershipSubscriptions (
+		    SubID                INT IDENTITY(1,1) PRIMARY KEY,
+		    CustomerID           INT            NULL,
+		    PlanName             NVARCHAR(100)  NOT NULL,
+		    BillingPeriod        NVARCHAR(10)   NOT NULL,
+		    FullName             NVARCHAR(100)  NOT NULL,
+		    Email                NVARCHAR(200)  NOT NULL,
+		    Phone                NVARCHAR(30)   NULL,
+		    AddressLine1         NVARCHAR(200)  NULL,
+		    AddressLine2         NVARCHAR(200)  NULL,
+		    City                 NVARCHAR(100)  NULL,
+		    StateProvince        NVARCHAR(100)  NULL,
+		    ZipCode              NVARCHAR(20)   NULL,
+		    BillingSameAsContact BIT            NOT NULL DEFAULT 1,
+		    BillingFullName      NVARCHAR(100)  NULL,
+		    BillingAddress1      NVARCHAR(200)  NULL,
+		    BillingAddress2      NVARCHAR(200)  NULL,
+		    BillingCity          NVARCHAR(100)  NULL,
+		    BillingState         NVARCHAR(100)  NULL,
+		    BillingZip           NVARCHAR(20)   NULL,
+		    CardLastFour         NVARCHAR(4)    NULL,
+		    Total                DECIMAL(10,2)  NOT NULL,
+		    StartDate            DATE           NOT NULL,
+		    EndDate              DATE           NOT NULL,
+		    PlacedAt             DATETIME2      NOT NULL DEFAULT SYSUTCDATETIME()
+		  )`,
+		// Split FullName into FirstName + LastName for all order tables
+		`IF COL_LENGTH('Orders','FirstName') IS NULL ALTER TABLE Orders ADD FirstName NVARCHAR(50) NULL`,
+		`IF COL_LENGTH('Orders','LastName') IS NULL ALTER TABLE Orders ADD LastName NVARCHAR(50) NULL`,
+		`IF COL_LENGTH('TicketOrders','FirstName') IS NULL ALTER TABLE TicketOrders ADD FirstName NVARCHAR(50) NULL`,
+		`IF COL_LENGTH('TicketOrders','LastName') IS NULL ALTER TABLE TicketOrders ADD LastName NVARCHAR(50) NULL`,
+		`IF COL_LENGTH('MembershipSubscriptions','FirstName') IS NULL ALTER TABLE MembershipSubscriptions ADD FirstName NVARCHAR(50) NULL`,
+		`IF COL_LENGTH('MembershipSubscriptions','LastName') IS NULL ALTER TABLE MembershipSubscriptions ADD LastName NVARCHAR(50) NULL`,
+		// Backfill FirstName/LastName from FullName for rows created before the split
+		`IF COL_LENGTH('Orders','FullName') IS NOT NULL UPDATE Orders SET FirstName = LTRIM(RTRIM(LEFT(FullName, CHARINDEX(' ', FullName + ' ') - 1))), LastName = NULLIF(LTRIM(RTRIM(SUBSTRING(FullName, CHARINDEX(' ', FullName + ' ') + 1, LEN(FullName)))), '') WHERE FirstName IS NULL AND FullName IS NOT NULL`,
+		`IF COL_LENGTH('TicketOrders','FullName') IS NOT NULL UPDATE TicketOrders SET FirstName = LTRIM(RTRIM(LEFT(FullName, CHARINDEX(' ', FullName + ' ') - 1))), LastName = NULLIF(LTRIM(RTRIM(SUBSTRING(FullName, CHARINDEX(' ', FullName + ' ') + 1, LEN(FullName)))), '') WHERE FirstName IS NULL AND FullName IS NOT NULL`,
+		`IF COL_LENGTH('MembershipSubscriptions','FullName') IS NOT NULL UPDATE MembershipSubscriptions SET FirstName = LTRIM(RTRIM(LEFT(FullName, CHARINDEX(' ', FullName + ' ') - 1))), LastName = NULLIF(LTRIM(RTRIM(SUBSTRING(FullName, CHARINDEX(' ', FullName + ' ') + 1, LEN(FullName)))), '') WHERE FirstName IS NULL AND FullName IS NOT NULL`,
+		// Drop the now-redundant FullName column
+		`IF COL_LENGTH('Orders','FullName') IS NOT NULL ALTER TABLE Orders DROP COLUMN FullName`,
+		`IF COL_LENGTH('TicketOrders','FullName') IS NOT NULL ALTER TABLE TicketOrders DROP COLUMN FullName`,
+		`IF COL_LENGTH('MembershipSubscriptions','FullName') IS NOT NULL ALTER TABLE MembershipSubscriptions DROP COLUMN FullName`,
 	];
 
 	for (const sql of steps) {

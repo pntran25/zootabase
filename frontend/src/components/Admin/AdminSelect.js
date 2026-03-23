@@ -12,7 +12,7 @@ import './AdminSelect.css';
  *   placeholder  — shown when no value selected
  *   disabled     — boolean
  */
-const AdminSelect = ({ value, onChange, options = [], placeholder = 'Select...', disabled = false }) => {
+const AdminSelect = ({ value, onChange, options = [], placeholder = 'Select...', disabled = false, width }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
 
@@ -37,7 +37,7 @@ const AdminSelect = ({ value, onChange, options = [], placeholder = 'Select...',
   };
 
   return (
-    <div className={`adm-sel-container${disabled ? ' adm-sel-disabled' : ''}`} ref={containerRef}>
+    <div className={`adm-sel-container${disabled ? ' adm-sel-disabled' : ''}`} ref={containerRef} style={width ? { width } : undefined}>
       <button
         type="button"
         className={`adm-sel-trigger${isOpen ? ' open' : ''}`}
