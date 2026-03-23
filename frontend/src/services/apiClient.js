@@ -4,7 +4,7 @@ const API_BASE_URL = (process.env.REACT_APP_API_BASE_URL || 'http://localhost:50
 
 const buildUrl = (path) => `${API_BASE_URL}${path}`;
 
-async function getAuthHeaders() {
+export async function getAuthHeaders() {
   try {
     const token = auth.currentUser ? await auth.currentUser.getIdToken() : null;
     return token ? { 'Authorization': `Bearer ${token}` } : {};
