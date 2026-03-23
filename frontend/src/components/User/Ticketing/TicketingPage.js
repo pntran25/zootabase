@@ -4,64 +4,9 @@ import {
   Gift, Info, Minus, Plus, ShieldCheck, Star, Ticket, Users, Zap
 } from 'lucide-react';
 import TicketCheckoutModal from './TicketCheckoutModal';
+import { apiGet } from '../../../services/apiClient';
 
 const cn = (...classes) => classes.filter(Boolean).join(' ');
-
-// Data
-const TICKET_TYPES = [
-  {
-    id: "general",
-    name: "General Admission",
-    description: "Full day access to all exhibits and daily shows",
-    prices: { adult: 29.99, child: 19.99, senior: 24.99 },
-    features: [
-      "All outdoor and indoor exhibits",
-      "Daily animal shows & talks",
-      "Playground access",
-      "Free zoo map",
-    ],
-    popular: false,
-  },
-  {
-    id: "premium",
-    name: "Premium Experience",
-    description: "Skip the lines and enjoy exclusive perks",
-    prices: { adult: 49.99, child: 34.99, senior: 44.99 },
-    features: [
-      "Everything in General Admission",
-      "Skip-the-line access",
-      "Reserved seating at shows",
-      "Free train & carousel rides",
-      "10% off dining & gifts",
-      "Complimentary parking",
-    ],
-    popular: true,
-  },
-  {
-    id: "vip",
-    name: "VIP Safari",
-    description: "The ultimate zoo experience with behind-the-scenes access",
-    prices: { adult: 99.99, child: 79.99, senior: 89.99 },
-    features: [
-      "Everything in Premium",
-      "Behind-the-scenes tour",
-      "Animal feeding experience",
-      "Private guide for 2 hours",
-      "$20 food voucher",
-      "Exclusive VIP lounge access",
-      "Souvenir gift bag",
-    ],
-    popular: false,
-  },
-];
-
-const ADDONS = [
-  { id: "parking", name: "Preferred Parking", price: 10, description: "Close to entrance" },
-  { id: "train", name: "Train Ride Pass", price: 8, description: "Unlimited rides" },
-  { id: "carousel", name: "Carousel Pass", price: 6, description: "Unlimited rides" },
-  { id: "feeding", name: "Animal Feeding", price: 15, description: "Giraffe & goat feeding" },
-  { id: "photo", name: "Photo Package", price: 25, description: "3 printed photos + digital" },
-];
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -76,7 +21,11 @@ function getFirstDayOfMonth(month, year) {
 }
 
 const TicketingPage = () => {
-  const [selectedTicket, setSelectedTicket] = useState("premium");
+  const [ticketTypes, setTicketTypes] = useState([]);
+  const [addons, setAddons] = useState([]);
+  const [dataLoading, setDataLoading] = useState(true);
+
+  const [selectedTicket, setSelectedTicket] = useState(null);
   const [quantities, setQuantities] = useState({ adult: 2, child: 0, senior: 0 });
   const [selectedAddOns, setSelectedAddOns] = useState([]);
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
@@ -92,6 +41,24 @@ const TicketingPage = () => {
 
   useEffect(() => {
     setIsMounted(true);
+    Promise.all([apiGet('/api/ticket-packages'), apiGet('/api/ticket-addons')])
+      .then(([pkgs, ads]) => {
+        const mapped = pkgs.map(p => ({
+          id: String(p.packageId),
+          name: p.name,
+          description: p.description,
+          prices: { adult: p.adultPrice, child: p.childPrice, senior: p.seniorPrice },
+          features: p.features || [],
+          popular: p.isMostPopular,
+        }));
+        setTicketTypes(mapped);
+        // Default to "most popular" or first
+        const popular = mapped.find(t => t.popular) || mapped[0];
+        if (popular) setSelectedTicket(popular.id);
+        setAddons(ads.map(a => ({ id: String(a.addonId), name: a.name, price: a.price, description: a.description })));
+      })
+      .catch(() => {})
+      .finally(() => setDataLoading(false));
   }, []);
 
   const updateQuantity = (type, delta) => {
@@ -102,22 +69,23 @@ const TicketingPage = () => {
   };
 
   const toggleAddOn = (id) => {
-    setSelectedAddOns(prev => 
+    setSelectedAddOns(prev =>
       prev.includes(id) ? prev.filter(a => a !== id) : [...prev, id]
     );
   };
 
-  const selectedTicketData = TICKET_TYPES.find(t => t.id === selectedTicket);
-  
-  const ticketSubtotal = 
-    quantities.adult * selectedTicketData.prices.adult +
-    quantities.child * selectedTicketData.prices.child +
-    quantities.senior * selectedTicketData.prices.senior;
+  const selectedTicketData = ticketTypes.find(t => t.id === selectedTicket);
+
+  const ticketSubtotal = selectedTicketData
+    ? quantities.adult  * selectedTicketData.prices.adult +
+      quantities.child  * selectedTicketData.prices.child +
+      quantities.senior * selectedTicketData.prices.senior
+    : 0;
 
   const totalGuests = quantities.adult + quantities.child + quantities.senior;
 
   const addOnsTotal = selectedAddOns.reduce((sum, id) => {
-    const addOn = ADDONS.find(a => a.id === id);
+    const addOn = addons.find(a => a.id === id);
     return sum + (addOn ? addOn.price * totalGuests : 0);
   }, 0);
 
@@ -125,6 +93,15 @@ const TicketingPage = () => {
 
   const daysInMonth = getDaysInMonth(currentMonth, currentYear);
   const firstDay = getFirstDayOfMonth(currentMonth, currentYear);
+
+  if (dataLoading) return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div style={{ textAlign: 'center', color: '#6b7280' }}>
+        <Ticket size={36} style={{ marginBottom: 12, opacity: 0.4 }} />
+        <p>Loading tickets...</p>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -247,7 +224,7 @@ const TicketingPage = () => {
                 </h2>
                 
                 <div className="space-y-4">
-                  {TICKET_TYPES.map((ticket) => (
+                  {ticketTypes.map((ticket) => (
                     <button
                       key={ticket.id}
                       onClick={() => setSelectedTicket(ticket.id)}
@@ -367,7 +344,7 @@ const TicketingPage = () => {
                 </h2>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {ADDONS.map((addOn) => (
+                  {addons.map((addOn) => (
                     <button
                       key={addOn.id}
                       onClick={() => toggleAddOn(addOn.id)}
@@ -449,7 +426,7 @@ const TicketingPage = () => {
                       <div className="border-t border-border mt-4 mb-4" />
                       <p className="text-sm font-medium text-foreground m-0">Add-ons</p>
                       {selectedAddOns.map(id => {
-                        const addOn = ADDONS.find(a => a.id === id);
+                        const addOn = addons.find(a => a.id === id);
                         return (
                           <div key={id} className="flex justify-between text-sm mt-2">
                             <span className="text-muted-foreground">{addOn.name} x{totalGuests}</span>
@@ -511,7 +488,8 @@ const TicketingPage = () => {
         visitDate={{ month: currentMonth, day: selectedDate, year: currentYear }}
         ticketType={selectedTicketData}
         quantities={quantities}
-        addOns={selectedAddOns.map(id => ADDONS.find(a => a.id === id)).filter(Boolean)}
+        prices={selectedTicketData?.prices}
+        addOns={selectedAddOns.map(id => addons.find(a => a.id === id)).filter(Boolean)}
         subtotal={ticketSubtotal + addOnsTotal}
         total={total}
         onOrderPlaced={() => setIsCheckoutOpen(false)}

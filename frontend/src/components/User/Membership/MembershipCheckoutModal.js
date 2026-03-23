@@ -50,12 +50,12 @@ const MembershipCheckoutModal = ({
 }) => {
   const [contact, setContact] = useState({
     email: userProfile?.Email || '',
-    fullName: userProfile?.FullName || '',
+    firstName: '', lastName: '',
     address1: '', address2: '', city: '', state: '', zip: '', phone: '',
   });
   const [card, setCard] = useState({ number: '', expiry: '', cvv: '' });
   const [billingSame, setBillingSame] = useState(true);
-  const [bill, setBill] = useState({ fullName: '', address1: '', address2: '', city: '', state: '', zip: '' });
+  const [bill, setBill] = useState({ firstName: '', lastName: '', address1: '', address2: '', city: '', state: '', zip: '' });
   const [placing, setPlacing] = useState(false);
 
   const setC = (key, val) => setContact(p => ({ ...p, [key]: val }));
@@ -64,9 +64,10 @@ const MembershipCheckoutModal = ({
 
   const fmtCard = v => { const d = v.replace(/\D/g, '').slice(0, 16); return d.match(/.{1,4}/g)?.join(' ') || d; };
   const fmtExpiry = v => { const d = v.replace(/\D/g, '').slice(0, 4); return d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d; };
+  const fmtPhone = v => { const d = v.replace(/\D/g, '').slice(0, 10); if (d.length < 4) return d; if (d.length < 7) return `(${d.slice(0, 3)}) ${d.slice(3)}`; return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`; };
 
   const handlePlace = async () => {
-    if (!contact.email || !contact.fullName || !contact.address1 || !contact.city || !contact.state || !contact.zip) {
+    if (!contact.email || !contact.firstName || !contact.lastName || !contact.address1 || !contact.city || !contact.state || !contact.zip) {
       toast.error('Please fill in all required contact fields.');
       return;
     }
@@ -74,7 +75,7 @@ const MembershipCheckoutModal = ({
       toast.error('Please fill in your card details.');
       return;
     }
-    if (!billingSame && (!bill.fullName || !bill.address1 || !bill.city || !bill.state || !bill.zip)) {
+    if (!billingSame && (!bill.firstName || !bill.lastName || !bill.address1 || !bill.city || !bill.state || !bill.zip)) {
       toast.error('Please fill in all required billing fields.');
       return;
     }
@@ -87,7 +88,7 @@ const MembershipCheckoutModal = ({
         customerId: userProfile?.CustomerID || null,
         planName: plan.Name,
         billingPeriod,
-        fullName: contact.fullName,
+        firstName: contact.firstName, lastName: contact.lastName,
         email: contact.email,
         phone: contact.phone || null,
         addressLine1: contact.address1,
@@ -96,7 +97,7 @@ const MembershipCheckoutModal = ({
         stateProvince: contact.state,
         zipCode: contact.zip,
         billingSameAsContact: billingSame,
-        billingFullName: billingSame ? null : bill.fullName,
+        billingFullName: billingSame ? null : `${bill.firstName} ${bill.lastName}`.trim(),
         billingAddress1: billingSame ? null : bill.address1,
         billingAddress2: billingSame ? null : bill.address2,
         billingCity: billingSame ? null : bill.city,
@@ -145,13 +146,17 @@ const MembershipCheckoutModal = ({
 
               <div className="co-row">
                 <div className="co-field">
-                  <label>Email Address <span style={{ color: '#ef4444' }}>*</span></label>
-                  <input type="email" placeholder="example.user@email.com" value={contact.email} onChange={e => setC('email', e.target.value)} />
+                  <label>First Name <span style={{ color: '#ef4444' }}>*</span></label>
+                  <input type="text" placeholder="John" value={contact.firstName} onChange={e => setC('firstName', e.target.value)} />
                 </div>
                 <div className="co-field">
-                  <label>Full Name <span style={{ color: '#ef4444' }}>*</span></label>
-                  <input type="text" placeholder="John Doe" value={contact.fullName} onChange={e => setC('fullName', e.target.value)} />
+                  <label>Last Name <span style={{ color: '#ef4444' }}>*</span></label>
+                  <input type="text" placeholder="Doe" value={contact.lastName} onChange={e => setC('lastName', e.target.value)} />
                 </div>
+              </div>
+              <div className="co-field">
+                <label>Email Address <span style={{ color: '#ef4444' }}>*</span></label>
+                <input type="email" placeholder="example.user@email.com" value={contact.email} onChange={e => setC('email', e.target.value)} />
               </div>
 
               <div className="co-field">
@@ -181,7 +186,7 @@ const MembershipCheckoutModal = ({
 
               <div className="co-field" style={{ maxWidth: '50%' }}>
                 <label>Phone Number <span style={{ color: '#999', fontWeight: 400 }}>(Optional)</span></label>
-                <input type="text" placeholder="Phone Number" value={contact.phone} onChange={e => setC('phone', e.target.value)} />
+                <input type="text" placeholder="(555) 123-4567" value={contact.phone} onChange={e => setC('phone', fmtPhone(e.target.value))} />
               </div>
             </div>
 
@@ -228,8 +233,12 @@ const MembershipCheckoutModal = ({
                 <div style={{ marginTop: 18 }}>
                   <div className="co-row">
                     <div className="co-field">
-                      <label>Full Name <span style={{ color: '#ef4444' }}>*</span></label>
-                      <input type="text" placeholder="John Doe" value={bill.fullName} onChange={e => setB('fullName', e.target.value)} />
+                      <label>First Name <span style={{ color: '#ef4444' }}>*</span></label>
+                      <input type="text" placeholder="John" value={bill.firstName} onChange={e => setB('firstName', e.target.value)} />
+                    </div>
+                    <div className="co-field">
+                      <label>Last Name <span style={{ color: '#ef4444' }}>*</span></label>
+                      <input type="text" placeholder="Doe" value={bill.lastName} onChange={e => setB('lastName', e.target.value)} />
                     </div>
                   </div>
                   <div className="co-field">

@@ -9,15 +9,14 @@ router.post('/', async (req, res) => {
     const {
         customerId,
         planName, billingPeriod,
-        fullName, email, phone,
+        firstName, lastName, email, phone,
         addressLine1, addressLine2, city, stateProvince, zipCode,
         billingSameAsContact,
         billingFullName, billingAddress1, billingAddress2, billingCity, billingState, billingZip,
         cardLastFour,
         total,
     } = req.body;
-
-    if (!fullName || !email || !planName || !billingPeriod) {
+    if (!firstName || !lastName || !email || !planName || !billingPeriod) {
         return res.status(400).json({ error: 'Missing required fields.' });
     }
     if (!addressLine1 || !city || !stateProvince || !zipCode) {
@@ -39,7 +38,8 @@ router.post('/', async (req, res) => {
             .input('CustomerID',          sql.Int,               customerId || null)
             .input('PlanName',            sql.NVarChar(100),     planName)
             .input('BillingPeriod',       sql.NVarChar(10),      billingPeriod)
-            .input('FullName',            sql.NVarChar(100),     fullName)
+            .input('FirstName',           sql.NVarChar(50),      firstName)
+            .input('LastName',            sql.NVarChar(50),      lastName)
             .input('Email',               sql.NVarChar(200),     email)
             .input('Phone',               sql.NVarChar(30),      phone || null)
             .input('AddressLine1',        sql.NVarChar(200),     addressLine1)
@@ -60,14 +60,14 @@ router.post('/', async (req, res) => {
             .input('EndDate',             sql.Date,              endDate)
             .query(`
                 INSERT INTO MembershipSubscriptions
-                    (CustomerID, PlanName, BillingPeriod, FullName, Email, Phone,
+                    (CustomerID, PlanName, BillingPeriod, FirstName, LastName, Email, Phone,
                      AddressLine1, AddressLine2, City, StateProvince, ZipCode,
                      BillingSameAsContact, BillingFullName, BillingAddress1, BillingAddress2,
                      BillingCity, BillingState, BillingZip,
                      CardLastFour, Total, StartDate, EndDate)
                 OUTPUT INSERTED.SubID
                 VALUES
-                    (@CustomerID, @PlanName, @BillingPeriod, @FullName, @Email, @Phone,
+                    (@CustomerID, @PlanName, @BillingPeriod, @FirstName, @LastName, @Email, @Phone,
                      @AddressLine1, @AddressLine2, @City, @StateProvince, @ZipCode,
                      @BillingSameAsContact, @BillingFullName, @BillingAddress1, @BillingAddress2,
                      @BillingCity, @BillingState, @BillingZip,
@@ -80,16 +80,50 @@ router.post('/', async (req, res) => {
     }
 });
 
-// GET /api/membership-subscriptions — list all (admin / data reports)
+// GET /api/membership-subscriptions — paginated + filtered list (admin / data reports)
 router.get('/', async (req, res) => {
     try {
+        const limit  = Math.min(parseInt(req.query.limit)  || 100, 200);
+        const offset = parseInt(req.query.offset) || 0;
+        const search   = (req.query.search   || '').trim();
+        const dateFrom = req.query.dateFrom || null;
+        const dateTo   = req.query.dateTo   || null;
+
         const pool = await connectToDb();
-        const result = await pool.request().query(
-            `SELECT SubID, FullName, Email, PlanName, BillingPeriod, Total, StartDate, EndDate, PlacedAt
-             FROM MembershipSubscriptions ORDER BY PlacedAt DESC`
-        );
-        res.json(result.recordset);
+
+        // Build shared WHERE clause + a helper that attaches inputs to any request
+        const conditions = [];
+        if (search)   conditions.push(`(CONCAT(ISNULL(FirstName,''),' ',ISNULL(LastName,'')) LIKE @search OR Email LIKE @search OR CAST(SubID AS NVARCHAR) LIKE @search)`);
+        if (dateFrom) conditions.push(`PlacedAt >= @dateFrom`);
+        if (dateTo)   conditions.push(`PlacedAt <= @dateTo`);
+        const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
+
+        const addFilters = (r) => {
+            if (search)   r.input('search',   sql.NVarChar,   `%${search}%`);
+            if (dateFrom) r.input('dateFrom', sql.DateTime2,  new Date(dateFrom));
+            if (dateTo)   r.input('dateTo',   sql.DateTime2,  new Date(dateTo));
+            return r;
+        };
+
+        const [dataResult, countResult] = await Promise.all([
+            addFilters(pool.request())
+                .input('limit',  sql.Int, limit)
+                .input('offset', sql.Int, offset)
+                .query(`
+                    SELECT SubID, FirstName, LastName,
+                           CONCAT(ISNULL(FirstName,''),' ',ISNULL(LastName,'')) AS FullName,
+                           Email, PlanName, BillingPeriod, Total, StartDate, EndDate, PlacedAt
+                    FROM MembershipSubscriptions ${where}
+                    ORDER BY PlacedAt DESC
+                    OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY
+                `),
+            addFilters(pool.request())
+                .query(`SELECT COUNT(*) AS total FROM MembershipSubscriptions ${where}`),
+        ]);
+
+        res.json({ rows: dataResult.recordset, total: countResult.recordset[0].total });
     } catch (err) {
+        console.error('Membership subscriptions list error:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -137,7 +171,7 @@ router.get('/:id', async (req, res) => {
         const pool = await connectToDb();
         const result = await pool.request()
             .input('id', sql.Int, parseInt(req.params.id, 10))
-            .query(`SELECT * FROM MembershipSubscriptions WHERE SubID = @id`);
+            .query(`SELECT *, CONCAT(ISNULL(FirstName,''),' ',ISNULL(LastName,'')) AS FullName FROM MembershipSubscriptions WHERE SubID = @id`);
         if (!result.recordset.length) return res.status(404).json({ error: 'Subscription not found.' });
         res.json(result.recordset[0]);
     } catch (err) {
