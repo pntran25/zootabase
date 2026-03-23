@@ -14,10 +14,20 @@ const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, imageDir),
     filename: (req, file, cb) => cb(null, 'event-' + Date.now() + path.extname(file.originalname)),
 });
-const upload = multer({ storage });
+const upload = multer({
+    storage,
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        const allowed = /jpeg|jpg|png|gif|webp/;
+        if (allowed.test(path.extname(file.originalname).toLowerCase()) && allowed.test(file.mimetype)) {
+            return cb(null, true);
+        }
+        cb(new Error('Only image files (jpg, png, gif, webp) are allowed'));
+    }
+});
 
 // Helper to resolve or create Exhibit based on name
-async function getOrCreateExhibitId(request, exhibitName) {
+async function resolveOrCreateExhibit(request, exhibitName) {
     // Try to find existing
     const exhRes = await request
         .input('exhName', sql.NVarChar, exhibitName)
@@ -222,7 +232,7 @@ router.delete('/api/events/:id', optionalAuth, async (req, res) => {
 });
 
 // POST upload event image
-router.post('/api/events/:id/image', upload.single('image'), async (req, res) => {
+router.post('/api/events/:id/image', verifyToken, upload.single('image'), async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ error: 'No image file provided' });
         const imageUrl = '/images/Event_Images/' + req.file.filename;

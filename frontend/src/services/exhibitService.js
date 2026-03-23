@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiPut, apiDelete, API_BASE_URL, humanizeError } from './apiClient';
+import { apiGet, apiPost, apiPut, apiDelete, API_BASE_URL, humanizeError, getAuthHeaders } from './apiClient';
 
 export const getExhibits = async () => {
   try {
@@ -39,9 +39,10 @@ export const deleteExhibit = async (id) => {
 export const setExhibitFeatured = async (id, isFeatured) => {
   let response;
   try {
+    const authHeaders = await getAuthHeaders();
     response = await fetch(`${API_BASE_URL}/api/exhibits/${id}/featured`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({ isFeatured }),
     });
   } catch {
@@ -60,8 +61,10 @@ export const uploadExhibitImage = async (id, file) => {
   formData.append('image', file);
   let response;
   try {
+    const authHeaders = await getAuthHeaders();
     response = await fetch(`${API_BASE_URL}/api/exhibits/${id}/image`, {
       method: 'POST',
+      headers: { ...authHeaders },
       body: formData,
     });
   } catch {

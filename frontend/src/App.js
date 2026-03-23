@@ -12,7 +12,7 @@ import TransactionPage from './components/User/Transaction/TransactionPage';
 import TicketingPage from './components/User/Ticketing/TicketingPage';
 import MembershipPage from './components/User/Membership/MembershipPage';
 import Login from './components/User/Auth/Login';
-import Signup from './components/User/Auth/Signup';
+import Signup from './components/User/Auth/SignUp';
 
 // Admin Imports
 import AdminLayout from './layout/AdminLayout';
@@ -29,6 +29,8 @@ import ProtectedRoute from './components/Admin/ProtectedRoute';
 import ManageStaff from './components/Admin/ManageStaff/ManageStaff';
 import LoginAnalytics from './components/Admin/Dashboard/LoginAnalytics';
 import DataReports from './components/Admin/DataReports/DataReports';
+import AnimalHealth from './components/Admin/AnimalHealth/AnimalHealth';
+import AnimalReport from './components/Admin/AnimalHealth/AnimalReport';
 import ManageMemberships from './components/Admin/ManageMemberships/ManageMemberships';
 
 const allStaffRoles = ['Super Admin', 'Caretaker', 'Event Coordinator', 'Ticket Staff', 'Shop Manager', 'Maintenance'];
@@ -70,6 +72,8 @@ function App() {
              <Route path="feedback" element={<ProtectedRoute allowedRoles={['Super Admin']}><GuestFeedback /></ProtectedRoute>} />
              <Route path="staff" element={<ProtectedRoute allowedRoles={['Super Admin']}><ManageStaff /></ProtectedRoute>} />
              <Route path="analytics" element={<ProtectedRoute allowedRoles={['Super Admin']}><LoginAnalytics /></ProtectedRoute>} />
+             <Route path="animal-health" element={<ProtectedRoute allowedRoles={['Super Admin', 'Caretaker']}><AnimalHealth /></ProtectedRoute>} />
+             <Route path="animal-report" element={<ProtectedRoute allowedRoles={['Super Admin', 'Caretaker']}><AnimalReport /></ProtectedRoute>} />
              <Route path="reports" element={<ProtectedRoute allowedRoles={['Super Admin', 'Shop Manager']}><DataReports /></ProtectedRoute>} />
              <Route path="memberships" element={<ProtectedRoute allowedRoles={['Super Admin']}><ManageMemberships /></ProtectedRoute>} />
           </Route>

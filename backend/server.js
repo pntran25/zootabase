@@ -7,8 +7,18 @@ const { connectToDb } = require('./services/admin');
 const app = express();
 const PORT = parseInt(process.env.PORT, 10) || 5000;
 
-app.use(cors());
-app.use(express.json());
+// CORS: allow only known origins in production
+const allowedOrigins = process.env.CORS_ORIGINS
+	? process.env.CORS_ORIGINS.split(',')
+	: ['http://localhost:3000'];
+app.use(cors({
+	origin: (origin, cb) => {
+		// Allow requests with no origin (mobile apps, curl, Postman in dev)
+		if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+		cb(new Error('Not allowed by CORS'));
+	}
+}));
+app.use(express.json({ limit: '1mb' }));
 
 let isDatabaseConnected = false;
 
@@ -34,6 +44,7 @@ const staffRouter = require('./routes/staff');
 const analyticsRouter = require('./routes/analytics');
 const ordersRouter = require('./routes/orders');
 const ticketOrdersRouter = require('./routes/ticketOrders');
+const animalHealthRouter = require('./routes/animalHealth');
 const membershipPlansRouter = require('./routes/membershipPlans');
 const membershipSubsRouter = require('./routes/membershipSubscriptions');
 const dashboardRouter = require('./routes/dashboard');
@@ -41,6 +52,7 @@ const path = require('path');
 
 app.use('/api/exhibits', exhibitsRouter);
 app.use('/api/animals', animalsRouter);
+app.use('/api/animal-health', animalHealthRouter);
 app.use('/', attractionsRouter);
 app.use('/', eventsRouter);
 app.use('/', productsRouter);
@@ -189,6 +201,18 @@ async function runMigrations(pool) {
 		`IF COL_LENGTH('TicketOrders','BillingCity') IS NULL ALTER TABLE TicketOrders ADD BillingCity NVARCHAR(100) NULL`,
 		`IF COL_LENGTH('TicketOrders','BillingState') IS NULL ALTER TABLE TicketOrders ADD BillingState NVARCHAR(100) NULL`,
 		`IF COL_LENGTH('TicketOrders','BillingZip') IS NULL ALTER TABLE TicketOrders ADD BillingZip NVARCHAR(20) NULL`,
+		// ── HealthAlert table for health triggers ──
+		`IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='HealthAlert' AND xtype='U')
+		  CREATE TABLE HealthAlert (
+		    AlertID      INT IDENTITY(1,1) PRIMARY KEY,
+		    AnimalID     INT NOT NULL,
+		    AlertType    NVARCHAR(50) NOT NULL,
+		    AlertMessage NVARCHAR(1000) NOT NULL,
+		    CreatedAt    DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+		    IsResolved   BIT NOT NULL DEFAULT 0,
+		    ResolvedAt   DATETIME2(0) NULL,
+		    CONSTRAINT FK_HealthAlert_Animal FOREIGN KEY (AnimalID) REFERENCES Animal(AnimalID)
+		  )`,
 		`IF COL_LENGTH('TicketOrders','AdultUnitPrice') IS NULL ALTER TABLE TicketOrders ADD AdultUnitPrice DECIMAL(10,2) NULL`,
 		`IF COL_LENGTH('TicketOrders','ChildUnitPrice') IS NULL ALTER TABLE TicketOrders ADD ChildUnitPrice DECIMAL(10,2) NULL`,
 		`IF COL_LENGTH('TicketOrders','SeniorUnitPrice') IS NULL ALTER TABLE TicketOrders ADD SeniorUnitPrice DECIMAL(10,2) NULL`,
@@ -345,6 +369,14 @@ async function startServer() {
 
 	app.listen(PORT, () => {
 		console.log(`Backend server running on port ${PORT}`);
+	});
+}
+
+// In production, strip raw DB error details from 500 responses
+if (process.env.NODE_ENV === 'production') {
+	app.use((err, req, res, _next) => {
+		console.error(err);
+		res.status(err.status || 500).json({ error: 'Internal server error' });
 	});
 }
 

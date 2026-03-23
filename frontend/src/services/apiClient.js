@@ -104,7 +104,10 @@ async function extractAndHumanize(response, fallbackStatus) {
 export const apiGet = async (path) => {
   let response;
   try {
-    response = await fetch(buildUrl(path));
+    const authHeaders = await getAuthHeaders();
+    response = await fetch(buildUrl(path), {
+      headers: { ...authHeaders },
+    });
   } catch {
     throw new Error(humanizeError(0));
   }
