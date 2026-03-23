@@ -3,6 +3,10 @@
     "main.css": "/static/css/main.0c90983c.css",
     "main.js": "/static/js/main.575719cc.js",
     "static/js/453.64aababc.chunk.js": "/static/js/453.64aababc.chunk.js",
+    "main.css": "/static/css/main.ac9a819e.css",
+    "main.js": "/static/js/main.390705fb.js",
+    "static/js/453.64aababc.chunk.js": "/static/js/453.64aababc.chunk.js",
+    "static/media/BreakfastWithGiraffes.png": "/static/media/BreakfastWithGiraffes.7e2072443807a7868162.png",
     "static/media/HomePage.png": "/static/media/HomePage.b23c02b1c087312f9a2f.png",
     "static/media/ExhibitsComingSoon.png": "/static/media/ExhibitsComingSoon.8216a6b2ef08dbdcf0c0.png",
     "static/media/gift-shop-hero.jpg": "/static/media/gift-shop-hero.438b7f308ccdd30fe067.jpg",
@@ -22,5 +26,12 @@
   "entrypoints": [
     "static/css/main.0c90983c.css",
     "static/js/main.575719cc.js"
+    "main.ac9a819e.css.map": "/static/css/main.ac9a819e.css.map",
+    "main.390705fb.js.map": "/static/js/main.390705fb.js.map",
+    "453.64aababc.chunk.js.map": "/static/js/453.64aababc.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.ac9a819e.css",
+    "static/js/main.390705fb.js"
   ]
 }

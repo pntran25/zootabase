@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const sql = require('mssql');
 const { connectToDb } = require('../services/admin');
-const { verifyToken } = require('../middleware/authMiddleware');
+const { optionalAuth } = require('../middleware/authMiddleware');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -103,7 +103,7 @@ router.get('/', async (req, res) => {
     try {
         const pool = await connectToDb();
         const query = `
-            SELECT 
+            SELECT
                 a.AnimalID as id,
                 a.Name as name,
                 a.Species as species,
@@ -120,12 +120,16 @@ router.get('/', async (req, res) => {
                 a.IsEndangered as isEndangered,
                 a.AnimalCode as animalCode,
                 a.SpeciesDetail as speciesDetail,
+                a.IsDisplay as isDisplay,
+                a.CreatedBy as createdBy,
+                a.UpdatedBy as updatedBy,
                 h.HabitatType,
                 e.ExhibitName as exhibit
             FROM Animal a
             LEFT JOIN Habitat h ON a.HabitatID = h.HabitatID
             LEFT JOIN Exhibit e ON h.ExhibitID = e.ExhibitID
             WHERE a.DeletedAt IS NULL
+            ${req.query.displayOnly === 'true' ? 'AND a.IsDisplay = 1' : ''}
         `;
         const result = await pool.request().query(query);
         res.json(result.recordset);
@@ -136,9 +140,10 @@ router.get('/', async (req, res) => {
 });
 
 // POST new animal
-router.post('/', verifyToken, async (req, res) => {
+router.post('/', optionalAuth, async (req, res) => {
     try {
-        const { name, species, speciesDetail, age, gender, diet, health, dateArrived, exhibit, lifespan, weight, region, funFact, isEndangered, codeSuffix } = req.body;
+        const { name, species, speciesDetail, age, gender, diet, health, dateArrived, exhibit, lifespan, weight, region, funFact, isEndangered, isDisplay, codeSuffix } = req.body;
+        const adminName = req.userProfile ? `${req.userProfile.FirstName} ${req.userProfile.LastName}`.trim() : null;
         const pool = await connectToDb();
         const transaction = new sql.Transaction(pool);
         await transaction.begin();
@@ -184,14 +189,16 @@ router.post('/', verifyToken, async (req, res) => {
                 .input('region', sql.NVarChar, region || null)
                 .input('funFact', sql.NVarChar, funFact || null)
                 .input('isEndangered', sql.Bit, isEndangered ? 1 : 0)
+                .input('isDisplay', sql.Bit, isDisplay ? 1 : 0)
                 .input('animalCode', sql.NVarChar, animalCode)
                 .input('speciesDetail', sql.NVarChar, speciesDetail || null)
+                .input('createdBy', sql.NVarChar, adminName)
                 .query(`
                     DECLARE @AnimOut TABLE (id INT, imageUrl NVARCHAR(255));
 
-                    INSERT INTO Animal (Name, Species, SpeciesDetail, Age, Gender, Diet, HealthStatus, DateArrived, HabitatID, Lifespan, Weight, Region, FunFact, IsEndangered, AnimalCode)
+                    INSERT INTO Animal (Name, Species, SpeciesDetail, Age, Gender, Diet, HealthStatus, DateArrived, HabitatID, Lifespan, Weight, Region, FunFact, IsEndangered, IsDisplay, AnimalCode, CreatedBy)
                     OUTPUT INSERTED.AnimalID, INSERTED.ImageUrl INTO @AnimOut
-                    VALUES (@name, @species, @speciesDetail, @age, @gender, @diet, @health, @dateArrived, @habitatId, @lifespan, @weight, @region, @funFact, @isEndangered, @animalCode);
+                    VALUES (@name, @species, @speciesDetail, @age, @gender, @diet, @health, @dateArrived, @habitatId, @lifespan, @weight, @region, @funFact, @isEndangered, @isDisplay, @animalCode, @createdBy);
 
                     SELECT id, imageUrl FROM @AnimOut;
                 `);
@@ -215,10 +222,11 @@ router.post('/', verifyToken, async (req, res) => {
 });
 
 // PUT update animal
-router.put('/:id', verifyToken, async (req, res) => {
+router.put('/:id', optionalAuth, async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, species, speciesDetail, age, gender, diet, health, dateArrived, exhibit, lifespan, weight, region, funFact, isEndangered } = req.body;
+        const { name, species, speciesDetail, age, gender, diet, health, dateArrived, exhibit, lifespan, weight, region, funFact, isEndangered, isDisplay } = req.body;
+        const adminName = req.userProfile ? `${req.userProfile.FirstName} ${req.userProfile.LastName}`.trim() : null;
         const pool = await connectToDb();
         const transaction = new sql.Transaction(pool);
         await transaction.begin();
@@ -244,7 +252,9 @@ router.put('/:id', verifyToken, async (req, res) => {
                 .input('region', sql.NVarChar, region || null)
                 .input('funFact', sql.NVarChar, funFact || null)
                 .input('isEndangered', sql.Bit, isEndangered ? 1 : 0)
+                .input('isDisplay', sql.Bit, isDisplay ? 1 : 0)
                 .input('speciesDetail', sql.NVarChar, speciesDetail || null)
+                .input('updatedBy', sql.NVarChar, adminName)
                 .query(`
                     UPDATE Animal
                     SET Name = @name, Species = @species, SpeciesDetail = @speciesDetail,
@@ -252,7 +262,8 @@ router.put('/:id', verifyToken, async (req, res) => {
                         Diet = @diet, HealthStatus = @health, DateArrived = @dateArrived,
                         HabitatID = @habitatId, Lifespan = @lifespan, Weight = @weight,
                         Region = @region, FunFact = @funFact, IsEndangered = @isEndangered,
-                        UpdatedAt = SYSUTCDATETIME()
+                        IsDisplay = @isDisplay,
+                        UpdatedAt = SYSUTCDATETIME(), UpdatedBy = @updatedBy
                     WHERE AnimalID = @id AND DeletedAt IS NULL
                 `);
 
@@ -286,15 +297,17 @@ router.patch('/:id/endangered', verifyToken, async (req, res) => {
 });
 
 // DELETE delete animal (soft-delete with departure reason)
-router.delete('/:id', verifyToken, async (req, res) => {
+router.delete('/:id', optionalAuth, async (req, res) => {
     try {
         const { id } = req.params;
         const reason = (req.body && req.body.reason) || 'Other';
+        const adminName = req.userProfile ? `${req.userProfile.FirstName} ${req.userProfile.LastName}`.trim() : null;
         const pool = await connectToDb();
         await pool.request()
             .input('id', sql.Int, id)
             .input('reason', sql.NVarChar, reason)
-            .query('UPDATE Animal SET DeletedAt = SYSUTCDATETIME(), DepartureReason = @reason WHERE AnimalID = @id');
+            .input('deletedBy', sql.NVarChar, adminName)
+            .query('UPDATE Animal SET DeletedAt = SYSUTCDATETIME(), DepartureReason = @reason, DeletedBy = @deletedBy WHERE AnimalID = @id');
         res.json({ message: 'Animal removed successfully' });
     } catch (error) {
         console.error('Error removing animal:', error);

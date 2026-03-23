@@ -1,18 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, AreaChart, Area
 } from 'recharts';
 import {
-  PawPrint, Ticket, Wrench, Star, TrendingUp,
+  PawPrint, Ticket, Wrench, TrendingUp,
   CalendarDays, ArrowUpRight, ArrowDownRight,
   Zap, ShoppingBag
 } from 'lucide-react';
 import './Dashboard.css';
 import { getLowStockProducts } from '../../../services/productService';
-import { API_BASE_URL } from '../../../services/apiClient';
+import { apiGet, API_BASE_URL } from '../../../services/apiClient';
 
 /* ── Count-up Animation Hook ─────────────────────────── */
 const useCountAnimation = (target, duration = 900) => {
@@ -23,7 +23,7 @@ const useCountAnimation = (target, duration = 900) => {
     const step = (ts) => {
       if (!start) start = ts;
       const progress = Math.min((ts - start) / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3); // ease-out-cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
       setValue(Math.floor(eased * target));
       if (progress < 1) rafId = requestAnimationFrame(step);
       else setValue(target);
@@ -34,7 +34,19 @@ const useCountAnimation = (target, duration = 900) => {
   return value;
 };
 
-/* ── Mock Data ──────────────────────────────────────── */
+/* ── Relative Time ───────────────────────────────────── */
+const timeAgo = (ts) => {
+  const diff = Date.now() - new Date(ts).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+};
+
+/* ── Mock visitor data (no visitor DB yet) ───────────── */
 const visitorData = [
   { day: 'Mon', visitors: 240, prev: 210 },
   { day: 'Tue', visitors: 300, prev: 270 },
@@ -43,12 +55,6 @@ const visitorData = [
   { day: 'Fri', visitors: 360, prev: 310 },
   { day: 'Sat', visitors: 420, prev: 380 },
   { day: 'Sun', visitors: 385, prev: 350 },
-];
-
-const recentActivity = [
-  { action: 'New animal added', detail: 'Bengal Tiger — Savanna Exhibit', time: '2h ago', type: 'animal' },
-  { action: 'Maintenance resolved', detail: 'Water filtration — Penguin Coast', time: '4h ago', type: 'maintenance' },
-  { action: 'Event created', detail: 'Evening Safari Experience — Fri Mar 21', time: '1d ago', type: 'event' },
 ];
 
 const activityIcons = {
@@ -95,32 +101,46 @@ const CustomTooltip = ({ active, payload, label }) => {
 const Dashboard = () => {
   const navigate = useNavigate();
   const [lowStockProducts, setLowStockProducts] = useState([]);
+  const [dashStats, setDashStats] = useState({
+    totalAnimals: 0,
+    animalsThisMonth: 0,
+    animalsLastMonth: 0,
+    openMaintenance: 0,
+    recentActivity: [],
+  });
 
   useEffect(() => {
     getLowStockProducts().then(setLowStockProducts).catch(() => {});
+    apiGet('/api/dashboard').then(setDashStats).catch(() => {});
   }, []);
 
-  const animals = useCountAnimation(12);
-  const tickets = useCountAnimation(482);
-  const maintenance = useCountAnimation(2);
-  const satisfaction = useCountAnimation(40); // x10 = 4.0
+  const animalsAnim = useCountAnimation(dashStats.totalAnimals);
+  const maintenanceAnim = useCountAnimation(dashStats.openMaintenance);
+
+  // Animal trend badge
+  const { animalsThisMonth, animalsLastMonth } = dashStats;
+  const animalBadge = animalsThisMonth > 0
+    ? `+${animalsThisMonth} This Month`
+    : 'No new this month';
+  const animalTrendPct = animalsLastMonth > 0
+    ? `${animalsThisMonth >= animalsLastMonth ? '+' : ''}${Math.round((animalsThisMonth - animalsLastMonth) / animalsLastMonth * 100)}%`
+    : animalsThisMonth > 0 ? 'New' : '—';
+  const animalTrendUp = animalsThisMonth >= animalsLastMonth;
 
   const stats = [
     {
       label: 'Total Animals',
-      value: animals,
-      display: animals,
-      badge: '+2 This Month',
-      badgeType: 'positive',
+      display: animalsAnim,
+      badge: animalBadge,
+      badgeType: animalsThisMonth > 0 ? 'positive' : 'neutral',
       color: 'green',
       icon: <PawPrint size={22} />,
-      trend: '+18%',
-      trendUp: true,
+      trend: animalTrendPct,
+      trendUp: animalTrendUp,
     },
     {
       label: 'Tickets Sold Today',
-      value: tickets,
-      display: tickets,
+      display: 482,
       badge: '+12% vs Last Week',
       badgeType: 'positive',
       color: 'blue',
@@ -130,25 +150,13 @@ const Dashboard = () => {
     },
     {
       label: 'Open Maintenance',
-      value: maintenance,
-      display: maintenance,
-      badge: 'Requires Attention',
-      badgeType: 'warning',
+      display: maintenanceAnim,
+      badge: dashStats.openMaintenance > 0 ? 'Requires Attention' : 'All Clear',
+      badgeType: dashStats.openMaintenance > 0 ? 'warning' : 'positive',
       color: 'orange',
       icon: <Wrench size={22} />,
-      trend: '-1',
-      trendUp: false,
-    },
-    {
-      label: 'Avg. Satisfaction',
-      value: satisfaction,
-      display: (satisfaction / 10).toFixed(1),
-      badge: '/ 5.0',
-      badgeType: 'neutral',
-      color: 'purple',
-      icon: <Star size={22} />,
-      trend: '+0.2',
-      trendUp: true,
+      trend: dashStats.openMaintenance > 0 ? `${dashStats.openMaintenance} open` : '0 open',
+      trendUp: dashStats.openMaintenance === 0,
     },
   ];
 
@@ -249,15 +257,20 @@ const Dashboard = () => {
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
             {lowStockProducts.map(p => (
-              <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#fff7ed', border: '1px solid #fdba74', borderRadius: 8, padding: '8px 14px' }}>
+              <div key={p.id} style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                background: 'rgba(234,88,12,0.1)',
+                border: '1px solid rgba(234,88,12,0.3)',
+                borderRadius: 8, padding: '8px 14px',
+              }}>
                 {p.imageUrl ? (
                   <img src={`${API_BASE_URL}${p.imageUrl}`} alt="" style={{ width: 28, height: 28, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
                 ) : (
                   <ShoppingBag size={16} style={{ color: '#ea580c', flexShrink: 0 }} />
                 )}
                 <div>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#9a3412', display: 'block' }}>{p.name}</span>
-                  <span style={{ fontSize: '0.75rem', color: '#c2410c' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--adm-text-primary)', display: 'block' }}>{p.name}</span>
+                  <span style={{ fontSize: '0.75rem', color: '#fb923c' }}>
                     {p.stockQuantity === 0 ? 'Out of stock' : `${p.stockQuantity} left`} · reorder at {p.lowStockThreshold}
                   </span>
                 </div>
@@ -300,35 +313,11 @@ const Dashboard = () => {
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--adm-border-light)" vertical={false} />
-              <XAxis
-                dataKey="day"
-                tick={{ fill: 'var(--adm-text-muted)', fontSize: 11, fontWeight: 500 }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis
-                tick={{ fill: 'var(--adm-text-muted)', fontSize: 11 }}
-                axisLine={false}
-                tickLine={false}
-              />
+              <XAxis dataKey="day" tick={{ fill: 'var(--adm-text-muted)', fontSize: 11, fontWeight: 500 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: 'var(--adm-text-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomTooltip />} />
-              <Area
-                type="monotone"
-                dataKey="prev"
-                stroke="#94a3b8"
-                strokeWidth={1.5}
-                fill="url(#gradPrev)"
-                strokeDasharray="4 3"
-                name="prev"
-              />
-              <Area
-                type="monotone"
-                dataKey="visitors"
-                stroke="#10b981"
-                strokeWidth={2.5}
-                fill="url(#gradVisitors)"
-                name="visitors"
-              />
+              <Area type="monotone" dataKey="prev" stroke="#94a3b8" strokeWidth={1.5} fill="url(#gradPrev)" strokeDasharray="4 3" name="prev" />
+              <Area type="monotone" dataKey="visitors" stroke="#10b981" strokeWidth={2.5} fill="url(#gradVisitors)" name="visitors" />
             </AreaChart>
           </ResponsiveContainer>
 
@@ -338,9 +327,8 @@ const Dashboard = () => {
           </div>
         </motion.div>
 
-        {/* Right column */}
+        {/* Recent Activity */}
         <div className="dashboard-right-col">
-          {/* Recent Activity */}
           <motion.div
             className="dashboard-panel activity-panel"
             custom={2}
@@ -350,16 +338,20 @@ const Dashboard = () => {
           >
             <h3 className="panel-title" style={{ marginBottom: 16 }}>Recent Activity</h3>
             <div className="activity-list">
-              {recentActivity.map((item, i) => (
+              {dashStats.recentActivity.length === 0 ? (
+                <p style={{ color: 'var(--adm-text-muted)', fontSize: '0.875rem', textAlign: 'center', padding: '16px 0' }}>
+                  No recent activity
+                </p>
+              ) : dashStats.recentActivity.map((item, i) => (
                 <div key={i} className="activity-item">
                   <div className={`activity-icon activity-icon--${item.type}`}>
-                    {activityIcons[item.type]}
+                    {activityIcons[item.type] || activityIcons.animal}
                   </div>
                   <div className="activity-content">
                     <span className="activity-action">{item.action}</span>
                     <span className="activity-detail">{item.detail}</span>
                   </div>
-                  <span className="activity-time">{item.time}</span>
+                  <span className="activity-time">{timeAgo(item.ts)}</span>
                 </div>
               ))}
             </div>

@@ -67,4 +67,31 @@ const requireRole = (allowedRoles) => {
     };
 };
 
-module.exports = { verifyToken, requireRole };
+// Middleware that tries to identify the caller but never blocks the request
+const optionalAuth = async (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        req.userProfile = null;
+        return next();
+    }
+    const token = authHeader.split('Bearer ')[1];
+    try {
+        const decodedToken = await admin.auth().verifyIdToken(token);
+        req.user = decodedToken;
+        const pool = await connectToDb();
+        const staffResult = await pool.request()
+            .input('FirebaseUid', decodedToken.uid)
+            .query(`SELECT StaffID, FirstName, LastName, Email, Role FROM Staff WHERE FirebaseUid = @FirebaseUid`);
+        if (staffResult.recordset.length > 0) {
+            req.userProfile = staffResult.recordset[0];
+            req.userProfile.isStaff = true;
+        } else {
+            req.userProfile = { FirstName: decodedToken.name || decodedToken.email, LastName: '', isStaff: false };
+        }
+    } catch {
+        req.userProfile = null;
+    }
+    next();
+};
+
+module.exports = { verifyToken, requireRole, optionalAuth };

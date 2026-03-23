@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const sql = require('mssql');
 const { connectToDb } = require('../services/admin');
-const { verifyToken } = require('../middleware/authMiddleware');
+const { optionalAuth } = require('../middleware/authMiddleware');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -33,7 +33,7 @@ const upload = multer({
 router.get('/api/attractions', async (req, res) => {
     try {
         const pool = await connectToDb();
-        const result = await pool.request().query('SELECT * FROM Attraction WHERE DeletedAt IS NULL');
+        const result = await pool.request().query('SELECT *, CreatedBy, UpdatedBy FROM Attraction WHERE DeletedAt IS NULL');
         const mappedResult = result.recordset.map(row => ({
             id: row.AttractionID.toString(),
             name: row.AttractionName,
@@ -47,6 +47,8 @@ router.get('/api/attractions', async (req, res) => {
             ageGroup: row.AgeGroup || '',
             price: row.Price != null ? Number(row.Price) : 0,
             imageUrl: row.ImageUrl || '',
+            createdBy: row.CreatedBy || null,
+            updatedBy: row.UpdatedBy || null,
         }));
         res.json(mappedResult);
     } catch (error) {
@@ -56,10 +58,11 @@ router.get('/api/attractions', async (req, res) => {
 });
 
 // POST new attraction
-router.post('/api/attractions', verifyToken, async (req, res) => {
+router.post('/api/attractions', optionalAuth, async (req, res) => {
     try {
         const { name, type, location, capacity, status, description, hours, duration, ageGroup, price } = req.body;
         const activeFlag = status === 'Open' ? 1 : 0;
+        const adminName = req.userProfile ? `${req.userProfile.FirstName} ${req.userProfile.LastName}`.trim() : null;
         const pool = await connectToDb();
         const result = await pool.request()
             .input('name', sql.NVarChar, name)
@@ -72,11 +75,12 @@ router.post('/api/attractions', verifyToken, async (req, res) => {
             .input('duration', sql.NVarChar, duration || '')
             .input('ageGroup', sql.NVarChar, ageGroup || '')
             .input('price', sql.Decimal(10, 2), parseFloat(price || 0))
+            .input('createdBy', sql.NVarChar, adminName)
             .query(`
                 DECLARE @Out TABLE (AttractionID INT);
-                INSERT INTO Attraction (AttractionName, AttractionType, LocationDesc, CapacityVisitors, ActiveFlag, Description, Hours, Duration, AgeGroup, Price)
+                INSERT INTO Attraction (AttractionName, AttractionType, LocationDesc, CapacityVisitors, ActiveFlag, Description, Hours, Duration, AgeGroup, Price, CreatedBy)
                 OUTPUT INSERTED.AttractionID INTO @Out
-                VALUES (@name, @type, @location, @capacity, @activeFlag, @description, @hours, @duration, @ageGroup, @price);
+                VALUES (@name, @type, @location, @capacity, @activeFlag, @description, @hours, @duration, @ageGroup, @price, @createdBy);
                 SELECT AttractionID FROM @Out;
             `);
         res.status(201).json({ id: result.recordset[0].AttractionID.toString(), ...req.body });
@@ -87,10 +91,11 @@ router.post('/api/attractions', verifyToken, async (req, res) => {
 });
 
 // PUT update attraction
-router.put('/api/attractions/:id', verifyToken, async (req, res) => {
+router.put('/api/attractions/:id', optionalAuth, async (req, res) => {
     try {
         const { name, type, location, capacity, status, description, hours, duration, ageGroup, price } = req.body;
         const activeFlag = status === 'Open' ? 1 : 0;
+        const adminName = req.userProfile ? `${req.userProfile.FirstName} ${req.userProfile.LastName}`.trim() : null;
         const pool = await connectToDb();
         await pool.request()
             .input('id', sql.Int, parseInt(req.params.id, 10))
@@ -104,12 +109,13 @@ router.put('/api/attractions/:id', verifyToken, async (req, res) => {
             .input('duration', sql.NVarChar, duration || '')
             .input('ageGroup', sql.NVarChar, ageGroup || '')
             .input('price', sql.Decimal(10, 2), parseFloat(price || 0))
+            .input('updatedBy', sql.NVarChar, adminName)
             .query(`
                 UPDATE Attraction
                 SET AttractionName = @name, AttractionType = @type, LocationDesc = @location,
                     CapacityVisitors = @capacity, ActiveFlag = @activeFlag, UpdatedAt = SYSUTCDATETIME(),
                     Description = @description, Hours = @hours, Duration = @duration,
-                    AgeGroup = @ageGroup, Price = @price
+                    AgeGroup = @ageGroup, Price = @price, UpdatedBy = @updatedBy
                 WHERE AttractionID = @id
             `);
         res.json({ success: true });
@@ -137,12 +143,14 @@ router.post('/api/attractions/:id/image', verifyToken, upload.single('image'), a
 });
 
 // DELETE attraction (soft delete)
-router.delete('/api/attractions/:id', verifyToken, async (req, res) => {
+router.delete('/api/attractions/:id', optionalAuth, async (req, res) => {
     try {
+        const adminName = req.userProfile ? `${req.userProfile.FirstName} ${req.userProfile.LastName}`.trim() : null;
         const pool = await connectToDb();
         await pool.request()
             .input('id', sql.Int, parseInt(req.params.id, 10))
-            .query('UPDATE Attraction SET DeletedAt = SYSUTCDATETIME() WHERE AttractionID = @id');
+            .input('deletedBy', sql.NVarChar, adminName)
+            .query('UPDATE Attraction SET DeletedAt = SYSUTCDATETIME(), DeletedBy = @deletedBy WHERE AttractionID = @id');
         res.json({ success: true });
     } catch (error) {
         console.error('Error deleting attraction:', error);
