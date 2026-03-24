@@ -18,13 +18,6 @@ router.post('/', async (req, res) => {
         return res.status(400).json({ error: 'Missing required shipping fields.' });
     }
 
-    let parsedItems = [];
-    try {
-        parsedItems = orderItems ? JSON.parse(orderItems) : [];
-    } catch {
-        return res.status(400).json({ error: 'Invalid orderItems format.' });
-    }
-
     try {
         const pool = await connectToDb();
         const transaction = new sql.Transaction(pool);
@@ -52,29 +45,18 @@ router.post('/', async (req, res) => {
                 .input('Total',                 sql.Decimal(10,2), total)
                 .input('OrderItems',            sql.NVarChar(sql.MAX), orderItems || null)
                 .query(`
+                    DECLARE @NewOrder TABLE (OrderID INT);
                     INSERT INTO Orders
                         (FirstName, LastName, Email, Phone, AddressLine1, AddressLine2, City, StateProvince,
                          ZipCode, BillingSameAsShipping, CardLastFour, Subtotal, Shipping, Tax, Total, OrderItems)
-                    OUTPUT INSERTED.OrderID
+                    OUTPUT INSERTED.OrderID INTO @NewOrder
                     VALUES
                         (@FirstName, @LastName, @Email, @Phone, @AddressLine1, @AddressLine2, @City, @StateProvince,
-                         @ZipCode, @BillingSameAsShipping, @CardLastFour, @Subtotal, @Shipping, @Tax, @Total, @OrderItems)
+                         @ZipCode, @BillingSameAsShipping, @CardLastFour, @Subtotal, @Shipping, @Tax, @Total, @OrderItems);
+                    SELECT OrderID FROM @NewOrder;
                 `);
 
             const orderId = result.recordset[0].OrderID;
-
-            // Decrement stock for each ordered item
-            for (const item of parsedItems) {
-                const stockReq = new sql.Request(transaction);
-                await stockReq
-                    .input('id',  sql.Int, parseInt(item.id, 10))
-                    .input('qty', sql.Int, parseInt(item.quantity, 10))
-                    .query(`
-                        UPDATE Product
-                        SET StockQuantity = CASE WHEN StockQuantity >= @qty THEN StockQuantity - @qty ELSE 0 END
-                        WHERE ProductID = @id AND DeletedAt IS NULL
-                    `);
-            }
 
             await transaction.commit();
             res.status(201).json({ success: true, orderId });
