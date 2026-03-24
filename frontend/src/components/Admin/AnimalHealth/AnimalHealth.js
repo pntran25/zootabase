@@ -516,12 +516,12 @@ const AnimalHealth = () => {
           <div className="form-group">
             <label>Animal *</label>
             <AdminSelect value={recordForm.AnimalID} onChange={v => setRecordForm(p => ({ ...p, AnimalID: v }))}
-              options={animalOptions} placeholder="Select animal..." />
+              options={animalOptions} placeholder="Select animal..." searchable />
           </div>
           <div className="form-group">
             <label>Vet / Staff *</label>
             <AdminSelect value={recordForm.StaffID} onChange={v => setRecordForm(p => ({ ...p, StaffID: v }))}
-              options={staffOptions} placeholder="Select staff..." />
+              options={staffOptions} placeholder="Select staff..." searchable />
           </div>
         </div>
         <div className="form-row">
@@ -548,7 +548,7 @@ const AnimalHealth = () => {
           <div className="form-group">
             <label>Animal *</label>
             <AdminSelect value={metricForm.AnimalID} onChange={v => setMetricForm(p => ({ ...p, AnimalID: v }))}
-              options={animalOptions} placeholder="Select animal..." />
+              options={animalOptions} placeholder="Select animal..." searchable />
           </div>
           <div className="form-group">
             <label>Record Date *</label>
