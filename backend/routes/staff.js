@@ -20,6 +20,15 @@ router.post('/', verifyToken, requireRole(['Super Admin']), async (req, res) => 
     const { firstName, lastName, email, dateOfBirth, ssn, role, contactNumber, salary, hireDate } = req.body;
     try {
         const pool = await connectToDb();
+
+        // SSN uniqueness check
+        const ssnCheck = await pool.request()
+            .input('SSN', ssn)
+            .query(`SELECT StaffID FROM Staff WHERE SSN = @SSN AND DeletedAt IS NULL`);
+        if (ssnCheck.recordset.length > 0) {
+            return res.status(409).json({ error: 'SSN is already used by another employee.' });
+        }
+
         const result = await pool.request()
             .input('FirstName', firstName)
             .input('LastName', lastName)
@@ -34,7 +43,7 @@ router.post('/', verifyToken, requireRole(['Super Admin']), async (req, res) => 
             .query(`INSERT INTO Staff (FirstName, LastName, Email, DateOfBirth, SSN, Role, ContactNumber, Salary, HireDate, FullName)
                     OUTPUT INSERTED.*
                     VALUES (@FirstName, @LastName, @Email, @DateOfBirth, @SSN, @Role, @ContactNumber, @Salary, @HireDate, @FullName)`);
-        
+
         res.status(201).json(result.recordset[0]);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -47,8 +56,18 @@ router.put('/:id', verifyToken, requireRole(['Super Admin']), async (req, res) =
     const { firstName, lastName, email, dateOfBirth, ssn, role, contactNumber, salary } = req.body;
     try {
         const pool = await connectToDb();
+
+        // SSN uniqueness check (exclude this staff member)
+        const ssnCheck = await pool.request()
+            .input('SSN', ssn)
+            .input('StaffID', id)
+            .query(`SELECT StaffID FROM Staff WHERE SSN = @SSN AND DeletedAt IS NULL AND StaffID != @StaffID`);
+        if (ssnCheck.recordset.length > 0) {
+            return res.status(409).json({ error: 'SSN is already used by another employee.' });
+        }
+
         const fullName = `${firstName || ''} ${lastName || ''}`.trim();
-        
+
         await pool.request()
             .input('StaffID', id)
             .input('FirstName', firstName)
