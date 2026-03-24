@@ -75,7 +75,7 @@ const AnimalReport = () => {
     loadReport(val);
   };
 
-  const animalOptions = animals.map(a => ({ value: String(a.AnimalID), label: `${a.Name} (${a.Species})` }));
+  const animalOptions = animals.map(a => ({ value: String(a.AnimalID), label: `#${a.AnimalID} — ${a.Name} (${a.Species})` }));
   const a = report?.animal;
 
   return (
@@ -94,7 +94,7 @@ const AnimalReport = () => {
       <div className="ar-picker">
         <span className="ar-picker-label">Select Animal:</span>
         <AdminSelect value={selectedAnimalId} onChange={handleAnimalChange}
-          options={animalOptions} placeholder="Choose an animal to view report..." />
+          options={animalOptions} placeholder="Choose an animal to view report..." searchable />
       </div>
 
       {loading && <div className="admin-table-empty">Loading report...</div>}

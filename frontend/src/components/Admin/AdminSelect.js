@@ -12,15 +12,21 @@ import './AdminSelect.css';
  *   placeholder  — shown when no value selected
  *   disabled     — boolean
  */
-const AdminSelect = ({ value, onChange, options = [], placeholder = 'Select...', disabled = false, width }) => {
+const AdminSelect = ({ value, onChange, options = [], placeholder = 'Select...', disabled = false, width, searchable = false }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
   const containerRef = useRef(null);
+  const searchRef = useRef(null);
 
   const normalized = options.map(o =>
     typeof o === 'string' ? { value: o, label: o } : o
   );
 
   const selected = normalized.find(o => o.value === value);
+
+  const filtered = searchable && search
+    ? normalized.filter(o => o.label.toLowerCase().includes(search.toLowerCase()))
+    : normalized;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -30,6 +36,11 @@ const AdminSelect = ({ value, onChange, options = [], placeholder = 'Select...',
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen && searchable && searchRef.current) searchRef.current.focus();
+    if (!isOpen) setSearch('');
+  }, [isOpen, searchable]);
 
   const handleSelect = (optValue) => {
     onChange(optValue);
@@ -52,7 +63,23 @@ const AdminSelect = ({ value, onChange, options = [], placeholder = 'Select...',
 
       {isOpen && (
         <div className="adm-sel-dropdown">
-          {normalized.map(opt => (
+          {searchable && (
+            <div className="adm-sel-search-wrap">
+              <input
+                ref={searchRef}
+                type="text"
+                className="adm-sel-search"
+                placeholder="Search..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                onClick={e => e.stopPropagation()}
+              />
+            </div>
+          )}
+          {filtered.length === 0 && (
+            <div className="adm-sel-option" style={{ opacity: 0.5, cursor: 'default' }}>No matches</div>
+          )}
+          {filtered.map(opt => (
             <button
               key={opt.value}
               type="button"
