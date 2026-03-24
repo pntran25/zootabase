@@ -48,6 +48,8 @@ const animalHealthRouter = require('./routes/animalHealth');
 const membershipPlansRouter = require('./routes/membershipPlans');
 const membershipSubsRouter = require('./routes/membershipSubscriptions');
 const dashboardRouter = require('./routes/dashboard');
+const feedingSchedulesRouter = require('./routes/feedingSchedules');
+const keeperAssignmentsRouter = require('./routes/keeperAssignments');
 const path = require('path');
 
 app.use('/api/exhibits', exhibitsRouter);
@@ -70,6 +72,8 @@ app.use('/api/ticket-addons',   require('./routes/ticketAddons'));
 app.use('/api/membership-plans', membershipPlansRouter);
 app.use('/api/membership-subscriptions', membershipSubsRouter);
 app.use('/api/dashboard', dashboardRouter);
+app.use('/api/feeding-schedules', feedingSchedulesRouter);
+app.use('/api/keeper-assignments', keeperAssignmentsRouter);
 
 // Serve images from the frontend assets folder dynamically
 app.use('/images', express.static(path.join(__dirname, '../frontend/src/assets/images')));

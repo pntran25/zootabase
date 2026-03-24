@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, PawPrint, Map, Ticket, ShoppingBag,
   Wrench, LogOut, TicketCheck, CalendarDays,
-  Sun, Moon, Users, LineChart, FileText, HeartPulse, ClipboardList, CreditCard
+  Sun, Moon, Users, LineChart, FileText, HeartPulse, ClipboardList, CreditCard, UtensilsCrossed
 } from 'lucide-react';
 import brandLogo from '../assets/images/Logo.png';
 import { Toaster, toast } from 'sonner';
@@ -14,8 +14,8 @@ import { API_BASE_URL } from '../services/apiClient';
 import './AdminLayout.css';
 
 const rolePermissions = {
-  'Super Admin': ['dashboard', 'animals', 'exhibits', 'attractions', 'events', 'tickets', 'shop', 'maintenance', 'staff', 'analytics', 'feedback', 'reports', 'memberships', 'animal-health', 'animal-report'],
-  'Caretaker': ['dashboard', 'animals', 'exhibits', 'maintenance', 'animal-health', 'animal-report'],
+  'Super Admin': ['dashboard', 'animals', 'exhibits', 'attractions', 'events', 'tickets', 'shop', 'maintenance', 'staff', 'analytics', 'feedback', 'reports', 'memberships', 'animal-health', 'animal-care', 'animal-report'],
+  'Caretaker': ['dashboard', 'animals', 'exhibits', 'maintenance', 'animal-health', 'animal-care', 'animal-report'],
   'Event Coordinator': ['dashboard', 'events', 'maintenance'],
   'Ticket Staff': ['dashboard', 'tickets', 'maintenance'],
   'Shop Manager': ['dashboard', 'shop', 'reports', 'maintenance'],
@@ -129,10 +129,12 @@ const AdminLayout = () => {
           <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Guest Services</p>
           {renderLink('/admin/tickets', <Ticket size={18} className="nav-icon" />, 'Tickets', 'tickets')}
           {renderLink('/admin/shop', <ShoppingBag size={18} className="nav-icon" />, 'Shop', 'shop')}
-          {renderLink('/admin/memberships', <CreditCard size={18} className="nav-icon" />, 'Manage Plans', 'memberships')}
-
+          
           <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Animal Care</p>
+
           {renderLink('/admin/animal-health', <HeartPulse size={18} className="nav-icon" />, 'Health Tracking', 'animal-health')}
+          {renderLink('/admin/animal-care', <UtensilsCrossed size={18} className="nav-icon" />, 'Feeding & Keepers', 'animal-care')}
+          {renderLink('/admin/memberships', <CreditCard size={18} className="nav-icon" />, 'Manage Plans', 'memberships')}
 
           <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Reports & Analytics</p>
           {renderLink('/admin/analytics', <LineChart size={18} className="nav-icon" />, 'Analytics', 'analytics')}
