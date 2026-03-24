@@ -102,10 +102,10 @@ const Dashboard = () => {
     animalsLastMonth: 0,
     openMaintenance: 0,
     recentActivity: [],
-    ticketsSoldToday: 0,
-    ticketsSameDayLastWeek: 0,
-    membersSoldToday: 0,
-    membersSameDayLastWeek: 0,
+    ticketsThisMonth: 0,
+    ticketsLastMonth: 0,
+    membersThisMonth: 0,
+    membersLastMonth: 0,
     weeklyVisitors: [],
   });
 
@@ -114,32 +114,32 @@ const Dashboard = () => {
     apiGet('/api/dashboard').then(setDashStats).catch(() => {});
   }, []);
 
-  const animalsAnim    = useCountAnimation(dashStats.totalAnimals);
+  const animalsAnim     = useCountAnimation(dashStats.totalAnimals);
   const maintenanceAnim = useCountAnimation(dashStats.openMaintenance);
-  const ticketsAnim    = useCountAnimation(dashStats.ticketsSoldToday);
-  const membersAnim    = useCountAnimation(dashStats.membersSoldToday);
+  const ticketsAnim     = useCountAnimation(dashStats.ticketsThisMonth);
+  const membersAnim     = useCountAnimation(dashStats.membersThisMonth);
 
-  // Animal trend
+  // Animal trend (this month vs last month)
   const { animalsThisMonth, animalsLastMonth } = dashStats;
-  const animalBadge   = animalsThisMonth > 0 ? `+${animalsThisMonth} This Month` : 'No new this month';
+  const animalBadge    = animalsThisMonth > 0 ? `+${animalsThisMonth} This Month` : 'No new this month';
   const animalTrendPct = animalsLastMonth > 0
     ? `${animalsThisMonth >= animalsLastMonth ? '+' : ''}${Math.round((animalsThisMonth - animalsLastMonth) / animalsLastMonth * 100)}%`
-    : animalsThisMonth > 0 ? 'New' : '—';
-  const animalTrendUp = animalsThisMonth >= animalsLastMonth;
+    : animalsThisMonth > 0 ? `+${animalsThisMonth} New` : '—';
+  const animalTrendUp  = animalsThisMonth >= animalsLastMonth;
 
-  // Ticket trend vs same day last week
-  const ticketDelta   = pctDelta(dashStats.ticketsSoldToday, dashStats.ticketsSameDayLastWeek);
-  const ticketTrendUp = dashStats.ticketsSoldToday >= dashStats.ticketsSameDayLastWeek;
+  // Tickets this month vs last month
+  const ticketDelta   = pctDelta(dashStats.ticketsThisMonth, dashStats.ticketsLastMonth);
+  const ticketTrendUp = dashStats.ticketsThisMonth >= dashStats.ticketsLastMonth;
   const ticketBadge   = ticketDelta !== null
-    ? `${ticketDelta > 0 ? '+' : ''}${ticketDelta}% vs Last Week`
-    : 'vs Last Week';
+    ? `${ticketDelta > 0 ? '+' : ''}${ticketDelta}% vs Last Month`
+    : 'vs Last Month';
 
-  // Membership trend vs same day last week
-  const memberDelta   = pctDelta(dashStats.membersSoldToday, dashStats.membersSameDayLastWeek);
-  const memberTrendUp = dashStats.membersSoldToday >= dashStats.membersSameDayLastWeek;
+  // Memberships this month vs last month
+  const memberDelta   = pctDelta(dashStats.membersThisMonth, dashStats.membersLastMonth);
+  const memberTrendUp = dashStats.membersThisMonth >= dashStats.membersLastMonth;
   const memberBadge   = memberDelta !== null
-    ? `${memberDelta > 0 ? '+' : ''}${memberDelta}% vs Last Week`
-    : 'vs Last Week';
+    ? `${memberDelta > 0 ? '+' : ''}${memberDelta}% vs Last Month`
+    : 'vs Last Month';
 
   // Weekly visitor trend
   const weeklyTotal     = dashStats.weeklyVisitors.reduce((s, d) => s + d.visitors, 0);
@@ -159,7 +159,7 @@ const Dashboard = () => {
       trendUp: animalTrendUp,
     },
     {
-      label: 'Tickets Sold Today',
+      label: 'Tickets Sold This Month',
       display: ticketsAnim,
       badge: ticketBadge,
       badgeType: ticketTrendUp ? 'positive' : 'warning',
@@ -169,7 +169,7 @@ const Dashboard = () => {
       trendUp: ticketTrendUp,
     },
     {
-      label: 'Memberships Sold Today',
+      label: 'Memberships This Month',
       display: membersAnim,
       badge: memberBadge,
       badgeType: memberTrendUp ? 'positive' : 'warning',
@@ -230,10 +230,6 @@ const Dashboard = () => {
             <p className="stat-label">{stat.label}</p>
             <div className="stat-bottom">
               <h2 className="stat-value">{stat.display}</h2>
-              <span className={`stat-trend ${stat.trendUp ? 'up' : 'down'}`}>
-                {stat.trendUp ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-                {stat.trend}
-              </span>
             </div>
           </motion.div>
         ))}

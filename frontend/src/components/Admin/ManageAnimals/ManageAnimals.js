@@ -704,6 +704,7 @@ const ManageAnimals = () => {
               onChange={val => setFormData({ ...formData, exhibit: val })}
               options={[{ value: '', label: 'Select an exhibit...' }, { value: 'Undecided', label: 'Undecided' }, ...exhibits.map(ex => ({ value: ex.ExhibitName, label: ex.ExhibitName }))]}
               placeholder="Select an exhibit..."
+              searchable
             />
           </div>
           <div className="form-group">
