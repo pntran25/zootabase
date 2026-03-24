@@ -31,6 +31,7 @@ import LoginAnalytics from './components/Admin/Dashboard/LoginAnalytics';
 import DataReports from './components/Admin/DataReports/DataReports';
 import AnimalHealth from './components/Admin/AnimalHealth/AnimalHealth';
 import AnimalReport from './components/Admin/AnimalHealth/AnimalReport';
+import AnimalCare from './components/Admin/AnimalHealth/AnimalCare';
 import ManageMemberships from './components/Admin/ManageMemberships/ManageMemberships';
 
 const allStaffRoles = ['Super Admin', 'Caretaker', 'Event Coordinator', 'Ticket Staff', 'Shop Manager', 'Maintenance'];
@@ -73,6 +74,7 @@ function App() {
              <Route path="staff" element={<ProtectedRoute allowedRoles={['Super Admin']}><ManageStaff /></ProtectedRoute>} />
              <Route path="analytics" element={<ProtectedRoute allowedRoles={['Super Admin']}><LoginAnalytics /></ProtectedRoute>} />
              <Route path="animal-health" element={<ProtectedRoute allowedRoles={['Super Admin', 'Caretaker']}><AnimalHealth /></ProtectedRoute>} />
+             <Route path="animal-care" element={<ProtectedRoute allowedRoles={['Super Admin', 'Caretaker']}><AnimalCare /></ProtectedRoute>} />
              <Route path="animal-report" element={<ProtectedRoute allowedRoles={['Super Admin', 'Caretaker']}><AnimalReport /></ProtectedRoute>} />
              <Route path="reports" element={<ProtectedRoute allowedRoles={['Super Admin', 'Shop Manager']}><DataReports /></ProtectedRoute>} />
              <Route path="memberships" element={<ProtectedRoute allowedRoles={['Super Admin']}><ManageMemberships /></ProtectedRoute>} />
