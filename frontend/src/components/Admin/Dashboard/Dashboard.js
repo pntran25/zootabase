@@ -6,9 +6,9 @@ import {
   ResponsiveContainer, AreaChart, Area
 } from 'recharts';
 import {
-  PawPrint, Ticket, Wrench, TrendingUp,
+  PawPrint, Ticket, Wrench, TrendingUp, TrendingDown,
   CalendarDays, ArrowUpRight, ArrowDownRight,
-  Zap, ShoppingBag
+  Zap, ShoppingBag, CreditCard
 } from 'lucide-react';
 import './Dashboard.css';
 import { getLowStockProducts } from '../../../services/productService';
@@ -46,16 +46,11 @@ const timeAgo = (ts) => {
   return `${days}d ago`;
 };
 
-/* ── Mock visitor data (no visitor DB yet) ───────────── */
-const visitorData = [
-  { day: 'Mon', visitors: 240, prev: 210 },
-  { day: 'Tue', visitors: 300, prev: 270 },
-  { day: 'Wed', visitors: 220, prev: 260 },
-  { day: 'Thu', visitors: 272, prev: 240 },
-  { day: 'Fri', visitors: 360, prev: 310 },
-  { day: 'Sat', visitors: 420, prev: 380 },
-  { day: 'Sun', visitors: 385, prev: 350 },
-];
+const pctDelta = (curr, prev) => {
+  if (prev === 0 && curr === 0) return null;
+  if (prev === 0) return null;
+  return ((curr - prev) / prev * 100).toFixed(1);
+};
 
 const activityIcons = {
   animal: <PawPrint size={14} />,
@@ -88,7 +83,7 @@ const CustomTooltip = ({ active, payload, label }) => {
         <p className="chart-tooltip-label">{label}</p>
         {payload.map((p, i) => (
           <p key={i} style={{ color: p.color, margin: '2px 0', fontSize: '0.82rem', fontWeight: 600 }}>
-            {p.name === 'visitors' ? 'This week' : 'Last week'}: {p.value.toLocaleString()}
+            {p.name === 'visitors' ? 'This week' : 'Last week'}: {Number(p.value).toLocaleString()}
           </p>
         ))}
       </div>
@@ -107,6 +102,11 @@ const Dashboard = () => {
     animalsLastMonth: 0,
     openMaintenance: 0,
     recentActivity: [],
+    ticketsSoldToday: 0,
+    ticketsSameDayLastWeek: 0,
+    membersSoldToday: 0,
+    membersSameDayLastWeek: 0,
+    weeklyVisitors: [],
   });
 
   useEffect(() => {
@@ -114,18 +114,38 @@ const Dashboard = () => {
     apiGet('/api/dashboard').then(setDashStats).catch(() => {});
   }, []);
 
-  const animalsAnim = useCountAnimation(dashStats.totalAnimals);
+  const animalsAnim    = useCountAnimation(dashStats.totalAnimals);
   const maintenanceAnim = useCountAnimation(dashStats.openMaintenance);
+  const ticketsAnim    = useCountAnimation(dashStats.ticketsSoldToday);
+  const membersAnim    = useCountAnimation(dashStats.membersSoldToday);
 
-  // Animal trend badge
+  // Animal trend
   const { animalsThisMonth, animalsLastMonth } = dashStats;
-  const animalBadge = animalsThisMonth > 0
-    ? `+${animalsThisMonth} This Month`
-    : 'No new this month';
+  const animalBadge   = animalsThisMonth > 0 ? `+${animalsThisMonth} This Month` : 'No new this month';
   const animalTrendPct = animalsLastMonth > 0
     ? `${animalsThisMonth >= animalsLastMonth ? '+' : ''}${Math.round((animalsThisMonth - animalsLastMonth) / animalsLastMonth * 100)}%`
     : animalsThisMonth > 0 ? 'New' : '—';
   const animalTrendUp = animalsThisMonth >= animalsLastMonth;
+
+  // Ticket trend vs same day last week
+  const ticketDelta   = pctDelta(dashStats.ticketsSoldToday, dashStats.ticketsSameDayLastWeek);
+  const ticketTrendUp = dashStats.ticketsSoldToday >= dashStats.ticketsSameDayLastWeek;
+  const ticketBadge   = ticketDelta !== null
+    ? `${ticketDelta > 0 ? '+' : ''}${ticketDelta}% vs Last Week`
+    : 'vs Last Week';
+
+  // Membership trend vs same day last week
+  const memberDelta   = pctDelta(dashStats.membersSoldToday, dashStats.membersSameDayLastWeek);
+  const memberTrendUp = dashStats.membersSoldToday >= dashStats.membersSameDayLastWeek;
+  const memberBadge   = memberDelta !== null
+    ? `${memberDelta > 0 ? '+' : ''}${memberDelta}% vs Last Week`
+    : 'vs Last Week';
+
+  // Weekly visitor trend
+  const weeklyTotal     = dashStats.weeklyVisitors.reduce((s, d) => s + d.visitors, 0);
+  const prevWeeklyTotal = dashStats.weeklyVisitors.reduce((s, d) => s + d.prev, 0);
+  const weeklyDelta     = pctDelta(weeklyTotal, prevWeeklyTotal);
+  const weeklyTrendUp   = weeklyTotal >= prevWeeklyTotal;
 
   const stats = [
     {
@@ -140,13 +160,23 @@ const Dashboard = () => {
     },
     {
       label: 'Tickets Sold Today',
-      display: 482,
-      badge: '+12% vs Last Week',
-      badgeType: 'positive',
+      display: ticketsAnim,
+      badge: ticketBadge,
+      badgeType: ticketTrendUp ? 'positive' : 'warning',
       color: 'blue',
       icon: <Ticket size={22} />,
-      trend: '+12%',
-      trendUp: true,
+      trend: ticketDelta !== null ? `${ticketDelta > 0 ? '+' : ''}${ticketDelta}%` : '—',
+      trendUp: ticketTrendUp,
+    },
+    {
+      label: 'Memberships Sold Today',
+      display: membersAnim,
+      badge: memberBadge,
+      badgeType: memberTrendUp ? 'positive' : 'warning',
+      color: 'purple',
+      icon: <CreditCard size={22} />,
+      trend: memberDelta !== null ? `${memberDelta > 0 ? '+' : ''}${memberDelta}%` : '—',
+      trendUp: memberTrendUp,
     },
     {
       label: 'Open Maintenance',
@@ -295,13 +325,14 @@ const Dashboard = () => {
               <h3 className="panel-title">Visitor Attendance</h3>
               <p className="panel-subtitle">Weekly comparison — current vs previous week</p>
             </div>
-            <span className="trend-badge">
-              <TrendingUp size={13} /> +8.4% this week
+            <span className={`trend-badge${!weeklyTrendUp ? ' trend-badge--down' : ''}`}>
+              {weeklyTrendUp ? <TrendingUp size={13} /> : <TrendingDown size={13} />}
+              {weeklyDelta !== null ? `${weeklyDelta > 0 ? '+' : ''}${weeklyDelta}% this week` : 'This week'}
             </span>
           </div>
 
           <ResponsiveContainer width="100%" height={230}>
-            <AreaChart data={visitorData} margin={{ top: 8, right: 4, left: -18, bottom: 0 }}>
+            <AreaChart data={dashStats.weeklyVisitors} margin={{ top: 8, right: 4, left: -18, bottom: 0 }}>
               <defs>
                 <linearGradient id="gradVisitors" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#10b981" stopOpacity={0.25} />

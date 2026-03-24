@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { LineChart } from 'lucide-react';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '../../../services/apiClient';
+import AdminSelect from '../AdminSelect';
+import AdminDatePicker from '../AdminDatePicker';
 import '../AdminTable.css';
 
 const roleColors = {
@@ -13,41 +15,89 @@ const roleColors = {
   'Maintenance':       { bg: 'rgba(239,68,68,0.15)',   color: '#ef4444' },
 };
 
+const RANGE_OPTIONS = [
+  { value: 'today',   label: 'Today' },
+  { value: 'week',    label: 'This Week' },
+  { value: 'month',   label: 'This Month' },
+  { value: 'custom',  label: 'Custom Range' },
+];
+
+function getDateRange(range) {
+  const today = new Date();
+  const fmt = (d) => d.toISOString().split('T')[0];
+  if (range === 'today') {
+    return { start: fmt(today), end: fmt(today) };
+  }
+  if (range === 'week') {
+    const mon = new Date(today);
+    mon.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1));
+    return { start: fmt(mon), end: fmt(today) };
+  }
+  if (range === 'month') {
+    const first = new Date(today.getFullYear(), today.getMonth(), 1);
+    return { start: fmt(first), end: fmt(today) };
+  }
+  return null; // custom — caller provides dates
+}
+
 const LoginAnalytics = () => {
     const [stats, setStats] = useState({ staffLogins: [], customerLogins: [] });
     const [loading, setLoading] = useState(true);
+    const [range, setRange] = useState('today');
+    const [customStart, setCustomStart] = useState('');
+    const [customEnd, setCustomEnd]     = useState('');
 
-    useEffect(() => {
-        const fetchAnalytics = async () => {
-            try {
-                const { auth } = await import('../../../services/firebase');
-                const token = await auth.currentUser.getIdToken();
-                const res = await fetch(`${API_BASE_URL}/api/analytics/logins`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                const data = await res.json();
-                setStats(data);
-            } catch (err) {
-                console.error(err);
-                toast.error('Failed to load login analytics');
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchAnalytics();
+    const today = new Date().toISOString().split('T')[0];
+
+    const fetchAnalytics = useCallback(async (start, end) => {
+        if (!start || !end) return;
+        setLoading(true);
+        try {
+            const { auth } = await import('../../../services/firebase');
+            const token = await auth.currentUser.getIdToken();
+            const res = await fetch(
+                `${API_BASE_URL}/api/analytics/logins?startDate=${start}&endDate=${end}`,
+                { headers: { 'Authorization': `Bearer ${token}` } }
+            );
+            const data = await res.json();
+            setStats(data);
+        } catch (err) {
+            console.error(err);
+            toast.error('Failed to load login analytics');
+        } finally {
+            setLoading(false);
+        }
     }, []);
+
+    // Fetch whenever range or custom dates change
+    useEffect(() => {
+        if (range !== 'custom') {
+            const { start, end } = getDateRange(range);
+            fetchAnalytics(start, end);
+        } else if (customStart && customEnd) {
+            fetchAnalytics(customStart, customEnd);
+        }
+    }, [range, customStart, customEnd, fetchAnalytics]);
 
     const formatDate = (d) => new Date(d).toLocaleString();
 
-    const Panel = ({ title, children }) => (
+    const Panel = ({ title, count, children }) => (
         <div className="admin-table-container" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{
                 padding: '14px 20px',
                 borderBottom: '1px solid var(--adm-border)',
                 background: 'var(--adm-bg-surface-2)',
                 flexShrink: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
             }}>
                 <h2 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: 'var(--adm-text-primary)' }}>{title}</h2>
+                {count != null && (
+                    <span style={{ fontSize: '0.8rem', color: 'var(--adm-text-secondary)' }}>
+                        {count} login{count !== 1 ? 's' : ''}
+                    </span>
+                )}
             </div>
             <div style={{ overflowY: 'auto', flex: 1 }}>
                 {children}
@@ -62,13 +112,41 @@ const LoginAnalytics = () => {
                     <h1 className="admin-page-title"><LineChart size={26} className="title-icon" /> Login Analytics</h1>
                     <p className="admin-page-subtitle">Recent login activity across staff and public users.</p>
                 </div>
+
+                {/* Date range selector */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    {range === 'custom' && (
+                        <>
+                            <AdminDatePicker
+                                value={customStart}
+                                onChange={setCustomStart}
+                                placeholder="Start date"
+                                maxDate={customEnd || today}
+                            />
+                            <span style={{ color: 'var(--adm-text-secondary)', fontSize: '0.82rem' }}>to</span>
+                            <AdminDatePicker
+                                value={customEnd}
+                                onChange={setCustomEnd}
+                                placeholder="End date"
+                                minDate={customStart}
+                                maxDate={today}
+                            />
+                        </>
+                    )}
+                    <AdminSelect
+                        value={range}
+                        onChange={v => { setRange(v); setCustomStart(''); setCustomEnd(''); }}
+                        options={RANGE_OPTIONS}
+                        width="148px"
+                    />
+                </div>
             </div>
 
             {loading ? (
                 <div className="admin-table-container"><div className="admin-table-loading">Loading analytics...</div></div>
             ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', flex: 1, minHeight: 0 }}>
-                    <Panel title="Recent Staff Logins">
+                    <Panel title="Recent Staff Logins" count={stats.staffLogins?.length}>
                         <table className="admin-table">
                             <thead>
                                 <tr>
@@ -79,7 +157,7 @@ const LoginAnalytics = () => {
                             </thead>
                             <tbody>
                                 {stats.staffLogins?.length === 0 && (
-                                    <tr><td colSpan="3" className="admin-table-empty" style={{ padding: '24px', textAlign: 'center' }}>No recent staff logins.</td></tr>
+                                    <tr><td colSpan="3" className="admin-table-empty" style={{ padding: '24px', textAlign: 'center' }}>No logins in this period.</td></tr>
                                 )}
                                 {stats.staffLogins?.map(log => (
                                     <tr key={log.LogID}>
@@ -98,7 +176,7 @@ const LoginAnalytics = () => {
                         </table>
                     </Panel>
 
-                    <Panel title="Recent Public User Logins">
+                    <Panel title="Recent Public User Logins" count={stats.customerLogins?.length}>
                         <table className="admin-table">
                             <thead>
                                 <tr>
@@ -109,7 +187,7 @@ const LoginAnalytics = () => {
                             </thead>
                             <tbody>
                                 {stats.customerLogins?.length === 0 && (
-                                    <tr><td colSpan="3" className="admin-table-empty" style={{ padding: '24px', textAlign: 'center' }}>No recent user logins.</td></tr>
+                                    <tr><td colSpan="3" className="admin-table-empty" style={{ padding: '24px', textAlign: 'center' }}>No logins in this period.</td></tr>
                                 )}
                                 {stats.customerLogins?.map(log => (
                                     <tr key={log.LogID}>

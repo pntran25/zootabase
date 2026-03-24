@@ -118,9 +118,9 @@ router.post('/api/maintenance', optionalAuth, async (req, res) => {
                 .input('createdBy', sql.NVarChar, adminName)
                 .query(`
                     DECLARE @Out TABLE (RequestID INT);
-                    INSERT INTO MaintenanceRequest (ExhibitID, Description, RequestDate, Status, StaffID, CreatedBy)
+                    INSERT INTO MaintenanceRequest (ExhibitID, Description, RequestDate, Status, StaffID, CreatedBy, CreatedAt)
                     OUTPUT INSERTED.RequestID INTO @Out
-                    VALUES (@exhId, @desc, @reqDate, @status, @staffId, @createdBy);
+                    VALUES (@exhId, @desc, @reqDate, @status, @staffId, @createdBy, SYSUTCDATETIME());
                     SELECT RequestID FROM @Out;
                 `);
 

@@ -141,7 +141,7 @@ const ManageAttractions = () => {
         const a = row.original;
         return a.imageUrl ? (
           <img src={`${API_BASE_URL}${a.imageUrl}`} alt={a.name}
-            style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover', border: '1.5px solid var(--adm-border)', display: 'block' }} />
+            style={{ width: 48, height: 48, minWidth: 48, borderRadius: 8, objectFit: 'cover', border: '1.5px solid var(--adm-border)', display: 'block' }} />
         ) : (
           <div style={{ width: 48, height: 48, borderRadius: 8, background: 'var(--adm-bg-surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--adm-border)' }}>
             <ImageIcon size={18} style={{ color: 'var(--adm-text-muted)' }} />
@@ -301,7 +301,7 @@ const ManageAttractions = () => {
                   {row.getVisibleCells().map(cell => (
                     <td key={cell.id} style={{
                     ...(cell.column.columnDef.size ? { maxWidth: cell.column.getSize() } : {}),
-                    ...(cell.column.id === 'image' ? { paddingRight: 6 } : {}),
+                    ...(cell.column.id === 'image' ? { paddingRight: 6, width: 60, minWidth: 60 } : {}),
                   }}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
                   ))}
                 </tr>

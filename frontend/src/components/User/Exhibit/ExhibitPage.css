@@ -218,6 +218,17 @@
   gap: 0.5rem;
 }
 
+@keyframes ww-slide-in-right {
+  from { transform: translateX(18px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+@keyframes ww-slide-in-left {
+  from { transform: translateX(-18px); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+.ww-region-filters.ww-slide-right { animation: ww-slide-in-right 0.22s ease; }
+.ww-region-filters.ww-slide-left  { animation: ww-slide-in-left  0.22s ease; }
+
 .ww-region-btn {
   display: inline-flex;
   white-space: nowrap;

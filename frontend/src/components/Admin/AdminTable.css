@@ -117,12 +117,34 @@
   border-radius: var(--adm-radius-lg);
   border: 1px solid var(--adm-border);
   box-shadow: var(--adm-shadow-card);
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   flex-grow: 1;
   transition: background 0.3s ease, border-color 0.3s ease;
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: var(--adm-border) var(--adm-bg-surface-2);
+}
+
+.admin-table-container::-webkit-scrollbar {
+  height: 6px;
+}
+
+.admin-table-container::-webkit-scrollbar-track {
+  background: var(--adm-bg-surface-2);
+}
+
+.admin-table-container::-webkit-scrollbar-thumb {
+  background: var(--adm-border);
+  border-radius: 999px;
+}
+
+.admin-table-container::-webkit-scrollbar-thumb:hover {
+  background: var(--adm-text-muted);
 }
 
 .admin-table-scroll-inner {
+  overflow-x: auto;
   overflow-y: auto;
 }
 
@@ -146,6 +168,7 @@
 /* ── Table ──────────────────────────────────────────── */
 .admin-table {
   width: 100%;
+  min-width: 750px;
   border-collapse: collapse;
   text-align: left;
 }

@@ -3,12 +3,8 @@ import '../AdminTable.css';
 import AdminModalForm from '../AdminModalForm';
 import {
   CreditCard, Search, Plus, Edit2, Trash2,
-  ChevronUp, ChevronDown, ChevronsUpDown, Star, X,
+  Star, X, Check,
 } from 'lucide-react';
-import {
-  useReactTable, getCoreRowModel, getSortedRowModel,
-  getPaginationRowModel, flexRender,
-} from '@tanstack/react-table';
 import { toast } from 'sonner';
 import { apiGet, apiPost, apiPut, apiDelete } from '../../../services/apiClient';
 
@@ -31,7 +27,6 @@ const ManageMemberships = () => {
   const [plans, setPlans]           = useState([]);
   const [isLoading, setIsLoading]   = useState(true);
   const [search, setSearch]         = useState('');
-  const [sorting, setSorting]       = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState(null);
   const [formData, setFormData]     = useState(EMPTY_FORM);
@@ -126,64 +121,6 @@ const ManageMemberships = () => {
     }
   };
 
-  const columns = useMemo(() => [
-    {
-      accessorKey: 'SortOrder', header: '#', size: 50,
-      cell: info => <span className="text-secondary">{info.getValue()}</span>,
-    },
-    {
-      accessorKey: 'Name', header: 'Plan Name',
-      cell: info => <span className="font-medium">{info.getValue()}</span>,
-    },
-    {
-      accessorKey: 'Description', header: 'Description',
-      cell: info => <span className="text-secondary">{info.getValue() || '—'}</span>,
-    },
-    {
-      accessorKey: 'MonthlyPrice', header: 'Monthly',
-      cell: info => <span>${Number(info.getValue()).toFixed(2)}/mo</span>,
-    },
-    {
-      accessorKey: 'YearlyPrice', header: 'Yearly',
-      cell: info => <span>${Number(info.getValue()).toFixed(0)}/yr</span>,
-    },
-    {
-      accessorKey: 'IsPopular', header: 'Popular', size: 90,
-      cell: info => info.getValue()
-        ? <Star size={15} fill="#f59e0b" stroke="#f59e0b" />
-        : <span className="text-secondary">—</span>,
-    },
-    {
-      accessorKey: 'Features', header: 'Features', size: 90,
-      cell: info => {
-        const f = info.getValue() || [];
-        return <span className="text-secondary">{f.length} items</span>;
-      },
-    },
-    {
-      id: 'actions', header: 'Actions', size: 110, enableSorting: false,
-      cell: info => (
-        <div className="action-buttons">
-          <button className="action-btn edit" title="Edit" onClick={() => handleOpenModal(info.row.original)}>
-            <Edit2 size={15} />
-          </button>
-          <button className="action-btn delete" title="Delete" onClick={() => handleDelete(info.row.original)}>
-            <Trash2 size={15} />
-          </button>
-        </div>
-      ),
-    },
-  ], []);
-
-  const table = useReactTable({
-    data: filteredPlans, columns,
-    state: { sorting },
-    onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize: 20 } },
-  });
 
   return (
     <div className="admin-page">
@@ -212,68 +149,98 @@ const ManageMemberships = () => {
         </div>
       </div>
 
-      {/* ── Table ── */}
-      <div className="admin-table-container">
-        <table className="admin-table">
-          <thead>
-            {table.getHeaderGroups().map(hg => (
-              <tr key={hg.id}>
-                {hg.headers.map(header => (
-                  <th
-                    key={header.id}
-                    style={{ width: header.getSize() }}
-                    onClick={header.column.getToggleSortingHandler()}
-                    data-sorted={header.column.getIsSorted() || undefined}
-                  >
-                    {flexRender(header.column.columnDef.header, header.getContext())}
-                    <SortIcon column={header.column} />
-                  </th>
-                ))}
-              </tr>
-            ))}
-          </thead>
-          <tbody>
-            {isLoading ? (
-              <tr className="no-hover"><td colSpan={columns.length}>
-                <div className="admin-table-loading">
-                  <div className="admin-loading-spinner" />
-                  <p>Loading plans...</p>
-                </div>
-              </td></tr>
-            ) : table.getRowModel().rows.length === 0 ? (
-              <tr className="no-hover"><td colSpan={columns.length}>
-                <div className="admin-table-empty">
-                  <div className="admin-table-empty-icon"><CreditCard size={22} /></div>
-                  <p className="admin-table-empty-title">No plans found</p>
-                  <p className="admin-table-empty-desc">
-                    {search ? 'Try adjusting your search.' : 'Click "New Plan" to create your first membership plan.'}
-                  </p>
-                </div>
-              </td></tr>
-            ) : (
-              table.getRowModel().rows.map(row => (
-                <tr key={row.id}>
-                  {row.getVisibleCells().map(cell => (
-                    <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
-                  ))}
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-
-        {!isLoading && table.getPageCount() > 1 && (
-          <div className="admin-table-pagination">
-            <span className="admin-pagination-info">
-              Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()} · {filteredPlans.length} records
-            </span>
-            <div className="admin-pagination-controls">
-              <button className="admin-pagination-btn" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>←</button>
-              <button className="admin-pagination-btn" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>→</button>
-            </div>
+      {/* ── Cards ── */}
+      {isLoading ? (
+        <div className="admin-table-container">
+          <div className="admin-table-loading"><div className="admin-loading-spinner" /><p>Loading plans...</p></div>
+        </div>
+      ) : filteredPlans.length === 0 ? (
+        <div className="admin-table-container">
+          <div className="admin-table-empty">
+            <div className="admin-table-empty-icon"><CreditCard size={22} /></div>
+            <p className="admin-table-empty-title">No plans found</p>
+            <p className="admin-table-empty-desc">
+              {search ? 'Try adjusting your search.' : 'Click "New Plan" to create your first membership plan.'}
+            </p>
           </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
+          {filteredPlans.map(plan => {
+            const features = plan.Features || [];
+            const included = features.filter(f => f.included !== false);
+            const visible  = included.slice(0, 4);
+            const extra    = included.length - visible.length;
+            return (
+              <div key={plan.PlanID} style={{
+                background: 'var(--adm-bg-surface)',
+                border: `1px solid ${plan.IsPopular ? 'var(--adm-accent)' : 'var(--adm-border)'}`,
+                borderRadius: 12,
+                padding: 20,
+                position: 'relative',
+              }}>
+                {/* Edit / Delete */}
+                <div style={{ position: 'absolute', top: 12, right: 12, display: 'flex', gap: 4 }}>
+                  <button className="action-btn edit" onClick={() => handleOpenModal(plan)}><Edit2 size={14} /></button>
+                  <button className="action-btn delete" onClick={() => handleDelete(plan)}><Trash2 size={14} /></button>
+                </div>
+
+                {/* Name + badge */}
+                <h3 style={{ margin: '0 0 6px', fontSize: '1rem', fontWeight: 700, color: 'var(--adm-text-primary)', paddingRight: 60 }}>
+                  {plan.Name}
+                </h3>
+                {plan.IsPopular ? (
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                    background: 'var(--adm-accent)', color: '#fff',
+                    fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.04em',
+                    padding: '3px 10px', borderRadius: 99, marginBottom: 8,
+                  }}>
+                    <Star size={11} fill="currentColor" /> Most Popular
+                  </span>
+                ) : null}
+                <p style={{ margin: '0 0 14px', fontSize: '0.82rem', color: 'var(--adm-text-secondary)' }}>
+                  {plan.Description || '—'}
+                </p>
+
+                {/* Pricing row */}
+                <div style={{ display: 'flex', gap: 12, marginBottom: 14 }}>
+                  {[['Monthly', `$${Number(plan.MonthlyPrice).toFixed(2)}/mo`], ['Yearly', `$${Number(plan.YearlyPrice).toFixed(0)}/yr`]].map(([lbl, val]) => (
+                    <div key={lbl} style={{ flex: 1, background: 'var(--adm-bg-surface-2)', borderRadius: 8, padding: '8px 10px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--adm-text-muted)', marginBottom: 2 }}>{lbl}</div>
+                      <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--adm-accent)' }}>{val}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Features */}
+                {visible.length > 0 && (
+                  <div style={{ borderTop: '1px solid var(--adm-border-light, rgba(255,255,255,0.06))', paddingTop: 12 }}>
+                    <p style={{ margin: '0 0 6px', fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Includes
+                    </p>
+                    <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+                      {visible.map((f, i) => (
+                        <li key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', color: 'var(--adm-text-secondary)', marginBottom: 3 }}>
+                          <Check size={11} color="var(--adm-accent)" style={{ flexShrink: 0 }} />
+                          {f.text || f}
+                        </li>
+                      ))}
+                      {extra > 0 && (
+                        <li style={{ fontSize: '0.75rem', color: 'var(--adm-text-muted)', marginTop: 2 }}>+{extra} more</li>
+                      )}
+                    </ul>
+                  </div>
+                )}
+
+                <div style={{ marginTop: 12, fontSize: '0.72rem', color: 'var(--adm-text-muted)' }}>
+                  Display order: {plan.SortOrder}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* ── Modal ── */}
       <AdminModalForm
