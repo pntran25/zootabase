@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Calendar, Check, ChevronLeft, ChevronRight, Clock,
   Gift, Info, Minus, Plus, ShieldCheck, Star, Ticket, Users, Zap
@@ -21,6 +22,7 @@ function getFirstDayOfMonth(month, year) {
 }
 
 const TicketingPage = () => {
+  const navigate = useNavigate();
   const [ticketTypes, setTicketTypes] = useState([]);
   const [addons, setAddons] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
@@ -503,7 +505,7 @@ const TicketingPage = () => {
             Unlimited visits, exclusive events, and up to 20% off at shops and restaurants
           </p>
           <div className="flex flex-wrap justify-center gap-4 mt-6">
-            <button className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 gap-2 cursor-pointer">
+            <button onClick={() => navigate('/membership#plans')} className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 gap-2 cursor-pointer">
               <Star className="h-4 w-4 fill-foreground" />
               View Membership Options
             </button>

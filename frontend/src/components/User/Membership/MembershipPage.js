@@ -109,6 +109,12 @@ const MembershipPage = () => {
       .catch(() => setPlansLoading(false));
   }, []);
 
+  useEffect(() => {
+    if (window.location.hash === '#plans') {
+      setTimeout(() => plansRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+    }
+  }, []);
+
 
   const handleContinue = useCallback(() => {
     if (!currentUser) {

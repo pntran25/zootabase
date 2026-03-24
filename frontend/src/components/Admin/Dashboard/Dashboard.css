@@ -258,6 +258,12 @@
   white-space: nowrap;
 }
 
+.trend-badge--down {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
 .panel-view-all {
   background: none;
   border: none;
@@ -442,6 +448,12 @@
   background: rgba(16,185,129,0.08);
   color: #34d399;
   border-color: rgba(16,185,129,0.18);
+}
+
+.admin-layout[data-theme="dark"] .trend-badge--down {
+  background: rgba(239,68,68,0.08);
+  color: #f87171;
+  border-color: rgba(239,68,68,0.18);
 }
 
 .admin-layout[data-theme="dark"] .quick-action-icon--green  { background: rgba(16,185,129,0.1);  color: #34d399; }

@@ -306,6 +306,8 @@ async function runMigrations(pool) {
 		`IF COL_LENGTH('MaintenanceRequest','CreatedBy') IS NULL ALTER TABLE MaintenanceRequest ADD CreatedBy NVARCHAR(100) NULL`,
 		`IF COL_LENGTH('MaintenanceRequest','UpdatedBy') IS NULL ALTER TABLE MaintenanceRequest ADD UpdatedBy NVARCHAR(100) NULL`,
 		`IF COL_LENGTH('MaintenanceRequest','DeletedBy') IS NULL ALTER TABLE MaintenanceRequest ADD DeletedBy NVARCHAR(100) NULL`,
+		`IF COL_LENGTH('MaintenanceRequest','CreatedAt') IS NULL ALTER TABLE MaintenanceRequest ADD CreatedAt DATETIME2 NULL`,
+		`UPDATE MaintenanceRequest SET CreatedAt = CAST(RequestDate AS DATETIME2) WHERE CreatedAt IS NULL`,
 		`IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='MembershipSubscriptions' AND xtype='U')
 		  CREATE TABLE MembershipSubscriptions (
 		    SubID                INT IDENTITY(1,1) PRIMARY KEY,
@@ -348,6 +350,35 @@ async function runMigrations(pool) {
 		`IF COL_LENGTH('Orders','FullName') IS NOT NULL ALTER TABLE Orders DROP COLUMN FullName`,
 		`IF COL_LENGTH('TicketOrders','FullName') IS NOT NULL ALTER TABLE TicketOrders DROP COLUMN FullName`,
 		`IF COL_LENGTH('MembershipSubscriptions','FullName') IS NOT NULL ALTER TABLE MembershipSubscriptions DROP COLUMN FullName`,
+		// Event Bookings table
+		`IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='EventBookings' AND xtype='U')
+		  CREATE TABLE EventBookings (
+		    EventBookingID       INT IDENTITY(1,1) PRIMARY KEY,
+		    EventID              INT NOT NULL,
+		    BookingDate          DATE NOT NULL,
+		    Quantity             INT NOT NULL DEFAULT 1,
+		    UnitPrice            DECIMAL(10,2) NOT NULL,
+		    Subtotal             DECIMAL(10,2) NOT NULL,
+		    Total                DECIMAL(10,2) NOT NULL,
+		    FirstName            NVARCHAR(100) NOT NULL,
+		    LastName             NVARCHAR(100) NOT NULL,
+		    Email                NVARCHAR(255) NOT NULL,
+		    Phone                NVARCHAR(30)  NULL,
+		    AddressLine1         NVARCHAR(255) NULL,
+		    AddressLine2         NVARCHAR(255) NULL,
+		    City                 NVARCHAR(100) NULL,
+		    StateProvince        NVARCHAR(100) NULL,
+		    ZipCode              NVARCHAR(20)  NULL,
+		    BillingSameAsContact BIT           NOT NULL DEFAULT 1,
+		    BillingFullName      NVARCHAR(200) NULL,
+		    BillingAddress1      NVARCHAR(255) NULL,
+		    BillingAddress2      NVARCHAR(255) NULL,
+		    BillingCity          NVARCHAR(100) NULL,
+		    BillingState         NVARCHAR(100) NULL,
+		    BillingZip           NVARCHAR(20)  NULL,
+		    CardLastFour         NVARCHAR(4)   NULL,
+		    PlacedAt             DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME()
+		  )`,
 	];
 
 	for (const sql of steps) {
