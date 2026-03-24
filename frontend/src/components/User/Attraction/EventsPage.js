@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import eventService from '../../../services/eventService';
 import './EventsPage.css';
 import { API_BASE_URL } from '../../../services/apiClient';
-import { Calendar, Clock, Filter, MapPin, Search, Star, Ticket, Users } from 'lucide-react';
+import { Calendar, Clock, ChevronLeft, ChevronRight, MapPin, Search, Star, Ticket, Users } from 'lucide-react';
+import EventCheckoutModal from './EventCheckoutModal';
 import eventsHeroImg from '../../../assets/images/events-hero.jpg';
 
 // Custom cn utility for Tailwind
@@ -44,17 +45,15 @@ function fmt12(t) {
 }
 
 function enrichEvent(ev) {
-  const seed = parseInt(ev.id, 10) || 1;
   const capacity = ev.capacity || 50;
-  // Deterministic pseudo-random spotsLeft based on event ID
-  const pseudoRandom = ((seed * 1103515245 + 12345) >>> 0) / 0xFFFFFFFF;
-  const spotsLeft = Math.max(1, Math.floor(pseudoRandom * capacity));
+  const spotsBooked = ev.spotsBooked != null ? Number(ev.spotsBooked) : 0;
+  const spotsLeft = Math.max(0, capacity - spotsBooked);
 
   return {
     ...ev,
     title: ev.name || 'Untitled Event',
     image: ev.imageUrl ? `${API_BASE_URL}${ev.imageUrl}` : '',
-    date: ev.date || new Date().toISOString(),
+    date: ev.date ? ev.date.split('T')[0] : new Date().toISOString().split('T')[0],
     endDate: ev.endDate || '',
     time: (ev.startTime || ev.time) ? `${fmt12(ev.startTime || ev.time)}${ev.endTime ? ' – ' + fmt12(ev.endTime) : ''}` : 'TBD',
     location: ev.exhibit || ev.location || 'Zoo-wide',
@@ -68,21 +67,27 @@ function enrichEvent(ev) {
 }
 
 
+const parseLocalDate = (str) => {
+  if (!str) return null;
+  const [y, m, d] = str.split('T')[0].split('-').map(Number);
+  return new Date(y, m - 1, d);
+};
+
 const formatDateRange = (startStr, endStr) => {
   if (!startStr) return '';
-  const start = new Date(startStr);
+  const start = parseLocalDate(startStr);
   if (!endStr || endStr === startStr) {
     return start.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
   }
-  const end = new Date(endStr);
-  // Same month: "Fri, Mar 21 – 23"
+  const end = parseLocalDate(endStr);
+  // Same month: "Mar 1 – 31"
   if (start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()) {
-    return `${start.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} – ${end.getDate()}`;
+    return `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${end.getDate()}`;
   }
   return `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${end.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
 }
 
-function FeaturedEventCard({ event }) {
+function FeaturedEventCard({ event, onBookNow }) {
   const spotsPercentage = (event.spotsLeft / event.totalSpots) * 100
   const isAlmostFull = spotsPercentage < 20
 
@@ -162,7 +167,7 @@ function FeaturedEventCard({ event }) {
           </div>
         </div>
 
-        <Button className="w-full gap-2 mt-2 h-10">
+        <Button className="w-full gap-2 mt-2 h-10" onClick={() => onBookNow(event)}>
           <Ticket className="h-4 w-4" />
           Book Now
         </Button>
@@ -171,7 +176,7 @@ function FeaturedEventCard({ event }) {
   )
 }
 
-function EventGridCard({ event }) {
+function EventGridCard({ event, onBookNow }) {
   const spotsPercentage = (event.spotsLeft / event.totalSpots) * 100
   const isAlmostFull = spotsPercentage < 20
   const emoji = CATEGORY_EMOJI[event.category] || '🎉';
@@ -241,7 +246,7 @@ function EventGridCard({ event }) {
               <span className="font-bold">${event.price}</span>
             )}
           </div>
-          <Button className="h-9 gap-1.5" size="sm">
+          <Button className="h-9 gap-1.5" size="sm" onClick={() => onBookNow(event)}>
             <Ticket className="h-3.5 w-3.5" />
             Book Now
           </Button>
@@ -251,7 +256,7 @@ function EventGridCard({ event }) {
   )
 }
 
-function EventListCard({ event }) {
+function EventListCard({ event, onBookNow }) {
   const spotsPercentage = (event.spotsLeft / event.totalSpots) * 100
   const isAlmostFull = spotsPercentage < 20
   const emoji = CATEGORY_EMOJI[event.category] || '🎉';
@@ -323,7 +328,7 @@ function EventListCard({ event }) {
         </div>
 
         <div className="flex items-center justify-end mt-5">
-          <Button className="gap-2 h-9">
+          <Button className="gap-2 h-9" onClick={() => onBookNow(event)}>
             <Ticket className="h-4 w-4" />
             Book Now
           </Button>
@@ -339,20 +344,27 @@ const EventsPage = () => {
   const [selectedCategory, setSelectedCategory] = useState("All Events");
   const [viewMode] = useState("grid");
   const [isLoading, setIsLoading]     = useState(true);
+  const [checkoutEvent, setCheckoutEvent] = useState(null);
+  const [categoryPage, setCategoryPage] = useState(0);
+  const [animKey, setAnimKey]   = useState(0);
+  const [animDir, setAnimDir]   = useState('right');
+  const CAT_PAGE_SIZE = 3;
+
+  const loadEvents = async () => {
+    try {
+      setIsLoading(true);
+      const data = await eventService.getAllEvents();
+      setEvents(Array.isArray(data) ? data.map(ev => enrichEvent(ev)) : []);
+    } catch {
+      setEvents([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        setIsLoading(true);
-        const data = await eventService.getAllEvents();
-        setEvents(Array.isArray(data) ? data.map(ev => enrichEvent(ev)) : []);
-      } catch {
-        setEvents([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    load();
+    loadEvents();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const categories = useMemo(() => {
@@ -403,7 +415,7 @@ const EventsPage = () => {
       <section className="sticky top-[4rem] z-40 bg-card border-b border-border" style={{ boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.07)' }}>
         <div className="mx-auto max-w-7xl px-4 py-4 lg:px-8">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            {/* LEFT: Search + Filter */}
+            {/* LEFT: Search */}
             <div className="flex items-center gap-3 shrink-0">
               <div className="relative w-full min-w-0 md:min-w-[336px] md:max-w-[480px]">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" style={{ width: '1.125rem', height: '1.125rem' }} />
@@ -424,36 +436,45 @@ const EventsPage = () => {
                   }}
                 />
               </div>
-              <button
-                className="inline-flex items-center justify-center shrink-0 rounded-xl border border-border bg-background text-foreground cursor-pointer hover:bg-secondary transition-colors"
-                style={{
-                  height: '2.75rem',
-                  width: '2.75rem',
-                  boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.06)',
-                }}
-              >
-                <Filter style={{ width: '1rem', height: '1rem' }} />
-              </button>
             </div>
 
-            {/* RIGHT: Category Filters */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-              <style>{`.flex.items-center.gap-2.overflow-x-auto::-webkit-scrollbar { display: none; }`}</style>
-              {categories.map((category) => (
-                <button
-                  key={category}
-                  className={cn(
-                    "inline-flex whitespace-nowrap items-center shrink-0 rounded-lg border cursor-pointer transition-all text-sm font-medium",
-                    selectedCategory === category
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-background text-foreground border-border hover:bg-secondary"
-                  )}
-                  style={{ height: '2.25rem', padding: '0 0.875rem' }}
-                  onClick={() => setSelectedCategory(category)}
-                >
-                  {category}
-                </button>
-              ))}
+            {/* RIGHT: Category Filters — paginated 3 at a time */}
+            <div className="ev-cat-scroll-wrapper">
+              <button
+                className={`ev-scroll-arrow${categoryPage === 0 ? ' ev-scroll-hidden' : ''}`}
+                onClick={() => { setCategoryPage(p => p - 1); setAnimDir('left'); setAnimKey(k => k + 1); }}
+                aria-label="Previous categories"
+              >
+                <ChevronLeft style={{ width: '1rem', height: '1rem' }} />
+              </button>
+
+              <div key={animKey} className={`ev-cat-filters ev-slide-${animDir}`}>
+                {categories
+                  .slice(categoryPage * CAT_PAGE_SIZE, categoryPage * CAT_PAGE_SIZE + CAT_PAGE_SIZE)
+                  .map((category) => (
+                    <button
+                      key={category}
+                      className={cn(
+                        "inline-flex whitespace-nowrap items-center shrink-0 rounded-lg border cursor-pointer transition-all text-sm font-medium",
+                        selectedCategory === category
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background text-foreground border-border hover:bg-secondary"
+                      )}
+                      style={{ height: '2.25rem', padding: '0 0.875rem' }}
+                      onClick={() => setSelectedCategory(category)}
+                    >
+                      {category}
+                    </button>
+                  ))}
+              </div>
+
+              <button
+                className={`ev-scroll-arrow${categoryPage >= Math.ceil(categories.length / CAT_PAGE_SIZE) - 1 ? ' ev-scroll-hidden' : ''}`}
+                onClick={() => { setCategoryPage(p => p + 1); setAnimDir('right'); setAnimKey(k => k + 1); }}
+                aria-label="Next categories"
+              >
+                <ChevronRight style={{ width: '1rem', height: '1rem' }} />
+              </button>
             </div>
           </div>
         </div>
@@ -473,7 +494,7 @@ const EventsPage = () => {
               </div>
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {featuredEvents.map((event) => (
-                  <FeaturedEventCard key={event.id} event={event} />
+                  <FeaturedEventCard key={event.id} event={event} onBookNow={setCheckoutEvent} />
                 ))}
               </div>
             </section>
@@ -496,13 +517,13 @@ const EventsPage = () => {
             {viewMode === "grid" ? (
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {upcomingEvents.map((event) => (
-                  <EventGridCard key={event.id} event={event} />
+                  <EventGridCard key={event.id} event={event} onBookNow={setCheckoutEvent} />
                 ))}
               </div>
             ) : (
               <div className="flex flex-col gap-4">
                 {upcomingEvents.map((event) => (
-                  <EventListCard key={event.id} event={event} />
+                  <EventListCard key={event.id} event={event} onBookNow={setCheckoutEvent} />
                 ))}
               </div>
             )}
@@ -518,6 +539,15 @@ const EventsPage = () => {
             )}
           </section>
         </>
+      )}
+
+      {checkoutEvent && (
+        <EventCheckoutModal
+          isOpen={!!checkoutEvent}
+          onClose={() => setCheckoutEvent(null)}
+          event={checkoutEvent}
+          onOrderPlaced={() => { setCheckoutEvent(null); loadEvents(); }}
+        />
       )}
 
       {/* Newsletter Section */}
