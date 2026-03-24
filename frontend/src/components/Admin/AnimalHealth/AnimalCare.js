@@ -12,6 +12,7 @@ import {
 import { toast } from 'sonner';
 import AdminModalForm from '../AdminModalForm';
 import DatePickerInput from '../DatePickerInput';
+import TimePickerInput from '../TimePickerInput';
 import AdminSelect from '../AdminSelect';
 import {
   getAllFeedingSchedules, createFeedingSchedule,
@@ -21,7 +22,7 @@ import {
   getAllKeeperAssignments, createKeeperAssignment,
   updateKeeperAssignment, deleteKeeperAssignment
 } from '../../../services/keeperAssignmentService';
-import { getAnimalsForDropdown, getStaffForDropdown } from '../../../services/animalHealthService';
+import { getAnimalsForDropdown, getStaffForDropdown, getMealTimes, updateMealTimes } from '../../../services/animalHealthService';
 
 /* ── Helpers ─────────────────────────────────────────────── */
 const SortIcon = ({ column }) => {
@@ -43,6 +44,32 @@ const fmtDate = (d) => {
 const fmtTime = (d) => {
   if (!d) return '—';
   return new Date(d).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+};
+
+const DEFAULT_MEALS = [
+  { id: 'breakfast', label: 'Breakfast', emoji: '🌅', time: '07:00' },
+  { id: 'lunch',     label: 'Lunch',     emoji: '☀️', time: '12:00' },
+  { id: 'dinner',    label: 'Dinner',    emoji: '🌙', time: '18:00' },
+];
+
+const fmtMealDisplay = (time) => {
+  if (!time) return '';
+  const [h, m] = time.split(':').map(Number);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
+};
+
+const getMealFromTime = (feedTime, mealsList) => {
+  if (!feedTime || !mealsList?.length) return '';
+  const hh = feedTime.slice(11, 16);
+  return mealsList.find(m => m.time === hh)?.id || '';
+};
+
+const getMealLabel = (feedTime, mealsList) => {
+  if (!feedTime || !mealsList?.length) return null;
+  const hh = feedTime.slice(11, 16);
+  return mealsList.find(m => m.time === hh)?.label || null;
 };
 
 /* ── Shared Paginated Table ──────────────────────────────── */
@@ -119,6 +146,13 @@ const AnimalCare = () => {
   const [animals, setAnimals] = useState([]);
   const [staff, setStaff] = useState([]);
 
+  // Meal time config
+  const [meals, setMeals] = useState(DEFAULT_MEALS);
+  const [mealSettingsModal, setMealSettingsModal] = useState(false);
+  const [mealSettingsForm, setMealSettingsForm] = useState({});
+  const [inlineMealEdit, setInlineMealEdit] = useState(null); // meal id being edited inline
+  const [inlineMealTime, setInlineMealTime] = useState('');
+
   // Feeding Schedules
   const [feedings, setFeedings] = useState([]);
   const [feedingsLoading, setFeedingsLoading] = useState(true);
@@ -138,11 +172,12 @@ const AnimalCare = () => {
   /* ── Load data ─────────────────────────────────────────── */
   const loadAll = useCallback(async () => {
     try {
-      const [animalList, staffList] = await Promise.all([
-        getAnimalsForDropdown(), getStaffForDropdown()
+      const [animalList, staffList, mealList] = await Promise.all([
+        getAnimalsForDropdown(), getStaffForDropdown(), getMealTimes()
       ]);
       setAnimals(animalList);
       setStaff(staffList);
+      if (mealList?.length) setMeals(mealList);
     } catch { /* non-fatal */ }
 
     try { setFeedingsLoading(true); setFeedings(await getAllFeedingSchedules()); }
@@ -217,6 +252,36 @@ const AnimalCare = () => {
     catch (err) { toast.error(err.message || 'Failed to delete.'); }
   };
 
+  /* ── Meal settings ─────────────────────────────────────── */
+  const openMealSettings = () => {
+    const form = {};
+    meals.forEach(m => { form[m.id] = m.time; });
+    setMealSettingsForm(form);
+    setMealSettingsModal(true);
+  };
+
+  const handleInlineMealSave = async (mealId, newTime) => {
+    if (!newTime) { setInlineMealEdit(null); return; }
+    const updated = meals.map(m => ({ id: m.id, time: m.id === mealId ? newTime : m.time }));
+    try {
+      const result = await updateMealTimes(updated);
+      if (result?.length) setMeals(result);
+      toast.success('Meal time updated.');
+    } catch (err) { toast.error(err.message || 'Failed to update meal time.'); }
+    setInlineMealEdit(null);
+  };
+
+  const handleMealSettingsSave = async (e) => {
+    e.preventDefault();
+    try {
+      const updated = meals.map(m => ({ id: m.id, time: mealSettingsForm[m.id] || m.time }));
+      const result = await updateMealTimes(updated);
+      if (result?.length) setMeals(result);
+      setMealSettingsModal(false);
+      toast.success('Meal times updated.');
+    } catch (err) { toast.error(err.message || 'Failed to update meal times.'); }
+  };
+
   /* ── Assignment CRUD ───────────────────────────────────── */
   const openAssignmentModal = (rec = null) => {
     if (rec) {
@@ -271,10 +336,11 @@ const AnimalCare = () => {
     )},
     { accessorKey: 'FeedTime', header: 'Feed Time', cell: ({ row }) => {
       const ft = row.original.FeedTime;
+      const meal = getMealLabel(ft, meals);
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <span style={{ fontWeight: 600 }}>{fmtTime(ft)}</span>
-          <span style={{ fontSize: '0.76rem', color: 'var(--adm-text-secondary)' }}>{fmtDate(ft)}</span>
+          {meal && <span style={{ fontWeight: 700, fontSize: '0.82rem' }}>{meal}</span>}
+          <span style={{ fontWeight: meal ? 400 : 600, color: meal ? 'var(--adm-text-secondary)' : 'inherit', fontSize: '0.82rem' }}>{fmtTime(ft)}</span>
         </div>
       );
     }},
@@ -294,7 +360,7 @@ const AnimalCare = () => {
       </div>
     )},
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  ], [animals, staff]);
+  ], [animals, staff, meals]);
 
   const assignmentColumns = useMemo(() => [
     { accessorKey: 'AnimalName', header: 'Animal', cell: ({ row }) => (
@@ -333,7 +399,13 @@ const AnimalCare = () => {
 
   /* ── Dropdown options ──────────────────────────────────── */
   const animalOptions = animals.map(a => ({ value: String(a.AnimalID), label: `${a.Name} (${a.Species})` }));
-  const staffOptions = staff.map(s => ({ value: String(s.StaffID), label: `${s.FullName} — ${s.Role}` }));
+  const staffOptions = staff
+    .filter(s => s.Role === 'Caretaker' || s.Role === 'Super Admin')
+    .sort((a, b) => {
+      if (a.Role !== b.Role) return a.Role === 'Caretaker' ? -1 : 1;
+      return a.FullName.localeCompare(b.FullName);
+    })
+    .map(s => ({ value: String(s.StaffID), label: `${s.FullName} — ${s.Role}` }));
 
   const activeCount = activeTab === 'feedings' ? filteredFeedings.length : filteredAssignments.length;
 
@@ -437,8 +509,55 @@ const AnimalCare = () => {
         <div className="form-row">
           <div className="form-group">
             <label>Feed Time *</label>
-            <input type="datetime-local" value={feedingForm.FeedTime}
-              onChange={e => setFeedingForm(p => ({ ...p, FeedTime: e.target.value }))} />
+            <div className="meal-selector">
+              {meals.map(meal => {
+                const selected = getMealFromTime(feedingForm.FeedTime, meals) === meal.id;
+                const isEditing = inlineMealEdit === meal.id;
+                return (
+                  <div key={meal.id} className={`meal-card-wrap${isEditing ? ' editing' : ''}`}>
+                    {isEditing ? (
+                      <div className="meal-card-edit">
+                        <span className="meal-emoji">{meal.emoji}</span>
+                        <span className="meal-label" style={{ color: 'var(--adm-accent)' }}>{meal.label}</span>
+                        <TimePickerInput value={inlineMealTime} onChange={setInlineMealTime} />
+                        <div className="meal-card-edit-actions">
+                          <button type="button" className="meal-save-btn"
+                            onClick={() => handleInlineMealSave(meal.id, inlineMealTime)}>
+                            Save
+                          </button>
+                          <button type="button" className="meal-cancel-btn" onClick={() => setInlineMealEdit(null)}>
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className={`meal-btn${selected ? ' active' : ''}`}
+                        style={{ width: '100%' }}
+                        onClick={() => {
+                          const today = new Date().toISOString().split('T')[0];
+                          setFeedingForm(p => ({ ...p, FeedTime: `${today}T${meal.time}` }));
+                        }}
+                      >
+                        <span className="meal-emoji">{meal.emoji}</span>
+                        <span className="meal-label">{meal.label}</span>
+                        <span className="meal-time">{fmtMealDisplay(meal.time)}</span>
+                        <span className="meal-edit-hint">
+                          <Edit2 size={10} /> edit time
+                        </span>
+                      </button>
+                    )}
+                    {!isEditing && (
+                      <button type="button" className="meal-edit-btn" title="Change time"
+                        onClick={e => { e.stopPropagation(); setInlineMealTime(meal.time); setInlineMealEdit(meal.id); }}>
+                        <Edit2 size={11} />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
           <div className="form-group">
             <label>Food Type *</label>
