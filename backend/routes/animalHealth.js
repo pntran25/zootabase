@@ -409,7 +409,13 @@ router.get('/animals-list', async (req, res) => {
     try {
         const pool = await connectToDb();
         const result = await pool.request().query(`
-            SELECT AnimalID, Name, Species FROM Animal WHERE DeletedAt IS NULL ORDER BY Name
+            SELECT a.AnimalID, a.Name, a.Species, a.AnimalCode, a.Age, a.Gender, a.HealthStatus,
+                   ex.ExhibitName
+            FROM Animal a
+            LEFT JOIN Habitat h ON a.HabitatID = h.HabitatID
+            LEFT JOIN Exhibit ex ON h.ExhibitID = ex.ExhibitID
+            WHERE a.DeletedAt IS NULL
+            ORDER BY a.Species, a.Name
         `);
         res.json(result.recordset);
     } catch (error) {
@@ -428,6 +434,74 @@ router.get('/staff-list', async (req, res) => {
         res.json(result.recordset);
     } catch (error) {
         console.error('Error fetching staff list:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ── GET meal time config ─────────────────────────────────────────────
+router.get('/meal-times', async (req, res) => {
+    try {
+        const pool = await connectToDb();
+        await pool.request().query(`
+            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='MealTimeConfig' AND xtype='U')
+            CREATE TABLE MealTimeConfig (
+                MealID   NVARCHAR(20) PRIMARY KEY,
+                MealLabel NVARCHAR(50) NOT NULL,
+                MealEmoji NVARCHAR(10) NOT NULL,
+                MealTime  NVARCHAR(5)  NOT NULL,
+                UpdatedAt DATETIME2,
+                UpdatedBy NVARCHAR(100)
+            )
+        `);
+        await pool.request().query(`
+            IF NOT EXISTS (SELECT 1 FROM MealTimeConfig)
+            BEGIN
+                INSERT INTO MealTimeConfig (MealID, MealLabel, MealEmoji, MealTime) VALUES
+                    ('breakfast', 'Breakfast', N'🌅', '07:00'),
+                    ('lunch',     'Lunch',     N'☀️', '12:00'),
+                    ('dinner',    'Dinner',    N'🌙', '18:00')
+            END
+        `);
+        const result = await pool.request().query(`
+            SELECT MealID AS id, MealLabel AS label, MealEmoji AS emoji, MealTime AS time
+            FROM MealTimeConfig
+            ORDER BY MealTime
+        `);
+        res.json(result.recordset);
+    } catch (error) {
+        console.error('Error fetching meal times:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ── PUT meal time config ─────────────────────────────────────────────
+router.put('/meal-times', verifyToken, async (req, res) => {
+    try {
+        const meals = req.body;
+        if (!Array.isArray(meals) || meals.length === 0) {
+            return res.status(400).json({ error: 'meals array required' });
+        }
+        const pool = await connectToDb();
+        for (const meal of meals) {
+            if (!meal.id || !meal.time) continue;
+            await pool.request()
+                .input('id',        sql.NVarChar(20),  meal.id)
+                .input('time',      sql.NVarChar(5),   meal.time)
+                .input('updatedBy', sql.NVarChar(100), req.user?.email || 'system')
+                .query(`
+                    UPDATE MealTimeConfig
+                    SET MealTime = @time, UpdatedAt = SYSUTCDATETIME(), UpdatedBy = @updatedBy
+                    WHERE MealID = @id
+                `);
+        }
+        const result = await pool.request().query(`
+            SELECT MealID AS id, MealLabel AS label, MealEmoji AS emoji, MealTime AS time
+            FROM MealTimeConfig
+            ORDER BY MealTime
+        `);
+        res.json(result.recordset);
+    } catch (error) {
+        console.error('Error updating meal times:', error);
         res.status(500).json({ error: error.message });
     }
 });
