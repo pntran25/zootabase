@@ -14,3 +14,40 @@
 .animal-card-enter {
   animation: animalCardIn 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+
+/* ── Exhibit filter pagination ── */
+.an-exhibit-scroll-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.an-scroll-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  background-color: var(--background);
+  color: var(--foreground);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.15s;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+}
+.an-scroll-arrow:hover { background-color: var(--secondary); }
+.an-scroll-hidden { opacity: 0; pointer-events: none; visibility: hidden; }
+
+.an-exhibit-filters {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ── Slide animations ── */
+@keyframes an-slide-in-right { from { transform: translateX(18px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes an-slide-in-left  { from { transform: translateX(-18px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+.an-exhibit-filters.an-slide-right { animation: an-slide-in-right 0.22s ease; }
+.an-exhibit-filters.an-slide-left  { animation: an-slide-in-left  0.22s ease; }

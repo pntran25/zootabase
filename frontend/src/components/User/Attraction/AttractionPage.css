@@ -212,11 +212,16 @@
 .ww-attr-page .ww-scroll-arrow:hover { background-color: var(--secondary); }
 .ww-attr-page .ww-scroll-hidden { opacity: 0; pointer-events: none; visibility: hidden; }
 
+@keyframes ww-attr-slide-in-right { from { transform: translateX(18px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes ww-attr-slide-in-left  { from { transform: translateX(-18px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
 .ww-attr-page .ww-region-filters {
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
+.ww-attr-page .ww-region-filters.ww-slide-right { animation: ww-attr-slide-in-right 0.22s ease; }
+.ww-attr-page .ww-region-filters.ww-slide-left  { animation: ww-attr-slide-in-left  0.22s ease; }
 
 .ww-attr-page .ww-region-btn {
   display: inline-flex;
