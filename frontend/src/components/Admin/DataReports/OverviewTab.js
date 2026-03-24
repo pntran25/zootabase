@@ -13,6 +13,7 @@ const COLORS = {
   tickets:     '#3b82f6',
   memberships: '#10b981',
   giftShop:    '#f59e0b',
+  events:      '#8b5cf6',
 };
 
 const fmtMoney    = (v) => `$${(Number(v) / 1000).toFixed(0)}k`;
@@ -77,7 +78,7 @@ const PRESETS = [
   { id: 'custom', label: 'Custom' },
 ];
 
-const trendLabel = { '30d': 'Past 30 days', '90d': 'Past 90 days', '6m': 'Past 6 months', 'ytd': 'This year' };
+const trendLabel = { '30d': 'Past 30 days', '90d': 'Past 90 days', '6m': 'Past 6 months', 'ytd': 'This year', 'custom': 'Custom range' };
 
 const OverviewTab = () => {
   const [preset,      setPreset]      = useState('30d');
@@ -107,6 +108,7 @@ const OverviewTab = () => {
     { name: 'Tickets',     value: data.kpis.ticketRevenue,     color: COLORS.tickets },
     { name: 'Memberships', value: data.kpis.membershipRevenue, color: COLORS.memberships },
     { name: 'Gift Shop',   value: data.kpis.giftShopRevenue,   color: COLORS.giftShop },
+    { name: 'Events',      value: data.kpis.eventRevenue ?? 0, color: COLORS.events },
   ].filter(d => d.value > 0) : [];
 
   return (
@@ -161,6 +163,11 @@ const OverviewTab = () => {
               <p className="ov-kpi-sub">{data.kpis.orderCount.toLocaleString()} orders</p>
             </div>
             <div className="ov-kpi-card">
+              <p className="ov-kpi-label">Event Bookings</p>
+              <p className="ov-kpi-value" style={{ color: COLORS.events }}>{fmtKpi(data.kpis.eventRevenue ?? 0)}</p>
+              <p className="ov-kpi-sub">{(data.kpis.eventCount ?? 0).toLocaleString()} bookings</p>
+            </div>
+            <div className="ov-kpi-card">
               <p className="ov-kpi-label">Total Transactions</p>
               <p className="ov-kpi-value">{data.kpis.totalTransactions.toLocaleString()}</p>
               <p className="ov-kpi-sub">across all sections</p>
@@ -194,8 +201,10 @@ const OverviewTab = () => {
             </div>
 
             <div className="ov-chart-card">
-              <p className="ov-chart-title">Monthly revenue trend</p>
-              <p className="ov-chart-sub">{trendLabel[preset] || 'Custom range'}</p>
+              <p className="ov-chart-title">Revenue trend</p>
+              <p className="ov-chart-sub">
+                {trendLabel[preset] || 'Custom range'} &mdash; {data.granularity === 'daily' ? 'daily' : 'monthly'} breakdown
+              </p>
               {data.monthlyTrend.length === 0 ? (
                 <div className="ov-no-data">No trend data for this period</div>
               ) : (
@@ -214,6 +223,10 @@ const OverviewTab = () => {
                         <stop offset="5%"  stopColor={COLORS.giftShop}    stopOpacity={0.2} />
                         <stop offset="95%" stopColor={COLORS.giftShop}    stopOpacity={0} />
                       </linearGradient>
+                      <linearGradient id="gradEvents" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%"  stopColor={COLORS.events}      stopOpacity={0.2} />
+                        <stop offset="95%" stopColor={COLORS.events}      stopOpacity={0} />
+                      </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--adm-border)" />
                     <XAxis dataKey="month" tick={{ fontSize: 11, fill: 'var(--adm-text-secondary)' }} />
@@ -222,6 +235,7 @@ const OverviewTab = () => {
                     <Area type="monotone" dataKey="tickets"     name="Tickets"     stroke={COLORS.tickets}     strokeWidth={2} fill="url(#gradTickets)"     dot={{ r: 4 }} activeDot={{ r: 6 }} />
                     <Area type="monotone" dataKey="memberships" name="Memberships" stroke={COLORS.memberships} strokeWidth={2} fill="url(#gradMemberships)" dot={{ r: 4 }} activeDot={{ r: 6 }} />
                     <Area type="monotone" dataKey="giftShop"    name="Gift Shop"   stroke={COLORS.giftShop}    strokeWidth={2} fill="url(#gradGiftShop)"    dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                    <Area type="monotone" dataKey="events"      name="Events"      stroke={COLORS.events}      strokeWidth={2} fill="url(#gradEvents)"      dot={{ r: 4 }} activeDot={{ r: 6 }} />
                   </AreaChart>
                 </ResponsiveContainer>
               )}
@@ -267,23 +281,43 @@ const OverviewTab = () => {
             </div>
           </div>
 
-          {/* ── Row 3: Gift shop categories (full width) ─────────── */}
-          <div className="ov-chart-full">
-            <p className="ov-chart-title">Gift shop orders by category</p>
-            <p className="ov-chart-sub">Order volume this period</p>
-            {data.giftShopCategories.length === 0 ? (
-              <div className="ov-no-data">No gift shop orders in this period</div>
-            ) : (
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={data.giftShopCategories} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--adm-border)" vertical={false} />
-                  <XAxis dataKey="category" tick={{ fontSize: 11, fill: 'var(--adm-text-secondary)' }} />
-                  <YAxis tick={{ fontSize: 11, fill: 'var(--adm-text-secondary)' }} />
-                  <Tooltip content={<BarTooltip />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
-                  <Bar dataKey="count" name="Orders" fill={COLORS.giftShop} radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
+          {/* ── Row 3: Gift shop categories + Event tiers ────────── */}
+          <div className="ov-charts-row">
+            <div className="ov-chart-card">
+              <p className="ov-chart-title">Gift shop orders by category</p>
+              <p className="ov-chart-sub">Order volume this period</p>
+              {data.giftShopCategories.length === 0 ? (
+                <div className="ov-no-data">No gift shop orders in this period</div>
+              ) : (
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={data.giftShopCategories} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--adm-border)" vertical={false} />
+                    <XAxis dataKey="category" tick={{ fontSize: 11, fill: 'var(--adm-text-secondary)' }} />
+                    <YAxis tick={{ fontSize: 11, fill: 'var(--adm-text-secondary)' }} />
+                    <Tooltip content={<BarTooltip />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+                    <Bar dataKey="count" name="Orders" fill={COLORS.giftShop} radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+
+            <div className="ov-chart-card">
+              <p className="ov-chart-title">Event bookings by category</p>
+              <p className="ov-chart-sub">Bookings per event category</p>
+              {!data.eventTiers || data.eventTiers.length === 0 ? (
+                <div className="ov-no-data">No event bookings in this period</div>
+              ) : (
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={data.eventTiers} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--adm-border)" vertical={false} />
+                    <XAxis dataKey="tier" tick={{ fontSize: 11, fill: 'var(--adm-text-secondary)' }} />
+                    <YAxis tick={{ fontSize: 11, fill: 'var(--adm-text-secondary)' }} />
+                    <Tooltip content={<BarTooltip />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+                    <Bar dataKey="count" name="Bookings" fill={COLORS.events} radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
           </div>
         </>
       )}

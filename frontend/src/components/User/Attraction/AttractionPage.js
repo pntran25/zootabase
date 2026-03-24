@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './AttractionPage.css';
-import { Search, MapPin, Users, Clock, Filter, ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
+import { Search, MapPin, Users, Clock, ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import { getAllAttractions } from '../../../services/attractionService';
 import { API_BASE_URL } from '../../../services/apiClient';
 
@@ -105,6 +105,8 @@ const AttractionPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeType, setActiveType] = useState('All');
   const [typePage, setTypePage] = useState(0);
+  const [animKey, setAnimKey]   = useState(0);
+  const [animDir, setAnimDir]   = useState('right');
 
   useEffect(() => {
     const fetchAttractions = async () => {
@@ -167,20 +169,17 @@ const AttractionPage = () => {
                   onChange={e => setSearchQuery(e.target.value)}
                 />
               </div>
-              <button className="ww-filter-btn" aria-label="Filter">
-                <Filter size={16} />
-              </button>
             </div>
 
             <div className="ww-region-scroll-wrapper">
               <button
                 className={`ww-scroll-arrow${typePage === 0 ? ' ww-scroll-hidden' : ''}`}
-                onClick={() => setTypePage(p => p - 1)}
+                onClick={() => { setTypePage(p => p - 1); setAnimDir('left');  setAnimKey(k => k + 1); }}
                 aria-label="Previous types"
               >
                 <ChevronLeft size={16} />
               </button>
-              <div className="ww-region-filters">
+              <div key={animKey} className={`ww-region-filters ww-slide-${animDir}`}>
                 {types
                   .slice(typePage * TYPE_PAGE_SIZE, typePage * TYPE_PAGE_SIZE + TYPE_PAGE_SIZE)
                   .map(type => (
@@ -195,7 +194,7 @@ const AttractionPage = () => {
               </div>
               <button
                 className={`ww-scroll-arrow${typePage >= Math.ceil(types.length / TYPE_PAGE_SIZE) - 1 ? ' ww-scroll-hidden' : ''}`}
-                onClick={() => setTypePage(p => p + 1)}
+                onClick={() => { setTypePage(p => p + 1); setAnimDir('right'); setAnimKey(k => k + 1); }}
                 aria-label="Next types"
               >
                 <ChevronRight size={16} />

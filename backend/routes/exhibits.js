@@ -50,7 +50,16 @@ router.get('/', async (req, res) => {
                 e.CreatedBy,
                 e.UpdatedBy,
                 a.AreaName,
-                h.HabitatType
+                h.HabitatType,
+                ISNULL(STUFF((
+                    SELECT DISTINCT ',' + an.Species
+                    FROM Animal an
+                    JOIN Habitat ah ON an.HabitatID = ah.HabitatID
+                    WHERE ah.ExhibitID = e.ExhibitID
+                      AND an.DeletedAt IS NULL
+                      AND an.Species IS NOT NULL
+                    FOR XML PATH(''), TYPE
+                ).value('.', 'NVARCHAR(MAX)'), 1, 1, ''), '') AS AnimalNames
             FROM Exhibit e
             LEFT JOIN Area a ON e.AreaID = a.AreaID
             LEFT JOIN Habitat h ON e.ExhibitID = h.ExhibitID

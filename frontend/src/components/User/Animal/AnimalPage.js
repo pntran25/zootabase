@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import animalService from '../../../services/animalService';
 import './AnimalPage.css';
 import { API_BASE_URL } from '../../../services/apiClient';
-import { Info, MapPin, Search, Filter, Grid3X3, List } from 'lucide-react';
+import { Info, MapPin, Search, Grid3X3, List, ChevronLeft, ChevronRight } from 'lucide-react';
 import placeholderImg from '../../../assets/images/Exhibits_Images/ExhibitsComingSoon.png';
 import tigerHeroImg from '../../../assets/images/tiger.jpg';
 
@@ -37,11 +37,14 @@ const AnimalPage = () => {
   const [animals, setAnimals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedCategory, setSelectedCategory] = useState("All Animals");
-  const [selectedStatus, setSelectedStatus] = useState("All");
+  const [selectedCategory, setSelectedCategory] = useState("All Exhibits");
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState("grid");
-  const [showFilters, setShowFilters] = useState(false);
+  const [exhibitPage, setExhibitPage] = useState(0);
+  const [animKey, setAnimKey]   = useState(0);
+  const [animDir, setAnimDir]   = useState('right');
+
+  const EXHIBIT_PAGE_SIZE = 3;
 
   const handleViewToggle = () => {
     setViewMode(v => v === 'grid' ? 'list' : 'grid');
@@ -64,19 +67,16 @@ const AnimalPage = () => {
   if (loading) return <div className="flex h-screen items-center justify-center text-lg text-muted-foreground">Loading animals...</div>;
   if (error) return <div className="flex h-screen items-center justify-center text-red-500">{error}</div>;
 
-  const dynamicCategories = ["All Animals", ...Array.from(new Set(animals.map(a => a.species).filter(Boolean)))];
-  const conservationStatuses = ["All", "Critically Endangered", "Endangered", "Vulnerable", "Near Threatened", "Least Concern"];
+  const dynamicCategories = ["All Exhibits", ...Array.from(new Set(animals.map(a => a.exhibit).filter(Boolean)))];
 
   const filteredAnimals = animals.filter(animal => {
-    const badge = getStatusBadge(animal.health);
-    const matchesCategory = selectedCategory === "All Animals" || animal.species === selectedCategory;
-    const matchesStatus = selectedStatus === "All" || badge.label === selectedStatus;
+    const matchesCategory = selectedCategory === "All Exhibits" || animal.exhibit === selectedCategory;
     const searchPart = searchQuery.toLowerCase();
-    const matchesSearch = 
+    const matchesSearch =
       (animal.name || "").toLowerCase().includes(searchPart) ||
       (animal.species || "").toLowerCase().includes(searchPart) ||
       (animal.exhibit || "").toLowerCase().includes(searchPart);
-    return matchesCategory && matchesStatus && matchesSearch;
+    return matchesCategory && matchesSearch;
   });
 
   return (
@@ -106,7 +106,7 @@ const AnimalPage = () => {
       <section className="sticky top-[4rem] z-40 bg-card border-b border-border" style={{ boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.07)' }}>
         <div className="mx-auto max-w-7xl px-4 py-4 lg:px-8">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            {/* LEFT: Search + Filter + View Toggle */}
+            {/* LEFT: Search + View Toggle */}
             <div className="flex items-center gap-3 shrink-0">
               <div className="relative w-full min-w-0 md:min-w-[336px] md:max-w-[480px]">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" style={{ width: '1.125rem', height: '1.125rem' }} />
@@ -134,17 +134,6 @@ const AnimalPage = () => {
                   width: '2.75rem',
                   boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.06)',
                 }}
-                onClick={() => setShowFilters(!showFilters)}
-              >
-                <Filter style={{ width: '1rem', height: '1rem' }} />
-              </button>
-              <button
-                className="inline-flex items-center justify-center shrink-0 rounded-xl border border-border bg-background text-foreground cursor-pointer hover:bg-secondary transition-colors"
-                style={{
-                  height: '2.75rem',
-                  width: '2.75rem',
-                  boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.06)',
-                }}
                 onClick={handleViewToggle}
                 title={viewMode === 'grid' ? 'Switch to list view' : 'Switch to grid view'}
               >
@@ -154,47 +143,45 @@ const AnimalPage = () => {
               </button>
             </div>
 
-            {/* RIGHT: Category Filters */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-              <style>{`.flex.items-center.gap-2.overflow-x-auto::-webkit-scrollbar { display: none; }`}</style>
-              {dynamicCategories.map((category) => (
-                <button
-                  key={category}
-                  className={cn(
-                    "inline-flex whitespace-nowrap items-center shrink-0 rounded-lg border cursor-pointer transition-all text-sm font-medium",
-                    selectedCategory === category
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-background text-foreground border-border hover:bg-secondary"
-                  )}
-                  style={{ height: '2.25rem', padding: '0 0.875rem' }}
-                  onClick={() => setSelectedCategory(category)}
-                >
-                  {category}
-                </button>
-              ))}
+            {/* RIGHT: Exhibit Filters — paginated 3 at a time */}
+            <div className="an-exhibit-scroll-wrapper">
+              <button
+                className={`an-scroll-arrow${exhibitPage === 0 ? ' an-scroll-hidden' : ''}`}
+                onClick={() => { setExhibitPage(p => p - 1); setAnimDir('left'); setAnimKey(k => k + 1); }}
+                aria-label="Previous exhibits"
+              >
+                <ChevronLeft style={{ width: '1rem', height: '1rem' }} />
+              </button>
+
+              <div key={animKey} className={`an-exhibit-filters an-slide-${animDir}`}>
+                {dynamicCategories
+                  .slice(exhibitPage * EXHIBIT_PAGE_SIZE, exhibitPage * EXHIBIT_PAGE_SIZE + EXHIBIT_PAGE_SIZE)
+                  .map((category) => (
+                    <button
+                      key={category}
+                      className={cn(
+                        "inline-flex whitespace-nowrap items-center shrink-0 rounded-lg border cursor-pointer transition-all text-sm font-medium",
+                        selectedCategory === category
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background text-foreground border-border hover:bg-secondary"
+                      )}
+                      style={{ height: '2.25rem', padding: '0 0.875rem' }}
+                      onClick={() => setSelectedCategory(category)}
+                    >
+                      {category}
+                    </button>
+                  ))}
+              </div>
+
+              <button
+                className={`an-scroll-arrow${exhibitPage >= Math.ceil(dynamicCategories.length / EXHIBIT_PAGE_SIZE) - 1 ? ' an-scroll-hidden' : ''}`}
+                onClick={() => { setExhibitPage(p => p + 1); setAnimDir('right'); setAnimKey(k => k + 1); }}
+                aria-label="Next exhibits"
+              >
+                <ChevronRight style={{ width: '1rem', height: '1rem' }} />
+              </button>
             </div>
           </div>
-
-          {showFilters && (
-            <div className="flex items-center gap-2 overflow-x-auto pt-3 mt-3 border-t border-border" style={{ scrollbarWidth: 'none' }}>
-              <span className="text-sm font-medium text-muted-foreground shrink-0">Health Status:</span>
-              {conservationStatuses.map((status) => (
-                <button
-                  key={status}
-                  className={cn(
-                    "inline-flex whitespace-nowrap items-center shrink-0 rounded-lg border cursor-pointer transition-all text-sm font-medium",
-                    selectedStatus === status
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-background text-foreground border-border hover:bg-secondary"
-                  )}
-                  style={{ height: '2.25rem', padding: '0 0.875rem' }}
-                  onClick={() => setSelectedStatus(status)}
-                >
-                  {status}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
       </section>
 

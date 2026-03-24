@@ -5,7 +5,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { auth } from '../../../services/firebase';
 import giftShopHeroImg from '../../../assets/images/gift-shop-hero.jpg';
 import './ProductPage.css';
-import { Search, ShoppingCart, Filter, Plus, Minus, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, ShoppingCart, Plus, Minus, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import CheckoutModal from './CheckoutModal';
 
@@ -69,6 +69,8 @@ const ProductPage = () => {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [categoryPage, setCategoryPage] = useState(0);
+  const [catAnimKey, setCatAnimKey] = useState(0);
+  const [catAnimDir, setCatAnimDir] = useState('right');
   const [membershipDiscount, setMembershipDiscount] = useState(0);
   const CAT_PAGE_SIZE = 3;
 
@@ -166,8 +168,7 @@ const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0
         />
         <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.4) 50%, rgba(250,250,250,1) 100%)' }} />
         <div className="relative z-10 text-center px-4 max-w-4xl mx-auto mt-8">
-          <Badge className="mb-4 bg-accent text-accent-foreground border-none">Shop Online</Badge>
-          <h1 className="text-4xl md:text-6xl font-bold text-white mb-4 text-balance m-0 tracking-tight">
+<h1 className="text-4xl md:text-6xl font-bold text-white mb-4 text-balance m-0 tracking-tight">
             Gift Shop
           </h1>
           <p className="text-lg md:text-xl text-white/80 max-w-2xl mx-auto text-pretty">
@@ -180,7 +181,7 @@ const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0
       <section className="sticky top-[4rem] z-40 bg-card border-b border-border" style={{ boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.07)' }}>
         <div className="max-w-7xl mx-auto px-4 py-4 lg:px-8">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            {/* LEFT: Search + Filter */}
+            {/* LEFT: Search */}
             <div className="flex items-center gap-3 shrink-0">
               <div className="relative w-full min-w-0 md:min-w-[336px] md:max-w-[480px]">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" style={{ width: '1.125rem', height: '1.125rem' }} />
@@ -201,23 +202,13 @@ const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0
                   }}
                 />
               </div>
-              <button
-                className="inline-flex items-center justify-center shrink-0 rounded-xl border border-border bg-background text-foreground cursor-pointer hover:bg-secondary transition-colors"
-                style={{
-                  height: '2.75rem',
-                  width: '2.75rem',
-                  boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.06)',
-                }}
-              >
-                <Filter style={{ width: '1rem', height: '1rem' }} />
-              </button>
             </div>
 
             {/* RIGHT: Category Carousel + Cart (always visible) */}
             <div className="flex items-center gap-3 shrink-0">
               {/* Prev arrow */}
               <button
-                onClick={() => setCategoryPage(p => p - 1)}
+                onClick={() => { setCategoryPage(p => p - 1); setCatAnimDir('left'); setCatAnimKey(k => k + 1); }}
                 disabled={categoryPage === 0}
                 className="inline-flex items-center justify-center rounded-lg border border-border bg-background text-foreground cursor-pointer hover:bg-secondary transition-colors disabled:opacity-30 disabled:cursor-default shrink-0"
                 style={{ height: '2.25rem', width: '2.25rem' }}
@@ -226,7 +217,7 @@ const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0
               </button>
 
               {/* 3 visible categories */}
-              <div className="flex items-center gap-2">
+              <div key={catAnimKey} className={`ps-cat-filters ps-slide-${catAnimDir}`}>
                 {categories
                   .slice(categoryPage * CAT_PAGE_SIZE, categoryPage * CAT_PAGE_SIZE + CAT_PAGE_SIZE)
                   .map((category) => (
@@ -248,7 +239,7 @@ const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0
 
               {/* Next arrow */}
               <button
-                onClick={() => setCategoryPage(p => p + 1)}
+                onClick={() => { setCategoryPage(p => p + 1); setCatAnimDir('right'); setCatAnimKey(k => k + 1); }}
                 disabled={categoryPage >= Math.ceil(categories.length / CAT_PAGE_SIZE) - 1}
                 className="inline-flex items-center justify-center rounded-lg border border-border bg-background text-foreground cursor-pointer hover:bg-secondary transition-colors disabled:opacity-30 disabled:cursor-default shrink-0"
                 style={{ height: '2.25rem', width: '2.25rem' }}

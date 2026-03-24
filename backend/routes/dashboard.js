@@ -1,72 +1,164 @@
 const express = require('express');
 const router = express.Router();
-const sql = require('mssql');
 const { connectToDb } = require('../services/admin');
+
+// Returns Mon of the week containing `date` as a 'YYYY-MM-DD' string
+function getMondayStr(date) {
+    const d = new Date(date);
+    const day = d.getDay(); // 0=Sun … 6=Sat
+    const diff = day === 0 ? -6 : 1 - day;
+    d.setDate(d.getDate() + diff);
+    return d.toISOString().split('T')[0];
+}
+
+function addDays(dateStr, n) {
+    const d = new Date(dateStr);
+    d.setDate(d.getDate() + n);
+    return d.toISOString().split('T')[0];
+}
 
 router.get('/', async (req, res) => {
     try {
         const pool = await connectToDb();
 
-        // Animal stats: total, added this month, added last month
-        const animalRes = await pool.request().query(`
-            SELECT
-                COUNT(*) AS total,
-                SUM(CASE WHEN MONTH(DateArrived) = MONTH(GETUTCDATE())
-                         AND YEAR(DateArrived)  = YEAR(GETUTCDATE())  THEN 1 ELSE 0 END) AS thisMonth,
-                SUM(CASE WHEN MONTH(DateArrived) = MONTH(DATEADD(MONTH,-1,GETUTCDATE()))
-                         AND YEAR(DateArrived)  = YEAR(DATEADD(MONTH,-1,GETUTCDATE())) THEN 1 ELSE 0 END) AS lastMonth
-            FROM Animal WHERE DeletedAt IS NULL
-        `);
-        const { total, thisMonth, lastMonth } = animalRes.recordset[0];
+        const today        = new Date().toISOString().split('T')[0];
+        const lastWeekDay  = addDays(today, -7);
+        const monday       = getMondayStr(today);
+        const sunday       = addDays(monday, 6);
+        const prevMonday   = addDays(monday, -7);
+        const prevSunday   = addDays(monday, -1);
 
-        // Open maintenance requests
-        const maintRes = await pool.request().query(`
-            SELECT COUNT(*) AS cnt FROM MaintenanceRequest
-            WHERE Status NOT IN ('Resolved','Completed') AND DeletedAt IS NULL
-        `);
-        const openMaintenance = maintRes.recordset[0].cnt;
+        const mk = () => pool.request()
+            .input('today',       today)
+            .input('lastWeekDay', lastWeekDay)
+            .input('monday',      monday)
+            .input('sunday',      sunday)
+            .input('prevMonday',  prevMonday)
+            .input('prevSunday',  prevSunday);
 
-        // Recent activity — last 5 animal changes
-        const animalActivity = await pool.request().query(`
-            SELECT TOP 5
-                'animal' AS type,
-                CASE WHEN a.UpdatedBy IS NOT NULL THEN 'Animal record updated'
-                     ELSE 'New animal added' END AS action,
-                COALESCE(NULLIF(a.Name,''), a.Species, 'Unknown')
-                    + COALESCE(' — ' + e.ExhibitName, '') AS detail,
-                COALESCE(a.UpdatedAt, CAST(a.DateArrived AS DATETIME2)) AS ts
-            FROM Animal a
-            LEFT JOIN Habitat  h ON a.HabitatID   = h.HabitatID
-            LEFT JOIN Exhibit   e ON h.ExhibitID   = e.ExhibitID
-            WHERE a.DeletedAt IS NULL
-            ORDER BY COALESCE(a.UpdatedAt, CAST(a.DateArrived AS DATETIME2)) DESC
-        `);
+        const [
+            animalRes, maintRes,
+            animalActivity, maintActivity,
+            ticketToday, ticketLastWeek,
+            memberToday, memberLastWeek,
+            currWeekRes, prevWeekRes,
+        ] = await Promise.all([
+            // ── Animals ────────────────────────────────────────────────
+            pool.request().query(`
+                SELECT
+                    COUNT(*) AS total,
+                    SUM(CASE WHEN MONTH(DateArrived)=MONTH(GETUTCDATE()) AND YEAR(DateArrived)=YEAR(GETUTCDATE())  THEN 1 ELSE 0 END) AS thisMonth,
+                    SUM(CASE WHEN MONTH(DateArrived)=MONTH(DATEADD(MONTH,-1,GETUTCDATE())) AND YEAR(DateArrived)=YEAR(DATEADD(MONTH,-1,GETUTCDATE())) THEN 1 ELSE 0 END) AS lastMonth
+                FROM Animal WHERE DeletedAt IS NULL
+            `),
+            // ── Open maintenance ───────────────────────────────────────
+            pool.request().query(`
+                SELECT COUNT(*) AS cnt FROM MaintenanceRequest
+                WHERE Status NOT IN ('Resolved','Completed') AND DeletedAt IS NULL
+            `),
+            // ── Recent activity: animals ───────────────────────────────
+            pool.request().query(`
+                SELECT TOP 5
+                    'animal' AS type,
+                    CASE WHEN a.UpdatedBy IS NOT NULL THEN 'Animal record updated' ELSE 'New animal added' END AS action,
+                    COALESCE(NULLIF(a.Name,''), a.Species, 'Unknown') + COALESCE(' — ' + e.ExhibitName, '') AS detail,
+                    COALESCE(a.UpdatedAt, a.CreatedAt, CAST(a.DateArrived AS DATETIME2)) AS ts
+                FROM Animal a
+                LEFT JOIN Habitat h ON a.HabitatID = h.HabitatID
+                LEFT JOIN Exhibit  e ON h.ExhibitID = e.ExhibitID
+                WHERE a.DeletedAt IS NULL
+                ORDER BY COALESCE(a.UpdatedAt, a.CreatedAt, CAST(a.DateArrived AS DATETIME2)) DESC
+            `),
+            // ── Recent activity: maintenance ───────────────────────────
+            pool.request().query(`
+                SELECT TOP 5
+                    'maintenance' AS type,
+                    CASE WHEN m.Status IN ('Resolved','Completed') THEN 'Maintenance resolved' ELSE 'Maintenance logged' END AS action,
+                    LEFT(m.Description, 60) + COALESCE(' — ' + ex.ExhibitName, '') AS detail,
+                    COALESCE(m.UpdatedAt, m.CreatedAt, CAST(m.RequestDate AS DATETIME2)) AS ts
+                FROM MaintenanceRequest m
+                LEFT JOIN Exhibit ex ON m.ExhibitID = ex.ExhibitID
+                WHERE m.DeletedAt IS NULL
+                ORDER BY COALESCE(m.UpdatedAt, m.CreatedAt, CAST(m.RequestDate AS DATETIME2)) DESC
+            `),
+            // ── Tickets sold today (individual tickets) ────────────────
+            mk().query(`
+                SELECT ISNULL(SUM(AdultQty+ChildQty+SeniorQty), 0) AS cnt
+                FROM TicketOrders
+                WHERE CAST(PlacedAt AS DATE) = @today
+            `),
+            // ── Tickets same day last week ─────────────────────────────
+            mk().query(`
+                SELECT ISNULL(SUM(AdultQty+ChildQty+SeniorQty), 0) AS cnt
+                FROM TicketOrders
+                WHERE CAST(PlacedAt AS DATE) = @lastWeekDay
+            `),
+            // ── Memberships sold today ─────────────────────────────────
+            mk().query(`
+                SELECT COUNT(*) AS cnt
+                FROM MembershipSubscriptions
+                WHERE CAST(PlacedAt AS DATE) = @today
+            `),
+            // ── Memberships same day last week ─────────────────────────
+            mk().query(`
+                SELECT COUNT(*) AS cnt
+                FROM MembershipSubscriptions
+                WHERE CAST(PlacedAt AS DATE) = @lastWeekDay
+            `),
+            // ── Visitor attendance: current week by VisitDate ──────────
+            mk().query(`
+                SELECT CAST(VisitDate AS DATE) AS visitDay,
+                       ISNULL(SUM(AdultQty+ChildQty+SeniorQty), 0) AS cnt
+                FROM TicketOrders
+                WHERE CAST(VisitDate AS DATE) >= @monday AND CAST(VisitDate AS DATE) <= @sunday
+                GROUP BY CAST(VisitDate AS DATE)
+            `),
+            // ── Visitor attendance: previous week by VisitDate ─────────
+            mk().query(`
+                SELECT CAST(VisitDate AS DATE) AS visitDay,
+                       ISNULL(SUM(AdultQty+ChildQty+SeniorQty), 0) AS cnt
+                FROM TicketOrders
+                WHERE CAST(VisitDate AS DATE) >= @prevMonday AND CAST(VisitDate AS DATE) <= @prevSunday
+                GROUP BY CAST(VisitDate AS DATE)
+            `),
+        ]);
 
-        // Recent activity — last 5 maintenance changes
-        const maintActivity = await pool.request().query(`
-            SELECT TOP 5
-                'maintenance' AS type,
-                CASE WHEN m.Status IN ('Resolved','Completed')
-                     THEN 'Maintenance resolved' ELSE 'Maintenance logged' END AS action,
-                LEFT(m.Description, 60) + COALESCE(' — ' + ex.ExhibitName, '') AS detail,
-                CAST(m.RequestDate AS DATETIME2) AS ts
-            FROM MaintenanceRequest m
-            LEFT JOIN Exhibit ex ON m.ExhibitID = ex.ExhibitID
-            WHERE m.DeletedAt IS NULL
-            ORDER BY m.RequestDate DESC
-        `);
+        // ── Build weekly visitor chart (Mon–Sun) ─────────────────────
+        const currMap = new Map(currWeekRes.recordset.map(r => [r.visitDay.toISOString().split('T')[0], Number(r.cnt)]));
+        const prevMap = new Map(prevWeekRes.recordset.map(r => [r.visitDay.toISOString().split('T')[0], Number(r.cnt)]));
+        const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        const weeklyVisitors = DAY_LABELS.map((day, i) => ({
+            day,
+            visitors: currMap.get(addDays(monday, i)) || 0,
+            prev:     prevMap.get(addDays(prevMonday, i)) || 0,
+        }));
 
+        // ── Recent activity merge + sort ─────────────────────────────
         const recentActivity = [
             ...animalActivity.recordset,
             ...maintActivity.recordset,
         ].sort((a, b) => new Date(b.ts) - new Date(a.ts)).slice(0, 8);
 
+        // ── Animal stats ─────────────────────────────────────────────
+        const { total, thisMonth, lastMonth } = animalRes.recordset[0];
+
+        // ── Ticket / membership deltas ───────────────────────────────
+        const ticketsSoldToday       = Number(ticketToday.recordset[0].cnt);
+        const ticketsSameDayLastWeek = Number(ticketLastWeek.recordset[0].cnt);
+        const membersSoldToday       = Number(memberToday.recordset[0].cnt);
+        const membersSameDayLastWeek = Number(memberLastWeek.recordset[0].cnt);
+
         res.json({
-            totalAnimals: total,
+            totalAnimals:     total,
             animalsThisMonth: thisMonth || 0,
             animalsLastMonth: lastMonth || 0,
-            openMaintenance,
+            openMaintenance:  maintRes.recordset[0].cnt,
             recentActivity,
+            ticketsSoldToday,
+            ticketsSameDayLastWeek,
+            membersSoldToday,
+            membersSameDayLastWeek,
+            weeklyVisitors,
         });
     } catch (error) {
         console.error('Dashboard stats error:', error);

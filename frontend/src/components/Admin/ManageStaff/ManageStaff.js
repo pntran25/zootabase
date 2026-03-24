@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Edit2, Plus, Trash2, Users } from 'lucide-react';
+import { Edit2, Plus, Trash2, Users, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import AdminModalForm from '../AdminModalForm';
 import AdminSelect from '../AdminSelect';
 import BirthDatePickerInput from '../BirthDatePickerInput';
@@ -10,12 +10,12 @@ import '../AdminTable.css';
 const ROLES = ['Super Admin', 'Caretaker', 'Event Coordinator', 'Ticket Staff', 'Shop Manager', 'Maintenance'];
 
 const roleColors = {
-  'Super Admin':       { bg: 'rgba(16,185,129,0.15)', color: '#10b981' },
-  'Caretaker':         { bg: 'rgba(59,130,246,0.15)', color: '#3b82f6' },
+  'Super Admin': { bg: 'rgba(16,185,129,0.15)', color: '#10b981' },
+  'Caretaker': { bg: 'rgba(59,130,246,0.15)', color: '#3b82f6' },
   'Event Coordinator': { bg: 'rgba(168,85,247,0.15)', color: '#a855f7' },
-  'Ticket Staff':      { bg: 'rgba(234,179,8,0.15)',  color: '#ca8a04' },
-  'Shop Manager':      { bg: 'rgba(249,115,22,0.15)', color: '#ea580c' },
-  'Maintenance':       { bg: 'rgba(239,68,68,0.15)',  color: '#ef4444' },
+  'Ticket Staff': { bg: 'rgba(234,179,8,0.15)', color: '#ca8a04' },
+  'Shop Manager': { bg: 'rgba(249,115,22,0.15)', color: '#ea580c' },
+  'Maintenance': { bg: 'rgba(239,68,68,0.15)', color: '#ef4444' },
 };
 
 const ManageStaff = () => {
@@ -23,6 +23,8 @@ const ManageStaff = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingStaff, setEditingStaff] = useState(null);
+  const [sortCol, setSortCol] = useState(null);
+  const [sortDir, setSortDir] = useState('asc');
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -63,14 +65,14 @@ const ManageStaff = () => {
     if (staff) {
       setEditingStaff(staff);
       setFormData({
-        firstName:     staff.FirstName || '',
-        lastName:      staff.LastName || '',
-        email:         staff.Email || '',
-        dateOfBirth:   staff.DateOfBirth ? staff.DateOfBirth.substring(0, 10) : '',
-        ssn:           staff.SSN || '',
-        role:          staff.Role || 'Caretaker',
+        firstName: staff.FirstName || '',
+        lastName: staff.LastName || '',
+        email: staff.Email || '',
+        dateOfBirth: staff.DateOfBirth ? staff.DateOfBirth.substring(0, 10) : '',
+        ssn: staff.SSN || '',
+        role: staff.Role || 'Caretaker',
         contactNumber: staff.ContactNumber || '',
-        salary:        staff.Salary || ''
+        salary: staff.Salary || ''
       });
     } else {
       setEditingStaff(null);
@@ -87,7 +89,7 @@ const ManageStaff = () => {
     if (!formData.ssn) { toast.error('SSN is required.'); return; }
     try {
       const token = await getToken();
-      const url    = editingStaff ? `${API_BASE_URL}/api/staff/${editingStaff.StaffID}` : `${API_BASE_URL}/api/staff`;
+      const url = editingStaff ? `${API_BASE_URL}/api/staff/${editingStaff.StaffID}` : `${API_BASE_URL}/api/staff`;
       const method = editingStaff ? 'PUT' : 'POST';
       const res = await fetch(url, {
         method,
@@ -98,6 +100,9 @@ const ManageStaff = () => {
         toast.success(`Staff member ${editingStaff ? 'updated' : 'added'} successfully`);
         setShowModal(false);
         fetchStaff();
+      } else if (res.status === 409) {
+        const data = await res.json();
+        toast.error(data.error || 'SSN is already used by another employee.');
       } else {
         toast.error('Failed to save staff member');
       }
@@ -176,15 +181,24 @@ const ManageStaff = () => {
             <thead>
               <tr>
                 <th>Staff ID</th>
-                <th>Name</th>
-                <th>Role</th>
+                <th data-sorted={sortCol === 'name' ? sortDir : undefined} onClick={() => { setSortDir(sortCol === 'name' && sortDir === 'asc' ? 'desc' : 'asc'); setSortCol('name'); }}>
+                  Name {sortCol === 'name' ? (sortDir === 'asc' ? <ChevronUp size={13} className="sort-icon" /> : <ChevronDown size={13} className="sort-icon" />) : <ChevronsUpDown size={13} className="sort-icon" />}
+                </th>
+                <th data-sorted={sortCol === 'role' ? sortDir : undefined} onClick={() => { setSortDir(sortCol === 'role' && sortDir === 'asc' ? 'desc' : 'asc'); setSortCol('role'); }}>
+                  Role {sortCol === 'role' ? (sortDir === 'asc' ? <ChevronUp size={13} className="sort-icon" /> : <ChevronDown size={13} className="sort-icon" />) : <ChevronsUpDown size={13} className="sort-icon" />}
+                </th>
                 <th>Email</th>
                 <th>Contact</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {staffList.map(staff => {
+              {[...staffList].sort((a, b) => {
+                const dir = sortDir === 'asc' ? 1 : -1;
+                if (sortCol === 'name') return dir * (`${a.FirstName} ${a.LastName}`).localeCompare(`${b.FirstName} ${b.LastName}`);
+                if (sortCol === 'role') return dir * (a.Role || '').localeCompare(b.Role || '');
+                return 0;
+              }).map(staff => {
                 const colors = roleColors[staff.Role] || { bg: 'var(--adm-accent-dim)', color: 'var(--adm-accent)' };
                 return (
                   <tr key={staff.StaffID}>
