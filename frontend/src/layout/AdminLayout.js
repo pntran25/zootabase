@@ -119,10 +119,14 @@ const AdminLayout = () => {
         {/* Nav */}
         <nav className="admin-nav mt-4" style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
           {renderLink('/admin', <LayoutDashboard size={18} className="nav-icon" />, 'Dashboard', 'dashboard')}
+
+          <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Zoo</p>
           {renderLink('/admin/animals', <PawPrint size={18} className="nav-icon" />, 'Animals', 'animals')}
           {renderLink('/admin/exhibits', <Map size={18} className="nav-icon" />, 'Exhibits', 'exhibits')}
           {renderLink('/admin/attractions', <TicketCheck size={18} className="nav-icon" />, 'Attractions', 'attractions')}
           {renderLink('/admin/events', <CalendarDays size={18} className="nav-icon" />, 'Events', 'events')}
+
+          <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Guest Services</p>
           {renderLink('/admin/tickets', <Ticket size={18} className="nav-icon" />, 'Tickets', 'tickets')}
           {renderLink('/admin/shop', <ShoppingBag size={18} className="nav-icon" />, 'Shop', 'shop')}
           
@@ -132,16 +136,14 @@ const AdminLayout = () => {
           {renderLink('/admin/animal-care', <UtensilsCrossed size={18} className="nav-icon" />, 'Feeding & Keepers', 'animal-care')}
           {renderLink('/admin/memberships', <CreditCard size={18} className="nav-icon" />, 'Manage Plans', 'memberships')}
 
-          <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Data Reports</p>
-
+          <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Reports & Analytics</p>
+          {renderLink('/admin/analytics', <LineChart size={18} className="nav-icon" />, 'Analytics', 'analytics')}
           {renderLink('/admin/animal-report', <ClipboardList size={18} className="nav-icon" />, 'Animal Reports', 'animal-report')}
           {renderLink('/admin/reports', <FileText size={18} className="nav-icon" />, 'Transaction Reports', 'reports')}
 
-          <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">System</p>
-
+          <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Administration</p>
+          {renderLink('/admin/staff', <Users size={18} className="nav-icon" />, 'Staff Management', 'staff')}
           {renderLink('/admin/maintenance', <Wrench size={18} className="nav-icon" />, 'Maintenance', 'maintenance')}
-          {role === 'Super Admin' && renderLink('/admin/staff', <Users size={18} className="nav-icon" />, 'Staff Management', 'staff')}
-          {role === 'Super Admin' && renderLink('/admin/analytics', <LineChart size={18} className="nav-icon" />, 'Analytics', 'analytics')}
         </nav>
 
         {/* Footer */}

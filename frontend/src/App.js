@@ -69,7 +69,7 @@ function App() {
              <Route path="events" element={<ProtectedRoute allowedRoles={['Super Admin', 'Event Coordinator']}><ManageEvents /></ProtectedRoute>} />
              <Route path="tickets" element={<ProtectedRoute allowedRoles={['Super Admin', 'Ticket Staff']}><ManageTickets /></ProtectedRoute>} />
              <Route path="shop" element={<ProtectedRoute allowedRoles={['Super Admin', 'Shop Manager']}><ManageShop /></ProtectedRoute>} />
-             <Route path="maintenance" element={<ProtectedRoute allowedRoles={['Super Admin', 'Maintenance']}><ManageMaintenance /></ProtectedRoute>} />
+             <Route path="maintenance" element={<ProtectedRoute allowedRoles={allStaffRoles}><ManageMaintenance /></ProtectedRoute>} />
              <Route path="feedback" element={<ProtectedRoute allowedRoles={['Super Admin']}><GuestFeedback /></ProtectedRoute>} />
              <Route path="staff" element={<ProtectedRoute allowedRoles={['Super Admin']}><ManageStaff /></ProtectedRoute>} />
              <Route path="analytics" element={<ProtectedRoute allowedRoles={['Super Admin']}><LoginAnalytics /></ProtectedRoute>} />
