@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { FileText, Search, X, ShoppingBag, Ticket, CreditCard, ChevronUp, ChevronDown, ChevronsUpDown, LayoutDashboard } from 'lucide-react';
+import { FileText, Search, X, ShoppingBag, Ticket, CreditCard, ChevronUp, ChevronDown, ChevronsUpDown, LayoutDashboard, CalendarCheck } from 'lucide-react';
 import OverviewTab from './OverviewTab';
 import { useReactTable, getCoreRowModel, getSortedRowModel, flexRender } from '@tanstack/react-table';
 import { toast } from 'sonner';
@@ -293,6 +293,81 @@ const MembershipDetailModal = ({ subId, onClose }) => {
   );
 };
 
+// ── Event Booking Detail Modal ─────────────────────────────────────
+const EventDetailModal = ({ bookingId, onClose }) => {
+  const [booking, setBooking] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    apiGet(`/api/event-bookings/${bookingId}`)
+      .then(data => { setBooking(data); setLoading(false); })
+      .catch(err => { toast.error(err.message || 'Failed to load booking details.'); onClose(); });
+  }, [bookingId, onClose]);
+
+  if (loading) return (
+    <div className="dr-modal-overlay" onClick={onClose}>
+      <div className="dr-modal"><div className="dr-modal-loading">Loading...</div></div>
+    </div>
+  );
+
+  const { date, time } = fmtPlaced(booking.PlacedAt);
+  return (
+    <div className="dr-modal-overlay" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="dr-modal">
+        <div className="dr-modal-header">
+          <div className="dr-modal-title-group">
+            <CalendarCheck size={18} />
+            <div>
+              <h2 className="dr-modal-title">Event Booking #{booking.EventBookingID}</h2>
+              <p className="dr-modal-subtitle">{date} at {time}</p>
+            </div>
+          </div>
+          <button className="dr-modal-close" onClick={onClose}><X size={18} /></button>
+        </div>
+        <div className="dr-modal-body">
+          <div className="dr-detail-section">
+            <p className="dr-detail-section-title">Event</p>
+            <div className="dr-detail-grid">
+              <div><span className="dr-detail-label">Name</span><span className="dr-detail-value">{booking.EventName}</span></div>
+              {booking.Category && <div><span className="dr-detail-label">Category</span><span className="dr-detail-value">{booking.Category}</span></div>}
+              {booking.Location && <div><span className="dr-detail-label">Location</span><span className="dr-detail-value">{booking.Location}</span></div>}
+              <div><span className="dr-detail-label">Visit Date</span><span className="dr-detail-value">{fmtVisit(booking.BookingDate)}</span></div>
+              <div><span className="dr-detail-label">Guests</span><span className="dr-detail-value">{booking.Quantity}</span></div>
+            </div>
+          </div>
+          <div className="dr-detail-section">
+            <p className="dr-detail-section-title">Customer</p>
+            <div className="dr-detail-grid">
+              <div><span className="dr-detail-label">Name</span><span className="dr-detail-value">{booking.FirstName} {booking.LastName}</span></div>
+              <div><span className="dr-detail-label">Email</span><span className="dr-detail-value">{booking.Email}</span></div>
+              {booking.Phone && <div><span className="dr-detail-label">Phone</span><span className="dr-detail-value">{booking.Phone}</span></div>}
+              {booking.CardLastFour && <div><span className="dr-detail-label">Card</span><span className="dr-detail-value dr-card">•••• {booking.CardLastFour}</span></div>}
+            </div>
+          </div>
+          <div className="dr-detail-section">
+            <p className="dr-detail-section-title">Contact Address</p>
+            <p className="dr-detail-value">{booking.AddressLine1}{booking.AddressLine2 ? `, ${booking.AddressLine2}` : ''}</p>
+            <p className="dr-detail-value">{booking.City}, {booking.StateProvince} {booking.ZipCode}</p>
+          </div>
+          {!booking.BillingSameAsContact && booking.BillingAddress1 && (
+            <div className="dr-detail-section">
+              <p className="dr-detail-section-title">Billing Address</p>
+              {booking.BillingFullName && <p className="dr-detail-value">{booking.BillingFullName}</p>}
+              <p className="dr-detail-value">{booking.BillingAddress1}{booking.BillingAddress2 ? `, ${booking.BillingAddress2}` : ''}</p>
+              <p className="dr-detail-value">{booking.BillingCity}, {booking.BillingState} {booking.BillingZip}</p>
+            </div>
+          )}
+          <div className="dr-totals">
+            <div className="dr-totals-row"><span>Unit Price</span><span>${Number(booking.UnitPrice).toFixed(2)}</span></div>
+            <div className="dr-totals-row"><span>Guests</span><span>× {booking.Quantity}</span></div>
+            <div className="dr-totals-row dr-totals-grand"><span>Total Charged</span><span>${Number(booking.Total).toFixed(2)}</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ── Shared table renderer ──────────────────────────────────────────
 const ReportTable = ({ data, columns, sorting, setSorting, loading, emptyText, visibleCount, onLoadMore, serverTotal }) => {
   const isServer = serverTotal !== undefined;
@@ -422,6 +497,14 @@ const DataReports = () => {
   const [selectedSubId, setSelectedSubId] = useState(null);
   const [membershipsSorting, setMembershipsSorting] = useState([{ id: 'PlacedAt', desc: true }]);
 
+  // Event bookings — server-side paginated
+  const [eventRows, setEventRows] = useState([]);
+  const [eventTotal, setEventTotal] = useState(0);
+  const [eventOffset, setEventOffset] = useState(0);
+  const [eventsLoading, setEventsLoading] = useState(false);
+  const [selectedEventBookingId, setSelectedEventBookingId] = useState(null);
+  const [eventsSorting, setEventsSorting] = useState([{ id: 'PlacedAt', desc: true }]);
+
   // Generic server-side fetch helper
   const fetchPage = (endpoint, offset, append, setRows, setTotal, setOffset, setLoading, errMsg) => {
     const { dateFrom, dateTo } = computeDateRange(dateFilter, customStart, customEnd);
@@ -457,6 +540,12 @@ const DataReports = () => {
   useEffect(() => {
     if (activeTab !== 'memberships') return;
     fetchPage('/api/membership-subscriptions', 0, false, setMembershipRows, setMembershipTotal, setMembershipOffset, setMembershipsLoading, 'Failed to load memberships.');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, debouncedSearch, dateFilter, customStart, customEnd]);
+
+  useEffect(() => {
+    if (activeTab !== 'events') return;
+    fetchPage('/api/event-bookings', 0, false, setEventRows, setEventTotal, setEventOffset, setEventsLoading, 'Failed to load event bookings.');
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, debouncedSearch, dateFilter, customStart, customEnd]);
 
@@ -507,8 +596,26 @@ const DataReports = () => {
     { id: 'actions', header: '', enableSorting: false, size: 110, cell: info => <button className="dr-details-btn" onClick={() => setSelectedSubId(info.row.original.SubID)}>View Details</button> },
   ], []);
 
+  const eventColumns = useMemo(() => [
+    { accessorKey: 'EventBookingID', header: 'Booking #', size: 90, cell: info => <span className="dr-order-id">#{info.getValue()}</span> },
+    { accessorKey: 'FullName', header: 'Customer', cell: info => <span style={{ fontWeight: 600 }}>{info.getValue()}</span> },
+    { accessorKey: 'Email', header: 'Email', cell: info => <span style={{ color: 'var(--adm-text-secondary)', fontSize: '0.82rem' }}>{info.getValue()}</span> },
+    { accessorKey: 'EventName', header: 'Event', cell: info => <span style={{ fontSize: '0.82rem' }}>{info.getValue()}</span> },
+    { accessorKey: 'Category', header: 'Category', size: 110, cell: info => <span style={{ fontSize: '0.82rem', color: 'var(--adm-text-secondary)' }}>{info.getValue() || '—'}</span> },
+    { accessorKey: 'BookingDate', header: 'Visit Date', cell: info => <span>{fmtVisit(info.getValue())}</span> },
+    { accessorKey: 'Quantity', header: 'Guests', size: 70, cell: info => <span style={{ textAlign: 'center', display: 'block' }}>{info.getValue()}</span> },
+    { accessorKey: 'PlacedAt', header: 'Booked', cell: info => {
+        const { date, time } = fmtPlaced(info.getValue());
+        return <span style={{ fontSize: '0.82rem' }}>{date}<br /><span style={{ color: 'var(--adm-text-secondary)' }}>{time}</span></span>;
+      }
+    },
+    { accessorKey: 'Total', header: 'Total', cell: info => <span className="dr-total-badge">${Number(info.getValue()).toFixed(2)}</span> },
+    { id: 'actions', header: '', enableSorting: false, size: 110, cell: info => <button className="dr-details-btn" onClick={() => setSelectedEventBookingId(info.row.original.EventBookingID)}>View Details</button> },
+  ], []);
+
   const activeCount = activeTab === 'shop' ? orderTotal
     : activeTab === 'tickets' ? ticketTotal
+    : activeTab === 'events' ? eventTotal
     : membershipTotal;
 
   return (
@@ -530,6 +637,9 @@ const DataReports = () => {
         <button className={`dr-tab${activeTab === 'shop' ? ' active' : ''}`} onClick={() => { setActiveTab('shop'); setSearch(''); setDateFilter('today'); setCustomStart(''); setCustomEnd(''); }}>
           <ShoppingBag size={14} /> Gift Shop Orders
         </button>
+        <button className={`dr-tab${activeTab === 'events' ? ' active' : ''}`} onClick={() => { setActiveTab('events'); setSearch(''); setDateFilter('today'); setCustomStart(''); setCustomEnd(''); }}>
+          <CalendarCheck size={14} /> Event Sales
+        </button>
         <button className={`dr-tab${activeTab === 'tickets' ? ' active' : ''}`} onClick={() => { setActiveTab('tickets'); setSearch(''); setDateFilter('today'); setCustomStart(''); setCustomEnd(''); }}>
           <Ticket size={14} /> Ticket Sales
         </button>
@@ -548,6 +658,7 @@ const DataReports = () => {
             placeholder={
               activeTab === 'shop' ? 'Search by name, email, or order #...' :
               activeTab === 'tickets' ? 'Search by name, email, or ticket type...' :
+              activeTab === 'events' ? 'Search by name, email, or event...' :
               'Search by name, email, or plan...'
             }
             value={search}
@@ -602,6 +713,17 @@ const DataReports = () => {
             serverTotal={orderTotal}
             onLoadMore={() => fetchPage('/api/orders', orderOffset, true, setOrderRows, setOrderTotal, setOrderOffset, setOrdersLoading, 'Failed to load shop orders.')}
           />
+        ) : activeTab === 'events' ? (
+          <ReportTable
+            data={eventRows}
+            columns={eventColumns}
+            sorting={eventsSorting}
+            setSorting={setEventsSorting}
+            loading={eventsLoading}
+            emptyText={search ? 'No event bookings match your search.' : 'No event bookings today.'}
+            serverTotal={eventTotal}
+            onLoadMore={() => fetchPage('/api/event-bookings', eventOffset, true, setEventRows, setEventTotal, setEventOffset, setEventsLoading, 'Failed to load event bookings.')}
+          />
         ) : activeTab === 'tickets' ? (
           <ReportTable
             data={ticketRows}
@@ -628,6 +750,7 @@ const DataReports = () => {
       )}
 
       {selectedOrderId && <OrderDetailModal orderId={selectedOrderId} onClose={() => setSelectedOrderId(null)} />}
+      {selectedEventBookingId && <EventDetailModal bookingId={selectedEventBookingId} onClose={() => setSelectedEventBookingId(null)} />}
       {selectedTicketOrderId && <TicketDetailModal ticketOrderId={selectedTicketOrderId} onClose={() => setSelectedTicketOrderId(null)} />}
       {selectedSubId && <MembershipDetailModal subId={selectedSubId} onClose={() => setSelectedSubId(null)} />}
     </div>

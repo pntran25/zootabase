@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './ExhibitPage.css';
-import { Search, MapPin, Clock, Leaf, Users, ArrowRight, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, MapPin, Clock, Leaf, Users, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getExhibits } from '../../../services/exhibitService';
 import { API_BASE_URL } from '../../../services/apiClient';
 import placeholderImg from '../../../assets/images/Exhibits_Images/ExhibitsComingSoon.png';
@@ -14,6 +14,8 @@ const ExhibitPage = () => {
   const [exhibits, setExhibits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [regionPage, setRegionPage] = useState(0);
+  const [animKey, setAnimKey]     = useState(0);
+  const [animDir, setAnimDir]     = useState('right');
 
   useEffect(() => {
     const fetchExhibits = async () => {
@@ -77,22 +79,19 @@ const ExhibitPage = () => {
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              <button className="ww-filter-btn">
-                <Filter size={16} />
-              </button>
             </div>
 
             {/* RIGHT: Region Filters — paginated (3 at a time) */}
             <div className="ww-region-scroll-wrapper">
               <button
                 className={`ww-scroll-arrow${regionPage === 0 ? ' ww-scroll-hidden' : ''}`}
-                onClick={() => setRegionPage(p => p - 1)}
+                onClick={() => { setRegionPage(p => p - 1); setAnimDir('left');  setAnimKey(k => k + 1); }}
                 aria-label="Previous regions"
               >
                 <ChevronLeft size={16} />
               </button>
 
-              <div className="ww-region-filters">
+              <div key={animKey} className={`ww-region-filters ww-slide-${animDir}`}>
                 {dynamicRegions
                   .slice(regionPage * REGION_PAGE_SIZE, regionPage * REGION_PAGE_SIZE + REGION_PAGE_SIZE)
                   .map(region => (
@@ -108,7 +107,7 @@ const ExhibitPage = () => {
 
               <button
                 className={`ww-scroll-arrow${regionPage >= Math.ceil(dynamicRegions.length / REGION_PAGE_SIZE) - 1 ? ' ww-scroll-hidden' : ''}`}
-                onClick={() => setRegionPage(p => p + 1)}
+                onClick={() => { setRegionPage(p => p + 1); setAnimDir('right'); setAnimKey(k => k + 1); }}
                 aria-label="Next regions"
               >
                 <ChevronRight size={16} />
@@ -167,19 +166,24 @@ const ExhibitPage = () => {
                   </p>
 
                   <div className="ww-card-chips">
-                    {exhibit.ExhibitName === 'African Savanna' ? (
-                      <>
-                        <span className="ww-chip">Lions</span>
-                        <span className="ww-chip">Giraffes</span>
-                        <span className="ww-chip">Zebras</span>
-                        <span className="ww-chip">+1 more</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="ww-chip">{exhibit.HabitatType || 'Habitat'}</span>
-                        <span className="ww-chip">Conservation</span>
-                      </>
-                    )}
+                    {(() => {
+                      const names = exhibit.AnimalNames
+                        ? exhibit.AnimalNames.split(',').map(n => n.trim()).filter(Boolean)
+                        : [];
+                      if (names.length === 0) return null;
+                      const visible = names.slice(0, 3);
+                      const extra = names.length - visible.length;
+                      return (
+                        <>
+                          {visible.map(name => (
+                            <span key={name} className="ww-chip">{name}</span>
+                          ))}
+                          {extra > 0 && (
+                            <span className="ww-chip">+{extra} more</span>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
 
                   <div className="ww-card-footer">
