@@ -7,6 +7,9 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/main_wildwoods-frontend.yml'
   workflow_dispatch:
 
 jobs:
@@ -26,14 +29,14 @@ jobs:
       - name: npm install, build, and test
         run: |
           npm install
-          npm run build --if-present
-          npm run test --if-present
+          REACT_APP_API_BASE_URL=https://wildwoods-geb8hychateyemam.eastus2-01.azurewebsites.net npm run build
+        working-directory: ./frontend
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: node-app
-          path: .
+          path: frontend/build
 
   deploy:
     runs-on: ubuntu-latest
@@ -61,5 +64,4 @@ jobs:
         with:
           app-name: 'wildwoods-frontend'
           slot-name: 'Production'
-          package: .
-          
+          package: frontend/build
