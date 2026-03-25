@@ -142,8 +142,9 @@ const Dashboard = () => {
     : 'vs Last Week';
 
   // Weekly visitor trend
-  const weeklyTotal     = dashStats.weeklyVisitors.reduce((s, d) => s + d.visitors, 0);
-  const prevWeeklyTotal = dashStats.weeklyVisitors.reduce((s, d) => s + d.prev, 0);
+  const weeklyVisitorsArr = Array.isArray(dashStats.weeklyVisitors) ? dashStats.weeklyVisitors : [];
+  const weeklyTotal     = weeklyVisitorsArr.reduce((s, d) => s + d.visitors, 0);
+  const prevWeeklyTotal = weeklyVisitorsArr.reduce((s, d) => s + d.prev, 0);
   const weeklyDelta     = pctDelta(weeklyTotal, prevWeeklyTotal);
   const weeklyTrendUp   = weeklyTotal >= prevWeeklyTotal;
 
