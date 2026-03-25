@@ -21,34 +21,35 @@ router.get('/', async (req, res) => {
     try {
         const pool = await connectToDb();
 
-        const today        = new Date().toISOString().split('T')[0];
-        const lastWeekDay  = addDays(today, -7);
-        const monday       = getMondayStr(today);
-        const sunday       = addDays(monday, 6);
-        const prevMonday   = addDays(monday, -7);
-        const prevSunday   = addDays(monday, -1);
+        const today      = new Date().toISOString().split('T')[0];
+        const monday     = getMondayStr(today);
+        const sunday     = addDays(monday, 6);
+        const prevMonday = addDays(monday, -7);
+        const prevSunday = addDays(monday, -1);
 
         const mk = () => pool.request()
-            .input('today',       today)
-            .input('lastWeekDay', lastWeekDay)
-            .input('monday',      monday)
-            .input('sunday',      sunday)
-            .input('prevMonday',  prevMonday)
-            .input('prevSunday',  prevSunday);
+            .input('monday',     monday)
+            .input('sunday',     sunday)
+            .input('prevMonday', prevMonday)
+            .input('prevSunday', prevSunday);
 
         const [
             animalRes, maintRes,
             animalActivity, maintActivity,
-            ticketToday, ticketLastWeek,
-            memberToday, memberLastWeek,
+            ticketThisMonth, ticketLastMonth,
+            memberThisMonth, memberLastMonth,
             currWeekRes, prevWeekRes,
         ] = await Promise.all([
-            // ── Animals ────────────────────────────────────────────────
+            // ── Animals: total + new this month vs last month ───────────
             pool.request().query(`
                 SELECT
                     COUNT(*) AS total,
-                    SUM(CASE WHEN MONTH(DateArrived)=MONTH(GETUTCDATE()) AND YEAR(DateArrived)=YEAR(GETUTCDATE())  THEN 1 ELSE 0 END) AS thisMonth,
-                    SUM(CASE WHEN MONTH(DateArrived)=MONTH(DATEADD(MONTH,-1,GETUTCDATE())) AND YEAR(DateArrived)=YEAR(DATEADD(MONTH,-1,GETUTCDATE())) THEN 1 ELSE 0 END) AS lastMonth
+                    SUM(CASE WHEN MONTH(CreatedAt) = MONTH(GETUTCDATE())
+                                  AND YEAR(CreatedAt) = YEAR(GETUTCDATE())
+                             THEN 1 ELSE 0 END) AS thisMonth,
+                    SUM(CASE WHEN MONTH(CreatedAt) = MONTH(DATEADD(MONTH,-1,GETUTCDATE()))
+                                  AND YEAR(CreatedAt) = YEAR(DATEADD(MONTH,-1,GETUTCDATE()))
+                             THEN 1 ELSE 0 END) AS lastMonth
                 FROM Animal WHERE DeletedAt IS NULL
             `),
             // ── Open maintenance ───────────────────────────────────────
@@ -81,29 +82,31 @@ router.get('/', async (req, res) => {
                 WHERE m.DeletedAt IS NULL
                 ORDER BY COALESCE(m.UpdatedAt, m.CreatedAt, CAST(m.RequestDate AS DATETIME2)) DESC
             `),
-            // ── Tickets sold today (individual tickets) ────────────────
-            mk().query(`
+            // ── Individual tickets sold this month (AdultQty+ChildQty+SeniorQty) ──
+            pool.request().query(`
                 SELECT ISNULL(SUM(AdultQty+ChildQty+SeniorQty), 0) AS cnt
                 FROM TicketOrders
-                WHERE CAST(PlacedAt AS DATE) = @today
+                WHERE MONTH(PlacedAt) = MONTH(GETUTCDATE()) AND YEAR(PlacedAt) = YEAR(GETUTCDATE())
             `),
-            // ── Tickets same day last week ─────────────────────────────
-            mk().query(`
+            // ── Individual tickets sold last month ─────────────────────
+            pool.request().query(`
                 SELECT ISNULL(SUM(AdultQty+ChildQty+SeniorQty), 0) AS cnt
                 FROM TicketOrders
-                WHERE CAST(PlacedAt AS DATE) = @lastWeekDay
+                WHERE MONTH(PlacedAt) = MONTH(DATEADD(MONTH,-1,GETUTCDATE()))
+                  AND YEAR(PlacedAt)  = YEAR(DATEADD(MONTH,-1,GETUTCDATE()))
             `),
-            // ── Memberships sold today ─────────────────────────────────
-            mk().query(`
+            // ── Memberships sold this month ────────────────────────────
+            pool.request().query(`
                 SELECT COUNT(*) AS cnt
                 FROM MembershipSubscriptions
-                WHERE CAST(PlacedAt AS DATE) = @today
+                WHERE MONTH(PlacedAt) = MONTH(GETUTCDATE()) AND YEAR(PlacedAt) = YEAR(GETUTCDATE())
             `),
-            // ── Memberships same day last week ─────────────────────────
-            mk().query(`
+            // ── Memberships sold last month ────────────────────────────
+            pool.request().query(`
                 SELECT COUNT(*) AS cnt
                 FROM MembershipSubscriptions
-                WHERE CAST(PlacedAt AS DATE) = @lastWeekDay
+                WHERE MONTH(PlacedAt) = MONTH(DATEADD(MONTH,-1,GETUTCDATE()))
+                  AND YEAR(PlacedAt)  = YEAR(DATEADD(MONTH,-1,GETUTCDATE()))
             `),
             // ── Visitor attendance: current week by VisitDate ──────────
             mk().query(`
@@ -142,22 +145,16 @@ router.get('/', async (req, res) => {
         // ── Animal stats ─────────────────────────────────────────────
         const { total, thisMonth, lastMonth } = animalRes.recordset[0];
 
-        // ── Ticket / membership deltas ───────────────────────────────
-        const ticketsSoldToday       = Number(ticketToday.recordset[0].cnt);
-        const ticketsSameDayLastWeek = Number(ticketLastWeek.recordset[0].cnt);
-        const membersSoldToday       = Number(memberToday.recordset[0].cnt);
-        const membersSameDayLastWeek = Number(memberLastWeek.recordset[0].cnt);
-
         res.json({
-            totalAnimals:     total,
-            animalsThisMonth: thisMonth || 0,
-            animalsLastMonth: lastMonth || 0,
-            openMaintenance:  maintRes.recordset[0].cnt,
+            totalAnimals:      total,
+            animalsThisMonth:  thisMonth  || 0,
+            animalsLastMonth:  lastMonth  || 0,
+            openMaintenance:   maintRes.recordset[0].cnt,
             recentActivity,
-            ticketsSoldToday,
-            ticketsSameDayLastWeek,
-            membersSoldToday,
-            membersSameDayLastWeek,
+            ticketsThisMonth:  Number(ticketThisMonth.recordset[0].cnt),
+            ticketsLastMonth:  Number(ticketLastMonth.recordset[0].cnt),
+            membersThisMonth:  Number(memberThisMonth.recordset[0].cnt),
+            membersLastMonth:  Number(memberLastMonth.recordset[0].cnt),
             weeklyVisitors,
         });
     } catch (error) {

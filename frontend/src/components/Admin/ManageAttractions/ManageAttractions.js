@@ -4,6 +4,7 @@ import { TicketCheck, Search, Plus, Edit2, Trash2, Image as ImageIcon, ChevronUp
 import { useReactTable, getCoreRowModel, getSortedRowModel, getPaginationRowModel, flexRender } from '@tanstack/react-table';
 import { toast } from 'sonner';
 import AdminModalForm from '../AdminModalForm';
+import AdminSelect from '../AdminSelect';
 import TimePickerInput from '../TimePickerInput';
 import attractionService, { uploadAttractionImage } from '../../../services/attractionService';
 import { API_BASE_URL } from '../../../services/apiClient';
@@ -334,9 +335,12 @@ const ManageAttractions = () => {
           </div>
           <div className="form-group">
             <label>Type</label>
-            <select value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })}>
-              {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
+            <AdminSelect
+              value={formData.type}
+              onChange={val => setFormData({ ...formData, type: val })}
+              options={TYPES.map(t => ({ value: t, label: t }))}
+              placeholder="Select type..."
+            />
           </div>
         </div>
 

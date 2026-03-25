@@ -6,7 +6,11 @@ require('dotenv').config();
 // For testing using default credentials if running in a Google Cloud environment or just using the mock setup:
 try {
     if (process.env.FIREBASE_SERVICE_ACCOUNT_PATH) {
-        const serviceAccount = require(process.env.FIREBASE_SERVICE_ACCOUNT_PATH);
+        // Resolve path relative to backend root directory
+        const path = require('path');
+        const serviceAccountPath = path.resolve(__dirname, '..', process.env.FIREBASE_SERVICE_ACCOUNT_PATH);
+        const serviceAccount = require(serviceAccountPath);
+        
         admin.initializeApp({
             credential: admin.credential.cert(serviceAccount)
         });
@@ -19,7 +23,9 @@ try {
         console.log('Firebase Admin initialized with projectId: wildwoods-zoo-auth-v1');
     }
 } catch (error) {
-    console.warn('Firebase Admin SDK initialization warning:', error.message);
+    console.error('CRITICAL: Firebase Admin SDK initialization failed:', error.message);
+    // Print the full stack so developers can see why it failed
+    console.error(error);
 }
 
 module.exports = admin;
