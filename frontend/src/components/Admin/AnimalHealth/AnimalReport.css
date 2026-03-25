@@ -1,28 +1,81 @@
 /* ── Animal Report ────────────────────────────────────── */
-.ar-picker {
+
+/* ── Modal overlay ───────────────────────────────────── */
+.ar-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+  z-index: 1100;
   display: flex;
   align-items: center;
-  gap: 14px;
-  margin-bottom: 20px;
+  justify-content: center;
+  padding: 24px;
 }
 
-.ar-picker-label {
-  font-size: 0.88rem;
-  font-weight: 600;
+.ar-modal {
+  background: var(--adm-bg-surface);
+  border: 1px solid var(--adm-border);
+  border-radius: 14px;
+  width: 100%;
+  max-width: 860px;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ar-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--adm-border);
+  flex-shrink: 0;
+}
+
+.ar-modal-title {
+  font-size: 1.1rem;
+  font-weight: 700;
   color: var(--adm-text-primary);
-  white-space: nowrap;
 }
 
-.ar-picker .admin-select-container {
-  min-width: 280px;
+.ar-modal-sub {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--adm-accent);
+  font-family: monospace;
+  margin-top: 2px;
+}
+
+.ar-modal-close {
+  background: none;
+  border: none;
+  color: var(--adm-text-secondary);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+
+.ar-modal-close:hover {
+  background: var(--adm-bg-surface-2);
+  color: var(--adm-text-primary);
+}
+
+.ar-modal-body {
+  overflow-y: auto;
+  padding: 20px 24px;
+  flex: 1;
 }
 
 /* ── Section cards ───────────────────────────────────── */
 .ar-sections {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  padding-bottom: 40px;
+  gap: 16px;
+  padding-bottom: 16px;
 }
 
 .ar-section {

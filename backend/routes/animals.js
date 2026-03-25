@@ -196,9 +196,9 @@ router.post('/', optionalAuth, async (req, res) => {
                 .query(`
                     DECLARE @AnimOut TABLE (id INT, imageUrl NVARCHAR(255));
 
-                    INSERT INTO Animal (Name, Species, SpeciesDetail, Age, Gender, Diet, HealthStatus, DateArrived, HabitatID, Lifespan, Weight, Region, FunFact, IsEndangered, IsDisplay, AnimalCode, CreatedBy)
+                    INSERT INTO Animal (Name, Species, SpeciesDetail, Age, Gender, Diet, HealthStatus, DateArrived, HabitatID, Lifespan, Weight, Region, FunFact, IsEndangered, IsDisplay, AnimalCode, CreatedBy, CreatedAt)
                     OUTPUT INSERTED.AnimalID, INSERTED.ImageUrl INTO @AnimOut
-                    VALUES (@name, @species, @speciesDetail, @age, @gender, @diet, @health, @dateArrived, @habitatId, @lifespan, @weight, @region, @funFact, @isEndangered, @isDisplay, @animalCode, @createdBy);
+                    VALUES (@name, @species, @speciesDetail, @age, @gender, @diet, @health, @dateArrived, @habitatId, @lifespan, @weight, @region, @funFact, @isEndangered, @isDisplay, @animalCode, @createdBy, SYSUTCDATETIME());
 
                     SELECT id, imageUrl FROM @AnimOut;
                 `);
@@ -237,6 +237,29 @@ router.put('/:id', optionalAuth, async (req, res) => {
                 ? await resolveHabitatId(request, exhibit)
                 : null;
 
+            // Check if this animal already has an AnimalCode
+            const codeCheck = await new sql.Request(transaction)
+                .input('cid', sql.Int, id)
+                .query('SELECT AnimalCode FROM Animal WHERE AnimalID = @cid AND DeletedAt IS NULL');
+            const existingCode = codeCheck.recordset[0]?.AnimalCode;
+
+            // Auto-assign AnimalCode if missing
+            let animalCode = existingCode || null;
+            if (!animalCode && species) {
+                const scReq = new sql.Request(transaction);
+                const scRes = await scReq
+                    .input('speciesLookup', sql.NVarChar, species)
+                    .query(`
+                        UPDATE SpeciesCode SET LastCount = LastCount + 1
+                        OUTPUT INSERTED.CodeSuffix, INSERTED.LastCount
+                        WHERE SpeciesName = @speciesLookup
+                    `);
+                if (scRes.recordset.length) {
+                    const { CodeSuffix, LastCount } = scRes.recordset[0];
+                    animalCode = `${CodeSuffix}-${String(LastCount).padStart(5, '0')}`;
+                }
+            }
+
             await request
                 .input('id', sql.Int, id)
                 .input('name', sql.NVarChar, name)
@@ -255,6 +278,7 @@ router.put('/:id', optionalAuth, async (req, res) => {
                 .input('isDisplay', sql.Bit, isDisplay ? 1 : 0)
                 .input('speciesDetail', sql.NVarChar, speciesDetail || null)
                 .input('updatedBy', sql.NVarChar, adminName)
+                .input('animalCode', sql.NVarChar, animalCode)
                 .query(`
                     UPDATE Animal
                     SET Name = @name, Species = @species, SpeciesDetail = @speciesDetail,
@@ -263,6 +287,7 @@ router.put('/:id', optionalAuth, async (req, res) => {
                         HabitatID = @habitatId, Lifespan = @lifespan, Weight = @weight,
                         Region = @region, FunFact = @funFact, IsEndangered = @isEndangered,
                         IsDisplay = @isDisplay,
+                        AnimalCode = COALESCE(AnimalCode, @animalCode),
                         UpdatedAt = SYSUTCDATETIME(), UpdatedBy = @updatedBy
                     WHERE AnimalID = @id AND DeletedAt IS NULL
                 `);
