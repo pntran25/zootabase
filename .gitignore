@@ -48,3 +48,6 @@ __pycache__/
 .claude/  
 Zoo UI Redesing/
 Zoo UI Redesing
+
+# Secrets
+service-account.json
