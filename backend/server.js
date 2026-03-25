@@ -9,7 +9,7 @@ const PORT = parseInt(process.env.PORT, 10) || 5000;
 
 // CORS: allow only known origins in production
 const allowedOrigins = process.env.CORS_ORIGINS
-	? process.env.CORS_ORIGINS.split(',')
+	? process.env.CORS_ORIGINS.split(',').map(o => o.trim().replace(/\/$/, ''))
 	: ['http://localhost:3000'];
 app.use(cors({
 	origin: (origin, cb) => {
@@ -75,8 +75,8 @@ app.use('/api/dashboard', dashboardRouter);
 app.use('/api/feeding-schedules', feedingSchedulesRouter);
 app.use('/api/keeper-assignments', keeperAssignmentsRouter);
 
-// Serve images from the frontend assets folder dynamically
-app.use('/images', express.static(path.join(__dirname, '../frontend/src/assets/images')));
+// Serve uploaded images from local uploads directory
+app.use('/images', express.static(path.join(__dirname, 'uploads')));
 
 async function runMigrations(pool) {
 	const steps = [
