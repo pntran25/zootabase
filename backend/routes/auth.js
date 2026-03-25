@@ -19,7 +19,7 @@ router.post('/sync', verifyToken, async (req, res) => {
         // 1. Check if user exists in Staff table by Email
         const staffResult = await pool.request()
             .input('Email', firebaseUser.email)
-            .query(`SELECT StaffID, FirebaseUid FROM Staff WHERE Email = @Email`);
+            .query(`SELECT StaffID, FirebaseUid FROM Staff WHERE Email = @Email AND DeletedAt IS NULL`);
 
         if (staffResult.recordset.length > 0) {
             isStaff = true;

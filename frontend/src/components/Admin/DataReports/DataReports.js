@@ -624,7 +624,7 @@ const DataReports = () => {
         <div>
           <h1 className="admin-page-title">
             <FileText size={26} style={{ color: 'var(--adm-accent)', marginRight: 12, flexShrink: 0 }} />
-            Data Reports
+            Transaction Reports
           </h1>
           <p className="admin-page-subtitle">Purchase transaction history across all sales channels</p>
         </div>

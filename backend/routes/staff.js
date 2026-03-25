@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { connectToDb } = require('../services/admin');
 const { verifyToken, requireRole } = require('../middleware/authMiddleware');
+const admin = require('../services/firebaseSetup');
 
 // Get all active staff (Super Admin only)
 router.get('/', verifyToken, requireRole(['Super Admin']), async (req, res) => {
@@ -29,22 +30,45 @@ router.post('/', verifyToken, requireRole(['Super Admin']), async (req, res) => 
             return res.status(409).json({ error: 'SSN is already used by another employee.' });
         }
 
-        const result = await pool.request()
-            .input('FirstName', firstName)
-            .input('LastName', lastName)
-            .input('Email', email)
-            .input('DateOfBirth', dateOfBirth)
-            .input('SSN', ssn)
-            .input('Role', role)
-            .input('ContactNumber', contactNumber)
-            .input('Salary', salary || 0)
-            .input('HireDate', hireDate || new Date().toISOString().split('T')[0])
-            .input('FullName', `${firstName || ''} ${lastName || ''}`.trim())
-            .query(`INSERT INTO Staff (FirstName, LastName, Email, DateOfBirth, SSN, Role, ContactNumber, Salary, HireDate, FullName)
-                    OUTPUT INSERTED.*
-                    VALUES (@FirstName, @LastName, @Email, @DateOfBirth, @SSN, @Role, @ContactNumber, @Salary, @HireDate, @FullName)`);
+        const fullName = `${firstName || ''} ${lastName || ''}`.trim();
 
-        res.status(201).json(result.recordset[0]);
+        // Create Firebase auth user first
+        let firebaseUserRecord;
+        try {
+            firebaseUserRecord = await admin.auth().createUser({
+                email: email,
+                password: 'ZooStaff2026!', // Default password for new staff
+                displayName: fullName
+            });
+        } catch (authErr) {
+            return res.status(400).json({ error: 'Failed to create Firebase user: ' + authErr.message });
+        }
+
+        try {
+            const result = await pool.request()
+                .input('FirstName', firstName)
+                .input('LastName', lastName)
+                .input('Email', email)
+                .input('DateOfBirth', dateOfBirth)
+                .input('SSN', ssn)
+                .input('Role', role)
+                .input('ContactNumber', contactNumber)
+                .input('Salary', salary || 0)
+                .input('HireDate', hireDate || new Date().toISOString().split('T')[0])
+                .input('FullName', fullName)
+                .input('FirebaseUid', firebaseUserRecord.uid)
+                .query(`INSERT INTO Staff (FirstName, LastName, Email, DateOfBirth, SSN, Role, ContactNumber, Salary, HireDate, FullName, FirebaseUid)
+                        OUTPUT INSERTED.*
+                        VALUES (@FirstName, @LastName, @Email, @DateOfBirth, @SSN, @Role, @ContactNumber, @Salary, @HireDate, @FullName, @FirebaseUid)`);
+
+            res.status(201).json(result.recordset[0]);
+        } catch (dbErr) {
+            // Rollback Firebase user creation if DB insert fails
+            if (firebaseUserRecord) {
+                await admin.auth().deleteUser(firebaseUserRecord.uid).catch(() => {});
+            }
+            throw dbErr;
+        }
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -96,9 +120,23 @@ router.delete('/:id', verifyToken, requireRole(['Super Admin']), async (req, res
     const { id } = req.params;
     try {
         const pool = await connectToDb();
+        
+        // Fetch the user's FirebaseUid before deleting
+        const userResult = await pool.request()
+            .input('StaffID', id)
+            .query(`SELECT FirebaseUid FROM Staff WHERE StaffID = @StaffID`);
+            
         await pool.request()
             .input('StaffID', id)
             .query(`UPDATE Staff SET DeletedAt = SYSUTCDATETIME() WHERE StaffID = @StaffID`);
+            
+        if (userResult.recordset.length > 0 && userResult.recordset[0].FirebaseUid) {
+            try {
+                await admin.auth().deleteUser(userResult.recordset[0].FirebaseUid);
+            } catch (authErr) {
+                console.warn('Failed to delete Firebase user:', authErr.message);
+            }
+        }
             
         res.json({ success: true });
     } catch (err) {
