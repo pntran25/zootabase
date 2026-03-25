@@ -1,3 +1,135 @@
+/* ── Meal selector ────────────────────────────────────────── */
+.meal-selector {
+  display: flex;
+  gap: 8px;
+}
+
+.meal-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 12px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--adm-border);
+  background: var(--adm-bg-surface-2);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.meal-btn:hover {
+  border-color: var(--adm-accent);
+}
+
+.meal-btn.active {
+  border-color: var(--adm-accent);
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.meal-emoji {
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.meal-label {
+  font-size: 0.83rem;
+  font-weight: 700;
+  color: var(--adm-text-primary);
+}
+
+.meal-btn.active .meal-label {
+  color: var(--adm-accent);
+}
+
+.meal-time {
+  font-size: 0.7rem;
+  color: var(--adm-text-secondary);
+}
+
+/* ── Meal card wrapper ────────────────────────────────── */
+.meal-card-wrap {
+  flex: 1;
+  position: relative;
+}
+
+.meal-edit-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: none;
+  border: none;
+  padding: 3px;
+  border-radius: 4px;
+  color: var(--adm-text-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+  line-height: 1;
+}
+
+.meal-card-wrap:hover > .meal-edit-btn {
+  opacity: 1;
+  color: var(--adm-accent);
+}
+
+.meal-edit-hint {
+  display: none;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.65rem;
+  color: var(--adm-text-muted);
+  margin-top: 1px;
+}
+
+.meal-card-wrap:hover .meal-edit-hint {
+  display: flex;
+}
+
+/* ── Edit state card ──────────────────────────────────── */
+.meal-card-edit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--adm-accent);
+  background: rgba(16, 185, 129, 0.06);
+  height: 100%;
+}
+
+
+.meal-card-edit-actions {
+  display: flex;
+  gap: 5px;
+  width: 100%;
+}
+
+.meal-save-btn {
+  flex: 1;
+  padding: 4px 0;
+  border-radius: 5px;
+  border: none;
+  background: var(--adm-accent);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.meal-cancel-btn {
+  flex: 1;
+  padding: 4px 0;
+  border-radius: 5px;
+  border: 1px solid var(--adm-border);
+  background: transparent;
+  color: var(--adm-text-secondary);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 /* ── Tabs ─────────────────────────────────────────────────── */
 .ah-tabs {
   display: flex;
@@ -49,6 +181,7 @@
   border-radius: 20px;
   font-size: 0.82rem;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .ah-score-dot {
