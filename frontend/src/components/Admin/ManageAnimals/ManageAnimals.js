@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import '../AdminTable.css';
 import { PawPrint, Search, Plus, Edit2, Trash2, Image as ImageIcon, ChevronUp, ChevronDown, ChevronsUpDown, AlertTriangle, X, BookOpen, Eye, EyeOff } from 'lucide-react';
 import { useReactTable, getCoreRowModel, getSortedRowModel, flexRender } from '@tanstack/react-table';
@@ -62,6 +62,13 @@ const ManageAnimals = () => {
   const [animalCodePreview, setAnimalCodePreview] = useState('');
   const [isNewSpecies, setIsNewSpecies] = useState(false);
   const [newCodeSuffix, setNewCodeSuffix] = useState('');
+  const [suffixConflict, setSuffixConflict] = useState(null);
+
+  // Animal Group combobox
+  const [speciesOpen, setSpeciesOpen] = useState(false);
+  const [speciesSearch, setSpeciesSearch] = useState('');
+  const speciesContainerRef = useRef(null);
+  const speciesSearchRef = useRef(null);
 
   // Lookup modal
   const [isLookupOpen, setIsLookupOpen] = useState(false);
@@ -96,6 +103,34 @@ const ManageAnimals = () => {
   };
 
   useEffect(() => { loadData(); }, []);
+
+  // Close species combobox when clicking outside
+  useEffect(() => {
+    const handler = (e) => {
+      if (speciesContainerRef.current && !speciesContainerRef.current.contains(e.target)) {
+        setSpeciesOpen(false);
+        setSpeciesSearch('');
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  // Focus the search input when species dropdown opens
+  useEffect(() => {
+    if (speciesOpen && speciesSearchRef.current) speciesSearchRef.current.focus();
+    if (!speciesOpen) setSpeciesSearch('');
+  }, [speciesOpen]);
+
+  // Toast when a new suffix conflict is detected
+  useEffect(() => {
+    if (suffixConflict) {
+      toast.error(
+        `"${newCodeSuffix}" is already the code for ${suffixConflict}. Please choose a unique suffix for this animal.`,
+        { duration: 4000 }
+      );
+    }
+  }, [suffixConflict]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const displayAnimals = useMemo(() =>
     animals.filter(a => a.isDisplay === true || a.isDisplay === 1).filter(animal => {
@@ -143,6 +178,9 @@ const ManageAnimals = () => {
       setAnimalCodePreview(animal.animalCode || '');
       setIsNewSpecies(false);
       setNewCodeSuffix('');
+      setSuffixConflict(null);
+      setSpeciesOpen(false);
+      setSpeciesSearch('');
       setImageFile(null);
       setPreviewUrl(animal.imageUrl ? `${API_BASE_URL}${animal.imageUrl}` : null);
     } else {
@@ -151,6 +189,9 @@ const ManageAnimals = () => {
       setAnimalCodePreview('');
       setIsNewSpecies(false);
       setNewCodeSuffix('');
+      setSuffixConflict(null);
+      setSpeciesOpen(false);
+      setSpeciesSearch('');
       setImageFile(null);
       setPreviewUrl(null);
     }
@@ -166,21 +207,33 @@ const ManageAnimals = () => {
   };
 
   const handleSpeciesChange = async (val) => {
-    setFormData(prev => ({ ...prev, species: val }));
+    const capitalized = val.length > 0 ? val.charAt(0).toUpperCase() + val.slice(1) : val;
+    setFormData(prev => ({ ...prev, species: capitalized }));
     if (editingAnimal) return; // don't change code when editing
-    const match = speciesCodes.find(sc => sc.speciesName.toLowerCase() === val.toLowerCase());
-    if (val && match) {
+    const match = speciesCodes.find(sc => sc.speciesName.toLowerCase() === capitalized.toLowerCase());
+    if (capitalized && match) {
       setIsNewSpecies(false);
-      const preview = await getNextAnimalCode(val);
+      setSuffixConflict(null);
+      setNewCodeSuffix('');
+      const preview = await getNextAnimalCode(capitalized);
       setAnimalCodePreview(preview ? preview.animalCode : '');
-    } else if (val) {
+    } else if (capitalized) {
       setIsNewSpecies(true);
       setAnimalCodePreview('');
       setNewCodeSuffix('');
+      setSuffixConflict(null);
     } else {
       setIsNewSpecies(false);
       setAnimalCodePreview('');
+      setSuffixConflict(null);
     }
+  };
+
+  const handleSuffixChange = (rawVal) => {
+    const v = rawVal.toLowerCase().replace(/[^a-z]/g, '');
+    setNewCodeSuffix(v);
+    const conflict = v ? speciesCodes.find(sc => sc.codeSuffix.toLowerCase() === v) : null;
+    setSuffixConflict(conflict ? conflict.speciesName : null);
   };
 
   const handleDelete = (animal) => {
@@ -227,6 +280,10 @@ const ManageAnimals = () => {
     e.preventDefault();
     if (!editingAnimal && isNewSpecies && !newCodeSuffix) {
       toast.error('Enter a species code suffix for the new species (e.g. "lio" for Lion).');
+      return;
+    }
+    if (!editingAnimal && isNewSpecies && suffixConflict) {
+      toast.error(`"${newCodeSuffix}" is already taken by ${suffixConflict}. Use a unique suffix.`);
       return;
     }
     try {
@@ -623,19 +680,52 @@ const ManageAnimals = () => {
           </div>
           <div className="form-group">
             <label>Animal Group</label>
-            <input
-              type="text"
-              list="species-datalist"
-              placeholder="e.g. Lion, Elephant..."
-              value={formData.species}
-              onChange={e => handleSpeciesChange(e.target.value)}
-              required
-            />
-            <datalist id="species-datalist">
-              {[...new Set(animals.map(a => a.species).filter(Boolean))].sort().map(s => (
-                <option key={s} value={s} />
-              ))}
-            </datalist>
+            <div ref={speciesContainerRef} style={{ position: 'relative', width: '100%' }}>
+              <input
+                type="text"
+                placeholder="e.g. Lion, Elephant..."
+                value={formData.species}
+                onChange={e => { handleSpeciesChange(e.target.value); setSpeciesOpen(true); }}
+                onFocus={() => setSpeciesOpen(true)}
+                required
+                style={{ width: '100%', boxSizing: 'border-box' }}
+              />
+              {speciesOpen && speciesCodes.length > 0 && (
+                <div className="adm-sel-dropdown" style={{ maxHeight: 196, overflowY: 'auto' }}>
+                  <div className="adm-sel-search-wrap">
+                    <input
+                      ref={speciesSearchRef}
+                      type="text"
+                      className="adm-sel-search"
+                      placeholder="Search..."
+                      value={speciesSearch}
+                      onChange={e => setSpeciesSearch(e.target.value)}
+                      onClick={e => e.stopPropagation()}
+                    />
+                  </div>
+                  {speciesCodes
+                    .map(sc => sc.speciesName)
+                    .sort()
+                    .filter(s => !speciesSearch || s.toLowerCase().includes(speciesSearch.toLowerCase()))
+                    .map(s => (
+                      <button
+                        key={s}
+                        type="button"
+                        className={`adm-sel-option${formData.species === s ? ' selected' : ''}`}
+                        onMouseDown={e => {
+                          e.preventDefault();
+                          handleSpeciesChange(s);
+                          setSpeciesOpen(false);
+                          setSpeciesSearch('');
+                        }}
+                      >
+                        {s}
+                      </button>
+                    ))
+                  }
+                </div>
+              )}
+            </div>
 
             {/* Known species — show upcoming Animal ID */}
             {!editingAnimal && !isNewSpecies && animalCodePreview && (
@@ -662,9 +752,15 @@ const ManageAnimals = () => {
                   maxLength={10}
                   placeholder='e.g. "lio" for Lion'
                   value={newCodeSuffix}
-                  onChange={e => setNewCodeSuffix(e.target.value.toLowerCase().replace(/[^a-z]/g, ''))}
+                  onChange={e => handleSuffixChange(e.target.value)}
+                  style={suffixConflict ? { borderColor: '#ef4444' } : undefined}
                 />
-                {newCodeSuffix && (
+                {suffixConflict && (
+                  <small style={{ color: '#ef4444', marginTop: 2, display: 'block' }}>
+                    "{newCodeSuffix}" is already used by {suffixConflict} — choose a unique suffix
+                  </small>
+                )}
+                {newCodeSuffix && !suffixConflict && (
                   <small style={{ color: 'var(--adm-text-secondary)' }}>
                     First animal of this species will be: <strong style={{ fontFamily: 'monospace' }}>{newCodeSuffix}-00001</strong>
                   </small>
