@@ -24,3 +24,7 @@ export const getAnimalReport = (animalId) => apiGet(`/api/animal-health/report/$
 // ── Dropdown helpers ────────────────────────────────────────────────
 export const getAnimalsForDropdown = () => apiGet('/api/animal-health/animals-list');
 export const getStaffForDropdown = () => apiGet('/api/animal-health/staff-list');
+
+// ── Meal time config ─────────────────────────────────────────────────
+export const getMealTimes = () => apiGet('/api/animal-health/meal-times');
+export const updateMealTimes = (meals) => apiPut('/api/animal-health/meal-times', meals);

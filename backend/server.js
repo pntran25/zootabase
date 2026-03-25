@@ -9,7 +9,7 @@ const PORT = parseInt(process.env.PORT, 10) || 5000;
 
 // CORS: allow only known origins in production
 const allowedOrigins = process.env.CORS_ORIGINS
-	? process.env.CORS_ORIGINS.split(',')
+	? process.env.CORS_ORIGINS.split(',').map(o => o.trim().replace(/\/$/, ''))
 	: ['http://localhost:3000'];
 app.use(cors({
 	origin: (origin, cb) => {
