@@ -1,0 +1,84 @@
+name: Build and deploy Node.js app to Azure Web App - wildwoods-frontend
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/main_wildwoods-frontend.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js version
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22.x'
+
+      - name: npm install, build, and test
+        run: |
+          npm install
+          npm run build
+        working-directory: ./frontend
+        env:
+          CI: false
+          REACT_APP_API_BASE_URL: https://wildwoods-geb8hychateyemam.eastus2-01.azurewebsites.net
+          REACT_APP_FIREBASE_API_KEY: ${{ secrets.REACT_APP_FIREBASE_API_KEY }}
+          REACT_APP_FIREBASE_AUTH_DOMAIN: ${{ secrets.REACT_APP_FIREBASE_AUTH_DOMAIN }}
+          REACT_APP_FIREBASE_PROJECT_ID: ${{ secrets.REACT_APP_FIREBASE_PROJECT_ID }}
+          REACT_APP_FIREBASE_STORAGE_BUCKET: ${{ secrets.REACT_APP_FIREBASE_STORAGE_BUCKET }}
+          REACT_APP_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.REACT_APP_FIREBASE_MESSAGING_SENDER_ID }}
+          REACT_APP_FIREBASE_APP_ID: ${{ secrets.REACT_APP_FIREBASE_APP_ID }}
+
+      - name: Upload artifact for deployment job
+        uses: actions/upload-artifact@v4
+        with:
+          name: node-app
+          path: frontend/build
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: node-app
+
+
+      - name: List files for debug
+        run: |
+          echo "Current directory: $(pwd)"
+          ls -l
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_7D23902437CB4708A583E91A7EF56AA9 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_F91F72F7806846A48E6D86D5B7A74E5E }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_351EA28B835449ADB9F1C4F5847DFC83 }}
+
+      - name: Set startup command for SPA
+        run: |
+          RG=$(az webapp list --query "[?name=='wildwoods-frontend'].resourceGroup | [0]" -o tsv)
+          az webapp config set --resource-group "$RG" --name wildwoods-frontend --startup-file "pm2 serve /home/site/wwwroot --no-daemon --spa"
+
+      - name: 'Deploy to Azure Web App'
+        id: deploy-to-webapp
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'wildwoods-frontend'
+          slot-name: 'Production'
+          package: .
