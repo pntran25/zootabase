@@ -48,6 +48,12 @@ jobs:
         with:
           name: node-app
 
+
+      - name: List files for debug
+        run: |
+          echo "Current directory: $(pwd)"
+          ls -l
+
       - name: Login to Azure
         uses: azure/login@v2
         with:
