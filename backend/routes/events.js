@@ -7,7 +7,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-const imageDir = path.join(__dirname, '../../frontend/src/assets/images/Event_Images');
+const imageDir = path.join(__dirname, '../uploads/Event_Images');
 if (!fs.existsSync(imageDir)) fs.mkdirSync(imageDir, { recursive: true });
 
 const storage = multer.diskStorage({

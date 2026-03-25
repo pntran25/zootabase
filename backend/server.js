@@ -75,8 +75,8 @@ app.use('/api/dashboard', dashboardRouter);
 app.use('/api/feeding-schedules', feedingSchedulesRouter);
 app.use('/api/keeper-assignments', keeperAssignmentsRouter);
 
-// Serve images from the frontend assets folder dynamically
-app.use('/images', express.static(path.join(__dirname, '../frontend/src/assets/images')));
+// Serve uploaded images from local uploads directory
+app.use('/images', express.static(path.join(__dirname, 'uploads')));
 
 async function runMigrations(pool) {
 	const steps = [
