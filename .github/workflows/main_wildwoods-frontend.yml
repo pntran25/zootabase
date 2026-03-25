@@ -48,12 +48,6 @@ jobs:
         with:
           name: node-app
 
-      - name: Move build contents to root
-        run: |
-          shopt -s dotglob
-          mv node-app/* .
-          rm -rf node-app
-
       - name: Login to Azure
         uses: azure/login@v2
         with:
