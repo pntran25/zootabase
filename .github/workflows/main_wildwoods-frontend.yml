@@ -29,7 +29,7 @@ jobs:
       - name: npm install, build, and test
         run: |
           npm install
-          REACT_APP_API_BASE_URL=https://wildwoods-geb8hychateyemam.eastus2-01.azurewebsites.net npm run build
+          CI=false REACT_APP_API_BASE_URL=https://wildwoods-geb8hychateyemam.eastus2-01.azurewebsites.net npm run build
         working-directory: ./frontend
 
       - name: Upload artifact for deployment job
