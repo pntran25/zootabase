@@ -6,7 +6,7 @@ import {
   Sun, Moon, Users, LineChart, FileText, HeartPulse, ClipboardList, CreditCard, UtensilsCrossed
 } from 'lucide-react';
 import brandLogo from '../assets/images/Logo.png';
-import { Toaster, toast } from 'sonner';
+import { Toaster } from 'sonner';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { auth } from '../services/firebase';
@@ -61,21 +61,10 @@ const AdminLayout = () => {
     }
   };
 
+  const hasAny = (...ids) => ids.some(id => myPerms.includes(id));
+
   const renderLink = (to, icon, label, id) => {
-    const isAllowed = myPerms.includes(id);
-    
-    if (!isAllowed) {
-      return (
-        <div 
-          className="admin-nav-link blur-sm opacity-50 cursor-not-allowed select-none"
-          onClick={() => toast.error('You do not have permission to access this section.')}
-        >
-          {icon}
-          <span>{label}</span>
-        </div>
-      );
-    }
-    
+    if (!myPerms.includes(id)) return null;
     return (
       <NavLink
         to={to}
@@ -87,6 +76,7 @@ const AdminLayout = () => {
       </NavLink>
     );
   };
+
 
   return (
     <div className="admin-layout" data-theme={theme}>
@@ -120,28 +110,27 @@ const AdminLayout = () => {
         <nav className="admin-nav mt-4" style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
           {renderLink('/admin', <LayoutDashboard size={18} className="nav-icon" />, 'Dashboard', 'dashboard')}
 
-          <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Zoo</p>
+          {hasAny('animals', 'exhibits', 'attractions', 'events') && <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Zoo</p>}
           {renderLink('/admin/animals', <PawPrint size={18} className="nav-icon" />, 'Animals', 'animals')}
           {renderLink('/admin/exhibits', <Map size={18} className="nav-icon" />, 'Exhibits', 'exhibits')}
           {renderLink('/admin/attractions', <TicketCheck size={18} className="nav-icon" />, 'Attractions', 'attractions')}
           {renderLink('/admin/events', <CalendarDays size={18} className="nav-icon" />, 'Events', 'events')}
 
-          <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Guest Services</p>
+          {hasAny('tickets', 'shop', 'memberships') && <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Guest Services</p>}
           {renderLink('/admin/tickets', <Ticket size={18} className="nav-icon" />, 'Tickets', 'tickets')}
           {renderLink('/admin/shop', <ShoppingBag size={18} className="nav-icon" />, 'Shop', 'shop')}
           {renderLink('/admin/memberships', <CreditCard size={18} className="nav-icon" />, 'Manage Plans', 'memberships')}
-          
-          <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Animal Care</p>
 
+          {hasAny('animal-health', 'animal-care') && <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Animal Care</p>}
           {renderLink('/admin/animal-health', <HeartPulse size={18} className="nav-icon" />, 'Health Tracking', 'animal-health')}
           {renderLink('/admin/animal-care', <UtensilsCrossed size={18} className="nav-icon" />, 'Feeding & Keepers', 'animal-care')}
 
-          <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Reports & Analytics</p>
-          {renderLink('/admin/analytics', <LineChart size={18} className="nav-icon" />, 'Analytics', 'analytics')}
+          {hasAny('animal-report', 'reports', 'analytics') && <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Reports & Analytics</p>}
           {renderLink('/admin/animal-report', <ClipboardList size={18} className="nav-icon" />, 'Animal Reports', 'animal-report')}
           {renderLink('/admin/reports', <FileText size={18} className="nav-icon" />, 'Transaction Reports', 'reports')}
+          {renderLink('/admin/analytics', <LineChart size={18} className="nav-icon" />, 'Analytics', 'analytics')}
 
-          <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Administration</p>
+          {hasAny('staff', 'maintenance') && <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Administration</p>}
           {renderLink('/admin/staff', <Users size={18} className="nav-icon" />, 'Staff Management', 'staff')}
           {renderLink('/admin/maintenance', <Wrench size={18} className="nav-icon" />, 'Maintenance', 'maintenance')}
         </nav>
