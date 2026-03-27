@@ -1,0 +1,19 @@
+{
+  "customers": [
+    {
+      "CustomerID": 22204,
+      "FullName": "Jawadhasan Hemani",
+      "Email": "jawadhasanhemani@gmail.com",
+      "FirebaseUid": null
+    }
+  ],
+  "staff": [
+    {
+      "StaffID": 10004,
+      "FirstName": "Jawad",
+      "LastName": "Hemani",
+      "Email": "jawadhasanhemani@gmail.com",
+      "FirebaseUid": "QRlY60Z6CRQnyq2OXqNAGXKGjsE2"
+    }
+  ]
+}

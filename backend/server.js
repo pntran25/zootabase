@@ -76,7 +76,12 @@ app.use('/api/feeding-schedules', feedingSchedulesRouter);
 app.use('/api/keeper-assignments', keeperAssignmentsRouter);
 
 // Serve images from the frontend assets folder dynamically
-app.use('/images', express.static(path.join(__dirname, '../frontend/src/assets/images')));
+if (process.env.NODE_ENV === "production") {
+    app.use('/images', express.static('/tmp/images'));
+    app.use('/images', express.static(path.join(__dirname, 'assets/images')));
+} else {
+    app.use('/images', express.static(path.join(__dirname, '../frontend/src/assets/images')));
+}
 
 async function runMigrations(pool) {
 	const steps = [
@@ -407,12 +412,24 @@ async function startServer() {
 	});
 }
 
-// In production, strip raw DB error details from 500 responses
-if (process.env.NODE_ENV === 'production') {
-	app.use((err, req, res, _next) => {
-		console.error(err);
-		res.status(err.status || 500).json({ error: 'Internal server error' });
-	});
-}
+// Global Error Handler
+app.use((err, req, res, _next) => {
+	console.error(err);
+
+	// Gracefully handle specific user-facing errors (like file uploads)
+	if (err.name === 'MulterError' && err.code === 'LIMIT_FILE_SIZE') {
+		return res.status(413).json({ error: 'Image file too large. The maximum allowed size is 20MB.' });
+	}
+	if (err.name === 'MulterError') {
+	    return res.status(400).json({ error: err.message });
+	}
+
+	// In production, strip raw DB error details from 500 responses
+	if (process.env.NODE_ENV === 'production') {
+		return res.status(err.status || 500).json({ error: 'Internal server error' });
+	}
+
+	res.status(err.status || 500).json({ error: err.message });
+});
 
 startServer();
