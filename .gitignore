@@ -4,6 +4,9 @@ node_modules/
 # Environment variables
 .env
 
+# Firebase service account key
+service-account.json
+
 # Logs
 logs/
 *.log
@@ -39,5 +42,15 @@ coverage/
 __pycache__/
 *.pyc
 
+# Claude
+.claude/
+
 # dotenv environment example
 .env.example
+.claude  
+.claude/  
+Zoo UI Redesing/
+Zoo UI Redesing
+
+# Secrets
+service-account.json

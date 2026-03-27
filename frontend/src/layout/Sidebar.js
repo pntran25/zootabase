@@ -4,7 +4,7 @@ import './Sidebar.css';
 
 const Sidebar = () => (
   <div className="sidebar">
-    <h2>Zootabase</h2>
+    <h2>WildWoods</h2>
     <nav>
       <ul>
         <li><Link to="/animals">Animals</Link></li>
