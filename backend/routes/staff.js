@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { connectToDb } = require('../services/admin');
 const { verifyToken, requireRole } = require('../middleware/authMiddleware');
+const admin = require('../services/firebaseSetup');
 
 // Get all active staff (Super Admin only)
 router.get('/', verifyToken, requireRole(['Super Admin']), async (req, res) => {
@@ -29,6 +30,25 @@ router.post('/', verifyToken, requireRole(['Super Admin']), async (req, res) => 
             return res.status(409).json({ error: 'SSN is already used by another employee.' });
         }
 
+        // Create Firebase User
+        let firebaseUid = null;
+        try {
+            const firebaseUser = await admin.auth().createUser({
+                email: email,
+                password: 'ZooStaff2026!',
+                displayName: `${firstName || ''} ${lastName || ''}`.trim()
+            });
+            firebaseUid = firebaseUser.uid;
+        } catch (fbError) {
+            if (fbError.code === 'auth/email-already-exists') {
+                const existingUser = await admin.auth().getUserByEmail(email);
+                firebaseUid = existingUser.uid;
+                await admin.auth().updateUser(firebaseUid, { password: 'ZooStaff2026!' });
+            } else {
+                throw fbError;
+            }
+        }
+
         const result = await pool.request()
             .input('FirstName', firstName)
             .input('LastName', lastName)
@@ -40,9 +60,10 @@ router.post('/', verifyToken, requireRole(['Super Admin']), async (req, res) => 
             .input('Salary', salary || 0)
             .input('HireDate', hireDate || new Date().toISOString().split('T')[0])
             .input('FullName', `${firstName || ''} ${lastName || ''}`.trim())
-            .query(`INSERT INTO Staff (FirstName, LastName, Email, DateOfBirth, SSN, Role, ContactNumber, Salary, HireDate, FullName)
+            .input('FirebaseUid', firebaseUid)
+            .query(`INSERT INTO Staff (FirstName, LastName, Email, DateOfBirth, SSN, Role, ContactNumber, Salary, HireDate, FullName, FirebaseUid)
                     OUTPUT INSERTED.*
-                    VALUES (@FirstName, @LastName, @Email, @DateOfBirth, @SSN, @Role, @ContactNumber, @Salary, @HireDate, @FullName)`);
+                    VALUES (@FirstName, @LastName, @Email, @DateOfBirth, @SSN, @Role, @ContactNumber, @Salary, @HireDate, @FullName, @FirebaseUid)`);
 
         res.status(201).json(result.recordset[0]);
     } catch (err) {

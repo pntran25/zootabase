@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Edit2, Plus, Trash2, Users, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { Edit2, Plus, Trash2, Users, ChevronUp, ChevronDown, ChevronsUpDown, Copy } from 'lucide-react';
 import AdminModalForm from '../AdminModalForm';
 import AdminSelect from '../AdminSelect';
 import BirthDatePickerInput from '../BirthDatePickerInput';
 import { API_BASE_URL } from '../../../services/apiClient';
 import '../AdminTable.css';
+
+const DEFAULT_PASSWORD = 'ZooStaff2026!';
 
 const ROLES = ['Super Admin', 'Caretaker', 'Event Coordinator', 'Ticket Staff', 'Shop Manager', 'Maintenance'];
 
@@ -276,6 +278,44 @@ const ManageStaff = () => {
           </div>
           {field(<>Salary <span style={{ color: 'var(--adm-text-muted)', fontSize: '0.75rem', fontWeight: 400 }}>(optional)</span></>, 'salary', 'number', { step: '0.01', placeholder: '0.00' })}
         </div>
+        {!editingStaff && (
+          <div style={{
+            marginTop: 4,
+            padding: '10px 14px',
+            borderRadius: 8,
+            background: 'rgba(16,185,129,0.08)',
+            border: '1px solid rgba(16,185,129,0.25)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+          }}>
+            <div>
+              <span style={{ fontSize: '0.72rem', color: 'var(--adm-text-muted)', display: 'block', marginBottom: 2 }}>Default password for new staff</span>
+              <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '0.95rem', color: '#10b981', letterSpacing: '0.05em' }}>{DEFAULT_PASSWORD}</span>
+            </div>
+            <button
+              type="button"
+              title="Copy password"
+              onClick={() => { navigator.clipboard.writeText(DEFAULT_PASSWORD); toast.success('Password copied!'); }}
+              style={{
+                background: 'rgba(16,185,129,0.15)',
+                border: '1px solid rgba(16,185,129,0.3)',
+                borderRadius: 6,
+                color: '#10b981',
+                cursor: 'pointer',
+                padding: '5px 8px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+                fontSize: '0.78rem',
+                fontWeight: 600,
+              }}
+            >
+              <Copy size={13} /> Copy
+            </button>
+          </div>
+        )}
       </AdminModalForm>
     </div>
   );
