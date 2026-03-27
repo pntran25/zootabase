@@ -127,13 +127,13 @@ router.post('/', optionalAuth, async (req, res) => {
             }
 
             await transaction.commit();
-            res.status(201).json({ 
-                ExhibitID: exhibitId, 
-                ExhibitName, 
-                AreaName, 
-                Capacity, 
+            res.status(201).json({
+                ExhibitID: exhibitId,
+                ExhibitName,
+                AreaName,
+                Capacity,
                 OpeningHours,
-                HabitatType 
+                HabitatType
             });
 
         } catch (err) {
@@ -201,7 +201,7 @@ router.put('/:id', optionalAuth, async (req, res) => {
                 .query('SELECT HabitatID FROM Habitat WHERE ExhibitID = @paramId');
 
             if (habitatResult.recordset.length > 0) {
-                 await request
+                await request
                     .input('paramHabitatType', sql.NVarChar, HabitatType)
                     .query(`
                         UPDATE Habitat 
@@ -210,7 +210,7 @@ router.put('/:id', optionalAuth, async (req, res) => {
                         WHERE ExhibitID = @paramId
                     `);
             } else if (HabitatType) {
-                 await request
+                await request
                     .input('paramHabitatType', sql.NVarChar, HabitatType)
                     .query(`
                         INSERT INTO Habitat (HabitatType, Size, ExhibitID)

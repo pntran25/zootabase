@@ -8,7 +8,7 @@ const path = require('path');
 const fs = require('fs');
 
 // Ensure image directory exists
-const imageDir = process.env.NODE_ENV === "production" ? "/tmp/images/Attractions_Images" : path.join(__dirname, '../../frontend/src/assets/images/Attractions_Images');
+const imageDir = path.join(__dirname, '../uploads/Attractions_Images');
 if (!fs.existsSync(imageDir)) {
     fs.mkdirSync(imageDir, { recursive: true });
 }

@@ -13,6 +13,7 @@ import TicketingPage from './components/User/Ticketing/TicketingPage';
 import MembershipPage from './components/User/Membership/MembershipPage';
 import Login from './components/User/Auth/Login';
 import Signup from './components/User/Auth/SignUp';
+import ForgotPassword from './components/User/Auth/ForgotPassword';
 
 // Admin Imports
 import AdminLayout from './layout/AdminLayout';
@@ -59,6 +60,7 @@ function App() {
           {/* Standalone Login and Signup routes — no UserLayout header */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
 
           {/* Admin Routes */}
           <Route path="/admin" element={<ProtectedRoute allowedRoles={allStaffRoles}><AdminLayout /></ProtectedRoute>}>

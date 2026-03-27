@@ -106,7 +106,8 @@ const ManageStaff = () => {
         const data = await res.json();
         toast.error(data.error || 'SSN is already used by another employee.');
       } else {
-        toast.error('Failed to save staff member');
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || 'Failed to save staff member');
       }
     } catch (err) {
       toast.error('An error occurred');

@@ -28,7 +28,7 @@ const AdminLayout = () => {
   const { userProfile } = useAuth();
   const role = userProfile?.Role || 'Viewer';
   const myPerms = rolePermissions[role] || [];
-  
+
   const [theme, setTheme] = useState(
     () => localStorage.getItem('admin-theme') || 'light'
   );
