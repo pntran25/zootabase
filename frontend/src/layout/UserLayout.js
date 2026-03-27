@@ -46,6 +46,9 @@ const UserLayout = () => {
             <NavLink to="/events" className={({ isActive }) => `ww-nav-link ${isActive ? 'active' : ''}`}>Events</NavLink>
             <NavLink to="/products" className={({ isActive }) => `ww-nav-link ${isActive ? 'active' : ''}`}>Gift Shop</NavLink>
             <NavLink to="/membership" className={({ isActive }) => `ww-nav-link ${isActive ? 'active' : ''}`}>Membership</NavLink>
+            {userProfile?.isStaff && (
+              <NavLink to="/admin" className={({ isActive }) => `ww-nav-link ${isActive ? 'active' : ''}`}>Admin</NavLink>
+            )}
           </nav>
 
           <div className="ww-header-actions">
