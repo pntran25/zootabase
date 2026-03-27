@@ -1,0 +1,67 @@
+/* Slightly narrower modal for ticket checkout (no shipping column needed) */
+.tco-modal {
+  max-width: 900px;
+}
+
+/* Visit date banner */
+.tco-info-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: rgba(45, 106, 79, 0.08);
+  border: 1px solid rgba(45, 106, 79, 0.2);
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+.tco-info-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #2d6a4f;
+}
+.tco-info-value {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+/* Ticket type heading */
+.tco-ticket-type {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+}
+.tco-ticket-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+/* Qty rows */
+.tco-qty-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  color: #555;
+  padding: 2px 0;
+}
+.tco-qty-row span:last-child {
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+/* Add-ons divider & header */
+.tco-divider {
+  height: 1px;
+  background: #d0cec7;
+  margin: 8px 0;
+}
+.tco-addon-header {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #888;
+  margin: 0 0 4px;
+}
