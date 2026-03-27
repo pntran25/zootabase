@@ -4,7 +4,7 @@ import { Search, MapPin, Clock, Leaf, Users, ArrowRight, ChevronLeft, ChevronRig
 import { getExhibits } from '../../../services/exhibitService';
 import { API_BASE_URL } from '../../../services/apiClient';
 import placeholderImg from '../../../assets/images/Exhibits_Images/ExhibitsComingSoon.png';
-import heroWildlife from '../../../assets/images/hero-wildlife.jpg';
+import heroWildlife from '../../../assets/images/giraffe-habitat.jpg';
 
 const REGION_PAGE_SIZE = 3;
 
