@@ -1,0 +1,227 @@
+Team 4 (Zoo Database)  
+{Naomi, Phi, Jawad, Jacques, Nathaniel}
+
+Summary of Mini-World
+
+1) Scope & Database Purpose
+
+The Zoo Management Database models the operations of a single zoo facility. It stores information about animals and their species, where animals are housed, zoo attractions and schedules, zoo staff roles and work coverage, customer visits and ticket purchases, retail/food locations, products, inventory levels, and sales transactions.
+The database supports daily operations (animal tracking, staffing, visitor activity, sales) and management reporting such as revenue, ticket sales, product sales, and operational performance (attendance by day, popular attractions, product demand, etc.). The system focuses only on the zoo’s internal operations and does not include external vendors or third-party ticketing platforms.
+
+2) Mini-World Description
+
+The zoo contains many animals that belong to defined species. Each animal has identifying information and a current health status. Animals are housed in exhibits (enclosures or themed habitats) that have capacity limits and may or may not be open to the public.
+The zoo also offers attractions (shows, rides, experiences) that have visitor capacity and operating schedules. Staff members work at the zoo in different roles such as animal care, retail, food service, maintenance, or management. Staff can be scheduled for shifts and assigned to exhibits for regular duties.
+Customers visit the zoo on specific dates, and each visit can include ticket purchases. During a visit, customers may also buy items (food or gift shop merchandise) at point-of-sale locations. Products have prices and stock quantities tracked per location. Transactions record purchases and contribute to revenue reporting. Each transaction can include multiple purchased products, which are stored as transaction line items.
+
+- The system manages zoo layout (Area, Exhibit, Habitat), animals and care (Animal, AnimalHealthRecord, FeedingSchedule, AnimalKeeperAssignment), staffing and operations (Staff, StaffSchedule, MaintenanceRequest), and customer/sales workflows (Customer, Membership, Visit, Ticket, Event, Product, Transaction, line items, POSLocation).
+- The design enforces referential integrity with foreign keys, domain checks (non-negative money/quantity, valid time/date windows), and role-aware assignments for animal care.
+- Low health scores trigger keeper notification based on active keeper assignments.
+
+
+Entities
+(If an attribute is not marked optional, it is NOT NULL.)
+
+1) Area  
+- AreaID: Primary key (uuid/int)  
+- AreaName (string)  
+- Theme (string)  
+- Description: Optional (string)
+
+2) Exhibit  
+- ExhibitID: Primary key (uuid/int)  
+- ExhibitName (string)  
+- AreaID: Foreign key -> Area.AreaID  
+- Capacity (integer, >= 0)  
+- OpeningHours (string/time range)
+
+3) Habitat  
+- HabitatID: Primary key (uuid/int)  
+- HabitatType (string)  
+- Size (decimal/float, > 0)  
+- ExhibitID: Foreign key -> Exhibit.ExhibitID
+
+4) Animal  
+- AnimalID: Primary key (uuid/int)  
+- Name (string)  
+- Species (string)  
+- Age (integer, >= 0)  
+- Gender (enum/string)  
+- DateArrived (date/datetime)  
+- HabitatID: Foreign key -> Habitat.HabitatID
+
+5) AnimalKeeperAssignment  
+- AssignmentID: Primary key (uuid/int)  
+- AnimalID: Foreign key -> Animal.AnimalID  
+- StaffID: Foreign key -> Staff.StaffID  
+- StartDate (date)  
+- EndDate: Optional (date, must be >= StartDate if present)  
+- Constraint: assigned staff should have role = Keeper (enforced by app/trigger/check logic)
+
+6) AnimalHealthRecord  
+- RecordID: Primary key (uuid/int)  
+- AnimalID: Foreign key -> Animal.AnimalID  
+- CheckupDate (date/datetime)  
+- HealthScore (integer, 0..100)  
+- Notes: Optional (string)  
+- StaffID: Foreign key -> Staff.StaffID
+
+Trigger example:
+- If HealthScore < 40 -> notify active assigned keeper from AnimalKeeperAssignment.
+
+7) FeedingSchedule  
+- ScheduleID: Primary key (uuid/int)  
+- AnimalID: Foreign key -> Animal.AnimalID  
+- FeedTime (datetime/time)  
+- FoodType (string)  
+- StaffID: Foreign key -> Staff.StaffID
+
+8) Staff  
+- StaffID: Primary key (uuid/int)  
+- FullName (string)  
+- Role (enum: Keeper | Cashier | Manager | Veterinarian)  
+- ContactNumber (string)  
+- Salary (decimal, >= 0)  
+- HireDate (date)
+
+9) StaffSchedule  
+- ScheduleID: Primary key (uuid/int)  
+- StaffID: Foreign key -> Staff.StaffID  
+- WorkDate (date)  
+- ShiftStart (time/datetime)  
+- ShiftEnd (time/datetime, must be > ShiftStart)  
+- AssignedExhibitID: Foreign key -> Exhibit.ExhibitID (optional if off-exhibit shift)
+
+10) MaintenanceRequest  
+- RequestID: Primary key (uuid/int)  
+- ExhibitID: Foreign key -> Exhibit.ExhibitID  
+- Description (string)  
+- RequestDate (date/datetime)  
+- Status (enum: Pending | In Progress | Completed)  
+- StaffID: Foreign key -> Staff.StaffID
+
+11) Customer  
+- CustomerID: Primary key (uuid/int)  
+- FullName (string)  
+- Email (string, UNIQUE, valid email format)  
+- PhoneNumber (string)
+
+12) Membership  
+- MembershipID: Primary key (uuid/int)  
+- CustomerID: Foreign key -> Customer.CustomerID  
+- MembershipType (enum/string)  
+- StartDate (date)  
+- EndDate (date, must be >= StartDate)  
+- DiscountRate (decimal, 0..1 or 0..100 by convention)
+
+13) TicketType  
+- TicketTypeID: Primary key (uuid/int)  
+- TypeName (enum/value set: General | Child | VIP | Event, UNIQUE)
+
+14) Ticket  
+- TicketID: Primary key (uuid/int)  
+- TicketTypeID: Foreign key -> TicketType.TicketTypeID  
+- Price (decimal, >= 0)  
+- PurchaseDate (datetime)  
+- CustomerID: Foreign key -> Customer.CustomerID
+
+15) Event  
+- EventID: Primary key (uuid/int)  
+- EventName (string)  
+- EventDate (date)  
+- StartTime (time)  
+- EndTime (time, must be > StartTime)  
+- ExhibitID: Foreign key -> Exhibit.ExhibitID  
+- Capacity (integer, >= 0)
+
+16) Attraction
+- AttractionID: Primary key (Primary /int)  
+- AttractionName (string)  
+- AttractionType (string)  
+- LocationDesc (string)  
+- CapacityVisitor (int) 
+- ActiveFlag (bool)
+
+17) Product  
+- ProductID: Primary key (uuid/int)  
+- ProductName (string)  
+- Category (enum/string: Food | Gift Shop | Beverage)  
+- Price (decimal, >= 0)  
+- StockQuantity (integer, >= 0)
+
+18) POSLocation  
+- POSLocationID: Primary key (int/uuid)  
+- LocationName (string)  
+- LocationType (string)  
+- ZoneName (string)  
+- OpenTime (time)  
+- CloseTime (time, must be > OpenTime)
+
+19) Transaction  
+- TransactionID: Primary key (uuid/int)  
+- TransactionDate (datetime)  
+- TotalAmount (decimal, >= 0)  
+- PaymentMethod (enum/string)  
+- CustomerID: Foreign key -> Customer.CustomerID (optional for walk-ins)  
+- StaffID: Foreign key -> Staff.StaffID  
+- POSLocationID: Foreign key -> POSLocation.POSLocationID
+
+20) TransactionProductItem  
+- LineID: Primary key (uuid/int)  
+- TransactionID: Foreign key -> Transaction.TransactionID  
+- ProductID: Foreign key -> Product.ProductID  
+- Quantity (integer, > 0)  
+- Subtotal (decimal, >= 0)
+
+21) TransactionTicketItem  
+- LineID: Primary key (uuid/int)  
+- TransactionID: Foreign key -> Transaction.TransactionID  
+- TicketID: Foreign key -> Ticket.TicketID  
+- Quantity (integer, > 0)  
+- Subtotal (decimal, >= 0)
+
+Relationships
+
+1) AREA_HAS_EXHIBIT: Area -> Exhibit (One-to-Many)  
+2) EXHIBIT_HAS_HABITAT: Exhibit -> Habitat (One-to-Many)  
+3) HABITAT_HAS_ANIMAL: Habitat -> Animal (One-to-Many)  
+4) ANIMAL_ASSIGNED_KEEPER: Animal <-> Staff via AnimalKeeperAssignment (Many-to-Many over time)  
+5) ANIMAL_HEALTH_LOG: Animal -> AnimalHealthRecord (One-to-Many)  
+6) ANIMAL_FEEDING_LOG: Animal -> FeedingSchedule (One-to-Many)  
+7) STAFF_WORKS_SHIFT: Staff -> StaffSchedule (One-to-Many)  
+8) EXHIBIT_HAS_MAINT_REQ: Exhibit -> MaintenanceRequest (One-to-Many)  
+9) CUSTOMER_HAS_MEMBERSHIP: Customer -> Membership (One-to-Many)  
+10) CUSTOMER_BUYS_TICKET: Customer -> Ticket (One-to-Many)  
+11) TICKET_OF_TYPE: TicketType -> Ticket (One-to-Many)  
+12) EXHIBIT_HOSTS_EVENT: Exhibit -> Event (One-to-Many)  
+13) POS_PROCESSES_TRANSACTION: POSLocation -> Transaction (One-to-Many)  
+14) CUSTOMER_MAKES_TRANSACTION: Customer -> Transaction (One-to-Many, optional at transaction level)  
+15) STAFF_HANDLES_TRANSACTION: Staff -> Transaction (One-to-Many)  
+16) TRANSACTION_HAS_PRODUCT_ITEMS: Transaction -> TransactionProductItem (One-to-Many)  
+17) TRANSACTION_HAS_TICKET_ITEMS: Transaction -> TransactionTicketItem (One-to-Many)  
+18) PRODUCT_SOLD_IN_LINE: Product -> TransactionProductItem (One-to-Many)  
+19) TICKET_SOLD_IN_LINE: Ticket -> TransactionTicketItem (One-to-Many)
+Constraints & Business Rules
+Entity Constraints
+- All entities must have a unique primary key.
+- Foreign keys must reference existing records.
+- Customer email must be unique.
+- Prices, salaries, stock quantities, and capacities must be ≥ 0.
+- HealthScore must be between 0 and 100.
+- End dates must be after start dates.
+- End times must be after start times.
+
+Relationship Constraints
+- Each Exhibit belongs to one Area.
+- Each Habitat belongs to one Exhibit.
+- Each Animal belongs to one Habitat.
+- A Customer can have many Tickets and Transactions.
+- Each Ticket belongs to one Customer and one TicketType.
+- Each Transaction is handled by one Staff member and one POSLocation.
+- Each Transaction must contain at least one item.
+- Animals and Staff have a many-to-many relationship through-AnimalKeeperAssignment.
+Operational Constraints
+- Product stock decreases when sold.
+- Stock cannot go negative.
+- Transaction total must equal the sum of its items.
+- Only Staff with role = Keeper can be assigned to animals.

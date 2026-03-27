@@ -1,0 +1,227 @@
+/* ── Overlay ── */
+.mlm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 16px;
+}
+
+/* ── Modal card ── */
+.mlm-modal {
+  background: #fff;
+  border-radius: 18px;
+  padding: 36px 32px 28px;
+  width: 100%;
+  max-width: 420px;
+  position: relative;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.18);
+}
+
+/* ── Close ── */
+.mlm-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: #f5f5f5;
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #666;
+  transition: background 0.15s;
+}
+.mlm-close:hover { background: #e8e8e8; color: #111; }
+
+/* ── Header ── */
+.mlm-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+.mlm-icon {
+  width: 52px;
+  height: 52px;
+  background: #e8f2ec;
+  color: #2d6a4f;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 14px;
+}
+.mlm-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #111;
+  margin: 0 0 6px;
+}
+.mlm-subtitle {
+  font-size: 0.88rem;
+  color: #666;
+  margin: 0;
+  line-height: 1.5;
+}
+.mlm-subtitle strong {
+  color: #2d6a4f;
+}
+
+/* ── Notice banner ── */
+.mlm-notice {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.82rem;
+  color: #15803d;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 18px;
+}
+
+/* ── Error ── */
+.mlm-error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.83rem;
+  text-align: center;
+  margin-bottom: 14px;
+}
+
+/* ── Form ── */
+.mlm-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.mlm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.mlm-field label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #444;
+}
+.mlm-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.mlm-input-icon {
+  position: absolute;
+  left: 12px;
+  color: #aaa;
+  pointer-events: none;
+}
+.mlm-input-wrap input {
+  width: 100%;
+  height: 42px;
+  padding: 0 40px 0 38px;
+  border: 1.5px solid #e2e2e2;
+  border-radius: 9px;
+  font-size: 0.9rem;
+  color: #111;
+  background: #fafafa;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+.mlm-input-wrap input:focus {
+  border-color: #2d6a4f;
+  box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.12);
+  background: #fff;
+}
+.mlm-eye {
+  position: absolute;
+  right: 11px;
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: #aaa;
+  display: flex;
+  align-items: center;
+}
+.mlm-eye:hover { color: #555; }
+
+/* ── Buttons ── */
+.mlm-btn-primary {
+  width: 100%;
+  height: 44px;
+  background: #2d6a4f;
+  color: #fff;
+  border: none;
+  border-radius: 9px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+  margin-top: 2px;
+}
+.mlm-btn-primary:hover:not(:disabled) { background: #1b4332; }
+.mlm-btn-primary:disabled { opacity: 0.65; cursor: not-allowed; }
+
+/* ── Divider ── */
+.mlm-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0;
+  color: #bbb;
+  font-size: 0.82rem;
+}
+.mlm-divider::before,
+.mlm-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #ebebeb;
+}
+
+/* ── Google button ── */
+.mlm-btn-google {
+  width: 100%;
+  height: 44px;
+  background: #fff;
+  border: 1.5px solid #e2e2e2;
+  border-radius: 9px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #333;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: background 0.15s, border-color 0.15s;
+}
+.mlm-btn-google:hover:not(:disabled) { background: #f7f7f7; border-color: #ccc; }
+.mlm-btn-google:disabled { opacity: 0.65; cursor: not-allowed; }
+
+/* ── Footer ── */
+.mlm-footer {
+  text-align: center;
+  font-size: 0.83rem;
+  color: #888;
+  margin: 16px 0 0;
+}
+.mlm-link {
+  color: #2d6a4f;
+  font-weight: 600;
+  text-decoration: none;
+}
+.mlm-link:hover { text-decoration: underline; }

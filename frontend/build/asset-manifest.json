@@ -1,24 +1,27 @@
 {
   "files": {
-    "main.css": "/static/css/main.0ee6c980.css",
-    "main.js": "/static/js/main.040b4baf.js",
-    "static/js/453.20359781.chunk.js": "/static/js/453.20359781.chunk.js",
-    "static/media/tiger.jpg": "/static/media/tiger.20ea19fa8c7ac67ab869.jpg",
-    "static/media/panda.jpg": "/static/media/panda.922ab9ce7558f25c0cfb.jpg",
-    "static/media/lion.jpg": "/static/media/lion.3f27ce47b3ae602079d5.jpg",
-    "static/media/capy.jpg": "/static/media/capy.24dacfb3e74c56e72398.jpg",
-    "static/media/redpanda.jpg": "/static/media/redpanda.2a8f75639bf1407b0735.jpg",
+    "main.css": "/static/css/main.59e912e5.css",
+    "main.js": "/static/js/main.4dc53c22.js",
+    "static/js/453.64aababc.chunk.js": "/static/js/453.64aababc.chunk.js",
+    "static/media/BreakfastWithGiraffes.png": "/static/media/BreakfastWithGiraffes.7e2072443807a7868162.png",
+    "static/media/HomePage.png": "/static/media/HomePage.b23c02b1c087312f9a2f.png",
+    "static/media/ExhibitsComingSoon.png": "/static/media/ExhibitsComingSoon.8216a6b2ef08dbdcf0c0.png",
+    "static/media/gift-shop-hero.jpg": "/static/media/gift-shop-hero.438b7f308ccdd30fe067.jpg",
+    "static/media/tiger.jpg": "/static/media/tiger.bf54f68319ba8bdc84b5.jpg",
+    "static/media/hero-wildlife.jpg": "/static/media/hero-wildlife.cc9ea4a4bb02cecc7f5e.jpg",
+    "static/media/Logo.png": "/static/media/Logo.ec6793ab0830c3edbd78.png",
+    "static/media/events-hero.jpg": "/static/media/events-hero.06deaac97a252d55500e.jpg",
+    "static/media/login_lion.png": "/static/media/login_lion.ae6d9c65452e47971777.png",
     "static/media/AppleGaramond.ttf": "/static/media/AppleGaramond.0ae25b7cfb9d8a1385d4.ttf",
     "static/media/AppleGaramond-Bold.ttf": "/static/media/AppleGaramond-Bold.f39aff89cda1a68cae06.ttf",
     "static/media/AppleGaramond-Italic.ttf": "/static/media/AppleGaramond-Italic.1544e40873b51450ee55.ttf",
-    "static/media/giraffe.jpg": "/static/media/giraffe.d1684c6a9677def14354.jpg",
     "index.html": "/index.html",
-    "main.0ee6c980.css.map": "/static/css/main.0ee6c980.css.map",
-    "main.040b4baf.js.map": "/static/js/main.040b4baf.js.map",
-    "453.20359781.chunk.js.map": "/static/js/453.20359781.chunk.js.map"
+    "main.59e912e5.css.map": "/static/css/main.59e912e5.css.map",
+    "main.4dc53c22.js.map": "/static/js/main.4dc53c22.js.map",
+    "453.64aababc.chunk.js.map": "/static/js/453.64aababc.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.0ee6c980.css",
-    "static/js/main.040b4baf.js"
+    "static/css/main.59e912e5.css",
+    "static/js/main.4dc53c22.js"
   ]
 }
