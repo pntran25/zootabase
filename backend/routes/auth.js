@@ -17,27 +17,28 @@ router.post('/sync', verifyToken, async (req, res) => {
         const { fullName } = req.body;
 
         // 1. Check if user exists in Staff table by Email
+        console.log(`[AUTH SYNC] Checking Staff table for email: ${firebaseUser.email}`);
         const staffResult = await pool.request()
             .input('Email', firebaseUser.email)
             .query(`SELECT StaffID, FirebaseUid FROM Staff WHERE Email = @Email`);
 
+        console.log(`[AUTH SYNC] Staff query result length: ${staffResult.recordset.length}`);
+
         if (staffResult.recordset.length > 0) {
             isStaff = true;
+            console.log(`[AUTH SYNC] User ${firebaseUser.email} IS STAFF. StaffID: ${staffResult.recordset[0].StaffID}`);
             userId = staffResult.recordset[0].StaffID;
 
-            // Link FirebaseUid if not already linked
-            if (!staffResult.recordset[0].FirebaseUid) {
+            // Link or Update FirebaseUid if it doesn't match
+            if (staffResult.recordset[0].FirebaseUid !== firebaseUser.uid) {
                 await pool.request()
                     .input('FirebaseUid', firebaseUser.uid)
                     .input('StaffID', userId)
                     .query(`UPDATE Staff SET FirebaseUid = @FirebaseUid WHERE StaffID = @StaffID`);
             }
 
-            // Log Staff Traffic
-            await pool.request()
-                .input('StaffID', userId)
-                .query(`INSERT INTO StaffLoginAudit (StaffID) VALUES (@StaffID)`);
         } else {
+            console.log(`[AUTH SYNC] User ${firebaseUser.email} IS NOT STAFF. Attempting to match Customer.`);
             // 2. Check if user exists in Customer table by FirebaseUid or Email
             const custResult = await pool.request()
                 .input('FirebaseUid', firebaseUser.uid)
@@ -69,10 +70,6 @@ router.post('/sync', verifyToken, async (req, res) => {
                 .input('CustomerID', userId)
                 .query(`UPDATE Customer SET LastLoginAt = SYSUTCDATETIME() WHERE CustomerID = @CustomerID`);
 
-            // Log Customer Traffic
-            await pool.request()
-                .input('CustomerID', userId)
-                .query(`INSERT INTO CustomerLoginAudit (CustomerID) VALUES (@CustomerID)`);
         }
 
         res.json({ success: true, isStaff, userId });
