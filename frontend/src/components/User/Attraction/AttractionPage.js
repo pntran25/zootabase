@@ -138,7 +138,7 @@ const AttractionPage = () => {
       <section className="ww-attr-hero">
         <div className="ww-attr-hero-frame">
           <img
-            src={`${API_BASE_URL}/images/Attractions_Images/attraction-1774099742414.jpg`}
+            src={`${API_BASE_URL}/images/Attractions_Images/zoo-carousel2.png`}
             alt="Wildlife Carousel"
             className="ww-attr-hero-img"
           />

@@ -12,6 +12,24 @@
   display: flex;
   align-items: center;
 }
+.mem-hero {
+  position: relative;
+  height: 60vh;
+  min-height: 420px;
+  overflow: hidden;
+}
+
+@media (max-width: 1024px) {
+  .mem-hero {
+    height: 55vh;
+  }
+}
+
+@media (max-width: 640px) {
+  .mem-hero {
+    height: 45vh;
+  }
+}
 .mem-hero-img {
   position: absolute;
   inset: 0;
@@ -20,6 +38,7 @@
   object-fit: cover;
   object-position: center 30%;
 }
+
 .mem-hero-overlay {
   position: absolute;
   inset: 0;
@@ -31,7 +50,7 @@
   left: 0;
   right: 0;
   height: 130px;
-  background: linear-gradient(to bottom, transparent, #fff);
+  background: linear-gradient(to bottom, transparent, #303030);
   z-index: 1;
 }
 .mem-hero-content {

@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════
-   WildWoods Zoo – HomePage Styles Redesign
+  Zootabase Zoo – HomePage Styles Redesign
    ══════════════════════════════════════════ */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -42,6 +42,26 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+/* Desktop — move lion UP */
+.ww-hero-bg img {
+  object-fit: cover;
+  object-position: center 25%;
+}
+
+/* Split-screen */
+@media (max-width: 1024px) {
+  .ww-hero-bg img {
+    object-position: center 35%;
+  }
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+  .ww-hero-bg img {
+    object-position: center 50%;
+  }
 }
 
 .ww-hero-overlay-1 {
@@ -107,6 +127,7 @@
 
 .ww-hero-heading-block { display: block; text-wrap: balance; }
 .ww-hero-heading-accent { display: block; color: var(--accent); }
+
 
 .ww-hero-sub {
   margin-top: 1.5rem;
