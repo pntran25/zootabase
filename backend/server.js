@@ -9,7 +9,7 @@ const PORT = parseInt(process.env.PORT, 10) || 5000;
 
 // CORS: allow only known origins in production
 const allowedOrigins = process.env.CORS_ORIGINS
-	? process.env.CORS_ORIGINS.split(',')
+	? process.env.CORS_ORIGINS.split(',').map(o => o.trim().replace(/\/$/, ''))
 	: ['http://localhost:3000'];
 app.use(cors({
 	origin: (origin, cb) => {
@@ -68,20 +68,15 @@ app.use('/api/analytics', analyticsRouter);
 app.use('/api/orders', ordersRouter);
 app.use('/api/ticket-orders', ticketOrdersRouter);
 app.use('/api/ticket-packages', require('./routes/ticketPackages'));
-app.use('/api/ticket-addons',   require('./routes/ticketAddons'));
+app.use('/api/ticket-addons', require('./routes/ticketAddons'));
 app.use('/api/membership-plans', membershipPlansRouter);
 app.use('/api/membership-subscriptions', membershipSubsRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/feeding-schedules', feedingSchedulesRouter);
 app.use('/api/keeper-assignments', keeperAssignmentsRouter);
 
-// Serve images from the frontend assets folder dynamically
-if (process.env.NODE_ENV === "production") {
-    app.use('/images', express.static('/tmp/images'));
-    app.use('/images', express.static(path.join(__dirname, 'assets/images')));
-} else {
-    app.use('/images', express.static(path.join(__dirname, '../frontend/src/assets/images')));
-}
+// Serve uploaded images from local uploads directory
+app.use('/images', express.static(path.join(__dirname, 'uploads')));
 
 async function runMigrations(pool) {
 	const steps = [
@@ -421,7 +416,7 @@ app.use((err, req, res, _next) => {
 		return res.status(413).json({ error: 'Image file too large. The maximum allowed size is 20MB.' });
 	}
 	if (err.name === 'MulterError') {
-	    return res.status(400).json({ error: err.message });
+		return res.status(400).json({ error: err.message });
 	}
 
 	// In production, strip raw DB error details from 500 responses
