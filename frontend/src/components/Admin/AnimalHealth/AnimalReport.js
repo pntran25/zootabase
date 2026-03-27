@@ -3,7 +3,7 @@ import '../AdminTable.css';
 import './AnimalReport.css';
 import {
   ClipboardList, ChevronDown, ChevronRight, PawPrint, HeartPulse,
-  Scale, Users, UtensilsCrossed, AlertTriangle, CheckCircle
+  Scale, Users, UtensilsCrossed, AlertTriangle, CheckCircle, Search
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getAnimalReport, getAnimalsForDropdown } from '../../../services/animalHealthService';
@@ -26,6 +26,8 @@ const scoreLabel = (s) => {
   if (s >= 40) return 'Fair';
   return 'Critical';
 };
+
+const healthPriority = { Critical: 0, Poor: 1, Fair: 2, Good: 3, Excellent: 4 };
 
 const healthColor = {
   Excellent: '#10b981',
@@ -63,6 +65,7 @@ const AnimalReport = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     getAnimalsForDropdown()
@@ -108,6 +111,28 @@ const AnimalReport = () => {
         </div>
       </div>
 
+      {/* ── Search bar ── */}
+      <div style={{ marginBottom: 14, position: 'relative', maxWidth: 340 }}>
+        <Search size={15} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--adm-text-muted)', pointerEvents: 'none' }} />
+        <input
+          type="text"
+          placeholder="Search by name, ID, or species..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{
+            width: '100%',
+            padding: '8px 12px 8px 34px',
+            background: 'var(--adm-bg-surface)',
+            border: '1px solid var(--adm-border)',
+            borderRadius: 8,
+            color: 'var(--adm-text-primary)',
+            fontSize: '0.85rem',
+            outline: 'none',
+            boxSizing: 'border-box',
+          }}
+        />
+      </div>
+
       {/* ── Animal table ── */}
       <div className="admin-table-container">
         {animals.length === 0 ? (
@@ -126,7 +151,18 @@ const AnimalReport = () => {
               </tr>
             </thead>
             <tbody>
-              {animals.map(an => {
+              {[...animals]
+                .filter(an => {
+                  if (!search) return true;
+                  const q = search.toLowerCase();
+                  return (
+                    (an.AnimalCode || '').toLowerCase().includes(q) ||
+                    (an.Name || '').toLowerCase().includes(q) ||
+                    (an.Species || '').toLowerCase().includes(q)
+                  );
+                })
+                .sort((a, b) => (healthPriority[a.HealthStatus] ?? 99) - (healthPriority[b.HealthStatus] ?? 99))
+                .map(an => {
                 const hc = healthColor[an.HealthStatus] || '#6b7280';
                 return (
                   <tr key={an.AnimalID}>
