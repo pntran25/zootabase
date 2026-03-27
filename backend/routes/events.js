@@ -32,7 +32,7 @@ async function resolveOrCreateExhibit(request, exhibitName) {
     const exhRes = await request
         .input('exhName', sql.NVarChar, exhibitName)
         .query('SELECT ExhibitID FROM Exhibit WHERE ExhibitName = @exhName');
-    
+
     if (exhRes.recordset.length > 0) {
         return exhRes.recordset[0].ExhibitID;
     }
@@ -76,7 +76,7 @@ router.get('/api/events', async (req, res) => {
             LEFT JOIN Exhibit ex ON e.ExhibitID = ex.ExhibitID
             WHERE e.DeletedAt IS NULL
         `);
-        
+
         const mappedResult = result.recordset.map(row => {
             // Format times removing seconds (e.g. '10:30:00' -> '10:30')
             let sTime = row.StartTime ? row.StartTime.toISOString().substring(11, 16) : '';
@@ -105,7 +105,7 @@ router.get('/api/events', async (req, res) => {
                 spotsLeft: Math.max(0, (row.Capacity || 0) - (Number(row.SpotsBooked) || 0)),
             };
         });
-        
+
         res.json(mappedResult);
     } catch (error) {
         console.error('Error fetching events:', error);
@@ -226,7 +226,7 @@ router.delete('/api/events/:id', optionalAuth, async (req, res) => {
             .input('id', sql.Int, parseInt(req.params.id, 10))
             .input('deletedBy', sql.NVarChar, adminName)
             .query('UPDATE Event SET DeletedAt = SYSUTCDATETIME(), DeletedBy = @deletedBy WHERE EventID = @id');
-            
+
         res.json({ success: true });
     } catch (error) {
         console.error('Error deleting event:', error);
@@ -281,7 +281,7 @@ router.post('/api/event-bookings', async (req, res) => {
 
         const ev = evRes.recordset[0];
         const startDate = ev.EventDate ? ev.EventDate.toISOString().split('T')[0] : null;
-        const endDate   = ev.EndDate   ? ev.EndDate.toISOString().split('T')[0]   : startDate;
+        const endDate = ev.EndDate ? ev.EndDate.toISOString().split('T')[0] : startDate;
         if (startDate && (bookingDate < startDate || bookingDate > endDate)) {
             return res.status(400).json({ error: 'Booking date is outside the event date range.' });
         }
@@ -292,33 +292,33 @@ router.post('/api/event-bookings', async (req, res) => {
         }
 
         const unitPrice = Number(ev.Price) || 0;
-        const subtotal  = unitPrice * quantity;
-        const total     = subtotal;
+        const subtotal = unitPrice * quantity;
+        const total = subtotal;
 
         const result = await pool.request()
-            .input('eventId',           sql.Int,          parseInt(eventId, 10))
-            .input('bookingDate',       sql.Date,         bookingDate)
-            .input('quantity',          sql.Int,          parseInt(quantity, 10))
-            .input('unitPrice',         sql.Decimal(10,2), unitPrice)
-            .input('subtotal',          sql.Decimal(10,2), subtotal)
-            .input('total',             sql.Decimal(10,2), total)
-            .input('firstName',         sql.NVarChar,     firstName)
-            .input('lastName',          sql.NVarChar,     lastName)
-            .input('email',             sql.NVarChar,     email)
-            .input('phone',             sql.NVarChar,     phone || null)
-            .input('addressLine1',      sql.NVarChar,     addressLine1 || null)
-            .input('addressLine2',      sql.NVarChar,     addressLine2 || null)
-            .input('city',              sql.NVarChar,     city || null)
-            .input('stateProvince',     sql.NVarChar,     stateProvince || null)
-            .input('zipCode',           sql.NVarChar,     zipCode || null)
-            .input('billingSame',       sql.Bit,          billingSameAsContact ? 1 : 0)
-            .input('billingFullName',   sql.NVarChar,     billingFullName || null)
-            .input('billingAddress1',   sql.NVarChar,     billingAddress1 || null)
-            .input('billingAddress2',   sql.NVarChar,     billingAddress2 || null)
-            .input('billingCity',       sql.NVarChar,     billingCity || null)
-            .input('billingState',      sql.NVarChar,     billingState || null)
-            .input('billingZip',        sql.NVarChar,     billingZip || null)
-            .input('cardLastFour',      sql.NVarChar,     cardLastFour || null)
+            .input('eventId', sql.Int, parseInt(eventId, 10))
+            .input('bookingDate', sql.Date, bookingDate)
+            .input('quantity', sql.Int, parseInt(quantity, 10))
+            .input('unitPrice', sql.Decimal(10, 2), unitPrice)
+            .input('subtotal', sql.Decimal(10, 2), subtotal)
+            .input('total', sql.Decimal(10, 2), total)
+            .input('firstName', sql.NVarChar, firstName)
+            .input('lastName', sql.NVarChar, lastName)
+            .input('email', sql.NVarChar, email)
+            .input('phone', sql.NVarChar, phone || null)
+            .input('addressLine1', sql.NVarChar, addressLine1 || null)
+            .input('addressLine2', sql.NVarChar, addressLine2 || null)
+            .input('city', sql.NVarChar, city || null)
+            .input('stateProvince', sql.NVarChar, stateProvince || null)
+            .input('zipCode', sql.NVarChar, zipCode || null)
+            .input('billingSame', sql.Bit, billingSameAsContact ? 1 : 0)
+            .input('billingFullName', sql.NVarChar, billingFullName || null)
+            .input('billingAddress1', sql.NVarChar, billingAddress1 || null)
+            .input('billingAddress2', sql.NVarChar, billingAddress2 || null)
+            .input('billingCity', sql.NVarChar, billingCity || null)
+            .input('billingState', sql.NVarChar, billingState || null)
+            .input('billingZip', sql.NVarChar, billingZip || null)
+            .input('cardLastFour', sql.NVarChar, cardLastFour || null)
             .query(`
                 DECLARE @Out TABLE (EventBookingID INT);
                 INSERT INTO EventBookings (
@@ -352,28 +352,28 @@ router.post('/api/event-bookings', async (req, res) => {
 router.get('/api/event-bookings', async (req, res) => {
     try {
         const pool = await connectToDb();
-        const limit  = parseInt(req.query.limit  || 100, 10);
-        const offset = parseInt(req.query.offset || 0,   10);
-        const search   = req.query.search   || '';
+        const limit = parseInt(req.query.limit || 100, 10);
+        const offset = parseInt(req.query.offset || 0, 10);
+        const search = req.query.search || '';
         const dateFrom = req.query.dateFrom || '';
-        const dateTo   = req.query.dateTo   || '';
+        const dateTo = req.query.dateTo || '';
 
         let conditions = '';
-        if (search)   conditions += ` AND (eb.FirstName LIKE @search OR eb.LastName LIKE @search OR eb.Email LIKE @search OR e.EventName LIKE @search)`;
+        if (search) conditions += ` AND (eb.FirstName LIKE @search OR eb.LastName LIKE @search OR eb.Email LIKE @search OR e.EventName LIKE @search)`;
         if (dateFrom) conditions += ` AND eb.PlacedAt >= @dateFrom`;
-        if (dateTo)   conditions += ` AND eb.PlacedAt <= @dateTo`;
+        if (dateTo) conditions += ` AND eb.PlacedAt <= @dateTo`;
 
         const mkReq = () => {
             const r = pool.request();
-            if (search)   r.input('search',   sql.NVarChar, `%${search}%`);
+            if (search) r.input('search', sql.NVarChar, `%${search}%`);
             if (dateFrom) r.input('dateFrom', sql.NVarChar, dateFrom);
-            if (dateTo)   r.input('dateTo',   sql.NVarChar, dateTo);
+            if (dateTo) r.input('dateTo', sql.NVarChar, dateTo);
             return r;
         };
 
         const [rowsRes, countRes] = await Promise.all([
             mkReq()
-                .input('limit',  sql.Int, limit)
+                .input('limit', sql.Int, limit)
                 .input('offset', sql.Int, offset)
                 .query(`
                     SELECT eb.EventBookingID, eb.FirstName, eb.LastName, eb.Email,

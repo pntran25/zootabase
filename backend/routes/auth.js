@@ -20,7 +20,7 @@ router.post('/sync', verifyToken, async (req, res) => {
         console.log(`[AUTH SYNC] Checking Staff table for email: ${firebaseUser.email}`);
         const staffResult = await pool.request()
             .input('Email', firebaseUser.email)
-            .query(`SELECT StaffID, FirebaseUid FROM Staff WHERE Email = @Email`);
+            .query(`SELECT StaffID, FirebaseUid FROM Staff WHERE Email = @Email AND DeletedAt IS NULL`);
 
         console.log(`[AUTH SYNC] Staff query result length: ${staffResult.recordset.length}`);
 
