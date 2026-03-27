@@ -4,7 +4,7 @@ import './EventsPage.css';
 import { API_BASE_URL } from '../../../services/apiClient';
 import { Calendar, Clock, ChevronLeft, ChevronRight, MapPin, Search, Star, Ticket, Users } from 'lucide-react';
 import EventCheckoutModal from './EventCheckoutModal';
-import eventsHeroImg from '../../../assets/images/events-hero.jpg';
+import eventsHeroImg from '../../../assets/images/events-hero1.jpg';
 
 // Custom cn utility for Tailwind
 const cn = (...classes) => classes.filter(Boolean).join(' ');
@@ -391,13 +391,25 @@ const EventsPage = () => {
       
       {/* Hero Section */}
       <section className="relative">
-        <div className="relative h-[45vh] min-h-[360px] overflow-hidden">
+        <div className="events-hero-frame relative overflow-hidden">
+          
+          {/* Hero Image */}
           <img
             src={eventsHeroImg}
             alt="Zoo events"
-            className="absolute inset-0 w-full h-full object-cover"
+            className="events-hero-img absolute inset-0 w-full h-full"
           />
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.4) 50%, rgba(250,250,250,1) 100%)' }} />
+
+          {/* Gradient Overlay */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.4) 50%, rgb(15, 15, 15) 100%)'
+            }}
+          />
+
+          {/* Content */}
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center px-4 mt-8">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white tracking-tight text-balance m-0">
@@ -408,8 +420,10 @@ const EventsPage = () => {
               </p>
             </div>
           </div>
+
         </div>
       </section>
+
 
       {/* Filters Section */}
       <section className="sticky top-[4rem] z-40 bg-card border-b border-border" style={{ boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.07)' }}>

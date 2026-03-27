@@ -4,7 +4,7 @@ import './AnimalPage.css';
 import { API_BASE_URL } from '../../../services/apiClient';
 import { Info, MapPin, Search, Grid3X3, List, ChevronLeft, ChevronRight } from 'lucide-react';
 import placeholderImg from '../../../assets/images/Exhibits_Images/ExhibitsComingSoon.png';
-import tigerHeroImg from '../../../assets/images/tiger.jpg';
+import tigerHeroImg from '../../../assets/images/tiger1.jpg';
 
 // Custom cn utility for Tailwind
 const cn = (...classes) => classes.filter(Boolean).join(' ');
@@ -82,14 +82,15 @@ const AnimalPage = () => {
   return (
     <div className="min-h-screen bg-background pb-12">
       <section className="relative">
-        <div className="relative h-[45vh] min-h-[360px] overflow-hidden">
+        <div className="relative animal-hero-frame overflow-hidden">
+
           <img
             src={tigerHeroImg}
             alt="Zoo animals"
             className="absolute inset-0 w-full h-full object-cover"
-            style={{ objectPosition: 'center 40%' }}
+            style={{ objectPosition: 'center 40%'}}
           />
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.4) 50%, rgba(250,250,250,1) 100%)' }} />
+          <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.4) 50%, rgb(6, 6, 6) 100%)' }} />
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center px-4 mt-8">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white tracking-tight text-balance m-0">
