@@ -8,7 +8,7 @@ const path = require('path');
 const fs = require('fs');
 
 // Ensure image directory exists
-const imageDir = path.join(__dirname, '../../frontend/src/assets/images/Animals_Images');
+const imageDir = process.env.NODE_ENV === "production" ? "/tmp/images/Animals_Images" : path.join(__dirname, '../../frontend/src/assets/images/Animals_Images');
 if (!fs.existsSync(imageDir)) {
     fs.mkdirSync(imageDir, { recursive: true });
 }
@@ -24,7 +24,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 5 * 1024 * 1024 },
+    limits: { fileSize: 20 * 1024 * 1024 }, // Increased to 20MB
     fileFilter: (req, file, cb) => {
         const allowed = /jpeg|jpg|png|gif|webp/;
         if (allowed.test(path.extname(file.originalname).toLowerCase()) && allowed.test(file.mimetype)) {

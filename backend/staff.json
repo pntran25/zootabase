@@ -1,0 +1,306 @@
+[
+  {
+    "StaffID": 2,
+    "FirstName": "Admin",
+    "LastName": "User",
+    "Email": null,
+    "Role": "Manager",
+    "FirebaseUid": null
+  },
+  {
+    "StaffID": 10004,
+    "FirstName": "Jawad",
+    "LastName": "Hemani",
+    "Email": "jawadhasanhemani@gmail.com",
+    "Role": "Super Admin",
+    "FirebaseUid": "QRlY60Z6CRQnyq2OXqNAGXKGjsE2"
+  },
+  {
+    "StaffID": 10005,
+    "FirstName": "Luca",
+    "LastName": "Wells",
+    "Email": "lucawells@gmail.com",
+    "Role": "Caretaker",
+    "FirebaseUid": "cCA1zkuyvEYgxqd5itSfkYCKeiJ2"
+  },
+  {
+    "StaffID": 10006,
+    "FirstName": "Phi",
+    "LastName": "Tran",
+    "Email": "phitran347446@gmail.com",
+    "Role": "Super Admin",
+    "FirebaseUid": "YpqM7oDJbyfwlbQPsaUVaLRoDtg2"
+  },
+  {
+    "StaffID": 10007,
+    "FirstName": "Nathaniel",
+    "LastName": "Ebarena",
+    "Email": "ebarenathaniel@gmail.com",
+    "Role": "Super Admin",
+    "FirebaseUid": "CvwLTZl4BbXs1xwDxmBWV1kP3993"
+  },
+  {
+    "StaffID": 10008,
+    "FirstName": "Naomi",
+    "LastName": "Thomas",
+    "Email": "naomithomas2005@gmail.com",
+    "Role": "Super Admin",
+    "FirebaseUid": "DcNnyOjTAgPw5EEzf0YBKrT6oP12"
+  },
+  {
+    "StaffID": 10009,
+    "FirstName": "Jacques",
+    "LastName": "Akpan",
+    "Email": "tepeakpan@gmail.com",
+    "Role": "Super Admin",
+    "FirebaseUid": "IbeCxJ1QLGcagq9FJcQgCZGaU8v2"
+  },
+  {
+    "StaffID": 10010,
+    "FirstName": "James",
+    "LastName": "Wilson",
+    "Email": "jameswilson@gmail.com",
+    "Role": "Caretaker",
+    "FirebaseUid": null
+  },
+  {
+    "StaffID": 10011,
+    "FirstName": "Maria",
+    "LastName": "Garcia",
+    "Email": "mariagarcia@gmail.com",
+    "Role": "Caretaker",
+    "FirebaseUid": null
+  },
+  {
+    "StaffID": 10012,
+    "FirstName": "Robert",
+    "LastName": "Smith",
+    "Email": "robertsmith@gmail.com",
+    "Role": "Caretaker",
+    "FirebaseUid": null
+  },
+  {
+    "StaffID": 10013,
+    "FirstName": "Linda",
+    "LastName": "Chen",
+    "Email": "lindachen@gmail.com",
+    "Role": "Caretaker",
+    "FirebaseUid": null
+  },
+  {
+    "StaffID": 10014,
+    "FirstName": "Michael",
+    "LastName": "Brown",
+    "Email": "michaelbrown@gmail.com",
+    "Role": "Caretaker",
+    "FirebaseUid": null
+  },
+  {
+    "StaffID": 10015,
+    "FirstName": "Elizabeth",
+    "LastName": "Taylor",
+    "Email": "elizabethtaylor@gmail.com",
+    "Role": "Caretaker",
+    "FirebaseUid": null
+  },
+  {
+    "StaffID": 10016,
+    "FirstName": "David",
+    "LastName": "Miller",
+    "Email": "davidmiller@gmail.com",
+    "Role": "Caretaker",
+    "FirebaseUid": null
+  },
+  {
+    "StaffID": 10017,
+    "FirstName": "Jennifer",
+    "LastName": "Davis",
+    "Email": "jenniferdavis@gmail.com",
+    "Role": "Caretaker",
+    "FirebaseUid": null
+  },
+  {
+    "StaffID": 10018,
+    "FirstName": "William",
+    "LastName": "Martinez",
+    "Email": "williammartinez@gmail.com",
+    "Role": "Caretaker",
+    "FirebaseUid": null
+  },
+  {
+    "StaffID": 10019,
+    "FirstName": "Barbara",
+    "LastName": "Anderson",
+    "Email": "barbaraanderson@gmail.com",
+    "Role": "Caretaker",
+    "FirebaseUid": null
+  },
+  {
+    "StaffID": 10020,
+    "FirstName": "Richard",
+    "LastName": "Jackson",
+    "Email": "richardjackson@gmail.com",
+    "Role": "Event Coordinator",
+    "FirebaseUid": null
+  },
+  {
+    "StaffID": 10021,
+    "FirstName": "Susan",
+    "LastName": "White",
+    "Email": "susanwhite@gmail.com",
+    "Role": "Event Coordinator",
+    "FirebaseUid": null
+  },
+  {
+    "StaffID": 10022,
+    "FirstName": "Joseph",
+    "LastName": "Harris",
+    "Email": "josephharris@gmail.com",
+    "Role": "Event Coordinator",
+    "FirebaseUid": null
+  },
+  {
+    "StaffID": 10023,
+    "FirstName": "Margaret",
+    "LastName": "Martin",
+    "Email": "margaretmartin@gmail.com",
+    "Role": "Event Coordinator",
+    "FirebaseUid": null
+  },
+  {
+    "StaffID": 10024,
+    "FirstName": "Charles",
+    "LastName": "Thompson",
+    "Email": "charlesthompson@gmail.com",
+    "Role": "Event Coordinator",
+    "FirebaseUid": null
+  },
+  {
+    "StaffID": 10025,
+    "FirstName": "Christopher",
+    "LastName": "Moore",
+    "Email": "christoophermoore@gmail.com",
+    "Role": "Ticket Staff",
+    "FirebaseUid": null
+  },
+  {
+    "StaffID": 10026,
+    "FirstName": "Dorothy",
+    "LastName": "Young",
+    "Email": "dorothyyoung@gmail.com",
+    "Role": "Ticket Staff",
+    "FirebaseUid": null
+  },
+  {
+    "StaffID": 10027,
+    "FirstName": "Daniel",
+    "LastName": "Allen",
+    "Email": "danielallen@gmail.com",
+    "Role": "Ticket Staff",
+    "FirebaseUid": null
+  },
+  {
+    "StaffID": 10028,
+    "FirstName": "Lisa",
+    "LastName": "King",
+    "Email": "lisaking@gmail.com",
+    "Role": "Ticket Staff",
+    "FirebaseUid": null
+  },
+  {
+    "StaffID": 10029,
+    "FirstName": "Matthew",
+    "LastName": "Wright",
+    "Email": "matthewwright@gmail.com",
+    "Role": "Ticket Staff",
+    "FirebaseUid": null
+  },
+  {
+    "StaffID": 10030,
+    "FirstName": "Anthony",
+    "LastName": "Scott",
+    "Email": "anthonyscott@gmail.com",
+    "Role": "Shop Manager",
+    "FirebaseUid": null
+  },
+  {
+    "StaffID": 10031,
+    "FirstName": "Karen",
+    "LastName": "Green",
+    "Email": "karengreen@gmail.com",
+    "Role": "Shop Manager",
+    "FirebaseUid": null
+  },
+  {
+    "StaffID": 10032,
+    "FirstName": "Mark",
+    "LastName": "Baker",
+    "Email": "markbaker@gmail.com",
+    "Role": "Shop Manager",
+    "FirebaseUid": null
+  },
+  {
+    "StaffID": 10033,
+    "FirstName": "Paul",
+    "LastName": "Adams",
+    "Email": "pauladams@gmail.com",
+    "Role": "Maintenance",
+    "FirebaseUid": null
+  },
+  {
+    "StaffID": 10034,
+    "FirstName": "Steven",
+    "LastName": "Nelson",
+    "Email": "stevennelson@gmail.com",
+    "Role": "Maintenance",
+    "FirebaseUid": null
+  },
+  {
+    "StaffID": 10035,
+    "FirstName": "Admin",
+    "LastName": "Master",
+    "Email": "admin@wildwoods.zoo",
+    "Role": "Super Admin",
+    "FirebaseUid": "tpushFkqSMQu1y9P8DIcG1C2UKg2"
+  },
+  {
+    "StaffID": 10036,
+    "FirstName": "Nathaniel",
+    "LastName": "Ebare",
+    "Email": "ebarenathaniel@gmail.com",
+    "Role": "Super Admin",
+    "FirebaseUid": null
+  },
+  {
+    "StaffID": 10037,
+    "FirstName": "Nathaniel",
+    "LastName": "Ebare",
+    "Email": "nathanielebare@gmail.com",
+    "Role": "Super Admin",
+    "FirebaseUid": null
+  },
+  {
+    "StaffID": 10038,
+    "FirstName": "Nathaniel",
+    "LastName": "E",
+    "Email": "ebarenathaniel@gmail.com",
+    "Role": "Super Admin",
+    "FirebaseUid": null
+  },
+  {
+    "StaffID": 10039,
+    "FirstName": "brooo",
+    "LastName": "akkk",
+    "Email": "tepeakpan@gmail.com",
+    "Role": "Caretaker",
+    "FirebaseUid": null
+  },
+  {
+    "StaffID": 10040,
+    "FirstName": "Timmy",
+    "LastName": "Turner",
+    "Email": "timmyturner@gmail.com",
+    "Role": "Caretaker",
+    "FirebaseUid": "QbZybwkL35OReWTJ1X1BH6Ceaae2"
+  }
+]
