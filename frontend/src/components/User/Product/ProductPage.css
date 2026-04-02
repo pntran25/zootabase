@@ -6,6 +6,43 @@
   align-items: center;
   gap: 0.5rem;
 }
+/* HERO HEIGHT (same as Attractions page) */
+.giftshop-hero-frame {
+  height: 60vh;
+  min-height: 420px;
+}
+
+@media (max-width: 1024px) {
+  .giftshop-hero-frame {
+    height: 53vh;
+  }
+}
+
+@media (max-width: 640px) {
+  .giftshop-hero-frame {
+    height: 45vh;
+  }
+}
+
+/* IMAGE POSITIONING */
+.giftshop-hero-img {
+  object-fit: cover;
+  object-position: center 40%;
+}
+
+@media (max-width: 1024px) {
+  .giftshop-hero-img {
+    object-position: center 40%;
+  }
+}
+
+@media (max-width: 640px) {
+  .giftshop-hero-img {
+    object-position: center 50%;
+  }
+}
+
+
 
 @keyframes ps-slide-in-right { from { transform: translateX(18px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 @keyframes ps-slide-in-left  { from { transform: translateX(-18px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
