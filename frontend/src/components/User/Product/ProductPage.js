@@ -3,7 +3,7 @@ import { getAllProducts } from '../../../services/productService';
 import { API_BASE_URL } from '../../../services/apiClient';
 import { useAuth } from '../../../context/AuthContext';
 import { auth } from '../../../services/firebase';
-import giftShopHeroImg from '../../../assets/images/gift-shop-hero.jpg';
+import giftShopHeroImg from '../../../assets/images/zoo-giftshop.jpg';
 import './ProductPage.css';
 import { Search, ShoppingCart, Plus, Minus, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
@@ -160,15 +160,15 @@ const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
-      <section className="relative h-[45vh] min-h-[360px] flex items-center justify-center overflow-hidden bg-muted">
+      <section className="giftshop-hero-frame relative flex items-center justify-center overflow-hidden">
+
         <img
           src={giftShopHeroImg}
           alt="Zoo Gift Shop"
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.4) 50%, rgba(250,250,250,1) 100%)' }} />
+            className="giftshop-hero-img absolute inset-0 w-full h-full"/>
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.4) 50%, rgb(30, 29, 29) 100%)' }} />
         <div className="relative z-10 text-center px-4 max-w-4xl mx-auto mt-8">
-<h1 className="text-4xl md:text-6xl font-bold text-white mb-4 text-balance m-0 tracking-tight">
+        <h1 className="text-4xl md:text-6xl font-bold text-white mb-4 text-balance m-0 tracking-tight">
             Gift Shop
           </h1>
           <p className="text-lg md:text-xl text-white/80 max-w-2xl mx-auto text-pretty">

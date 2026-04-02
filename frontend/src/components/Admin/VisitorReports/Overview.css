@@ -1,0 +1,125 @@
+/* Base page layout */
+.vr-page {
+  padding: 24px 28px;
+  color: #f9fafb;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  background: #050816;
+  font-family: "Inter", system-ui, sans-serif;
+}
+
+/* Header */
+.vr-header h1 {
+  font-size: 1.9rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.vr-header p {
+  font-size: 0.95rem;
+  color: #9ca3af;
+}
+
+/* Date Filters */
+.vr-date-filters {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.vr-date-filters button {
+  background: #111827;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid #1f2937;
+  color: #e5e7eb;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: 0.15s ease;
+}
+
+.vr-date-filters button:hover {
+  background: #1f2937;
+}
+
+.vr-date-filters button.active {
+  background: #4f46e5;
+  border-color: #6366f1;
+  color: #fff;
+  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.4);
+}
+
+/* KPI Grid */
+.vr-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 16px;
+}
+
+.vr-kpi-card {
+  background: #0b0f1a;
+  padding: 18px;
+  border-radius: 14px;
+  border: 1px solid #1e2535;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.45);
+}
+
+.vr-kpi-card h2 {
+  font-size: 1.6rem;
+  font-weight: 600;
+}
+
+.vr-kpi-card p {
+  color: #9ca3af;
+  margin-top: 4px;
+}
+
+.vr-kpi-card.accent {
+  border-color: #6366f1;
+}
+
+/* Sections */
+.vr-section {
+  margin-top: 10px;
+}
+
+.vr-section h3 {
+  margin-bottom: 12px;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+/* Table */
+.vr-table {
+  background: #0b0f1a;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid #1e2535;
+}
+
+.vr-table-header,
+.vr-table-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  padding: 12px 4px;
+  font-size: 0.9rem;
+}
+
+.vr-table-header {
+  color: #9ca3af;
+  border-bottom: 1px solid #1e2535;
+}
+
+.vr-table-row {
+  border-bottom: 1px solid #111827;
+}
+
+.vr-table-row:last-child {
+  border-bottom: none;
+}
+
+.vr-total {
+  font-weight: 600;
+  color: #a5b4fc;
+}
