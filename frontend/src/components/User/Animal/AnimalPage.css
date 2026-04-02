@@ -46,6 +46,26 @@
   gap: 0.5rem;
 }
 
+/* Desktop default — show more of the bottom */
+.animal-hero-frame {
+  height: 60vh;
+  min-height: 420px;
+}
+
+/* Match Attractions page responsive behavior */
+@media (max-width: 1024px) {
+  .animal-hero-frame {
+    height: 53vh;
+  }
+}
+
+@media (max-width: 640px) {
+  .animal-hero-frame {
+    height: 45vh;
+  }
+}
+
+
 /* ── Slide animations ── */
 @keyframes an-slide-in-right { from { transform: translateX(18px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 @keyframes an-slide-in-left  { from { transform: translateX(-18px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
