@@ -36,6 +36,7 @@ import AnimalReport from './components/Admin/AnimalHealth/AnimalReport';
 import AnimalCare from './components/Admin/AnimalHealth/AnimalCare';
 import ManageMemberships from './components/Admin/ManageMemberships/ManageMemberships';
 
+const allStaffRoles = ['Super Admin', 'Zoo Manager', 'Caretaker', 'Event Coordinator', 'Ticket Staff', 'Shop Manager', 'Maintenance'];
 function ScrollToTop() {
   const { pathname } = useLocation();
   useEffect(() => {
@@ -43,8 +44,6 @@ function ScrollToTop() {
   }, [pathname]);
   return null;
 }
-
-const allStaffRoles = ['Super Admin', 'Caretaker', 'Event Coordinator', 'Ticket Staff', 'Shop Manager', 'Maintenance'];
 
 function App() {
   return (
