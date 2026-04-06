@@ -53,7 +53,7 @@ const Badge = ({ children, variant = "default", className }) => {
 function enrichProduct(product) {
   return {
     ...product,
-    image: product.imageUrl ? `${API_BASE_URL}${product.imageUrl}` : '',
+    image: product.imageUrl ? (product.imageUrl?.startsWith('http') ? product.imageUrl : `${API_BASE_URL}${product.imageUrl}`) : '',
     inStock: (product.stockQuantity || 0) > 0,
   };
 }
