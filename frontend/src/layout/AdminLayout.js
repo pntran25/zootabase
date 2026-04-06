@@ -15,9 +15,9 @@ import { API_BASE_URL } from '../services/apiClient';
 import './AdminLayout.css';
 
 const rolePermissions = {
-  'Super Admin':       ['dashboard', 'animals', 'exhibits', 'attractions', 'events', 'tickets', 'shop', 'maintenance', 'staff', 'analytics', 'feedback', 'reports', 'memberships', 'animal-health', 'animal-care', 'animal-report'],
+  'Super Admin':       ['dashboard', 'animals', 'exhibits', 'attractions', 'events', 'tickets', 'shop', 'maintenance', 'staff', 'analytics', 'feedback', 'reports', 'memberships', 'animal-health', 'animal-care', 'animal-report', 'health-report'],
   'Zoo Manager':       ['dashboard', 'animals', 'exhibits', 'attractions', 'events', 'maintenance', 'animal-health', 'animal-care', 'animal-report', 'reports', 'analytics', 'feedback'],
-  'Caretaker':         ['dashboard', 'animals', 'maintenance', 'animal-health', 'animal-care', 'animal-report'],
+  'Caretaker':         ['dashboard', 'animals', 'maintenance', 'animal-health', 'animal-care', 'animal-report', 'health-report'],
   'Event Coordinator': ['dashboard', 'events', 'reports', 'maintenance'],
   'Ticket Staff':      ['dashboard', 'tickets', 'memberships', 'reports', 'maintenance'],
   'Shop Manager':      ['dashboard', 'shop', 'reports', 'maintenance'],
@@ -131,9 +131,10 @@ const AdminLayout = () => {
           {renderLink('/admin/animal-health', <HeartPulse size={18} className="nav-icon" />, 'Health Tracking', 'animal-health')}
           {renderLink('/admin/animal-care', <UtensilsCrossed size={18} className="nav-icon" />, 'Feeding & Keepers', 'animal-care')}
 
-          {hasAny('animal-report', 'reports', 'analytics') && <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Reports & Analytics</p>}
+          {hasAny('animal-report', 'health-report', 'reports', 'analytics') && <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Reports & Analytics</p>}
           {renderLink('/admin/animal-report', <ClipboardList size={18} className="nav-icon" />, 'Animal Reports', 'animal-report')}
-          {renderLink('/admin/reports', <FileText size={18} className="nav-icon" />, 'Sales Reports', 'reports')}
+          {renderLink('/admin/health-report', <HeartPulse size={18} className="nav-icon" />, 'Health Reports', 'health-report')}
+          {renderLink('/admin/reports', <FileText size={18} className="nav-icon" />, 'Transaction Reports', 'reports')}
           {renderLink('/admin/analytics', <LineChart size={18} className="nav-icon" />, 'Analytics', 'analytics')}
 
           {hasAny('staff', 'maintenance') && <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Administration</p>}
