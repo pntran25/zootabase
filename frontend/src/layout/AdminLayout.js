@@ -15,12 +15,13 @@ import { API_BASE_URL } from '../services/apiClient';
 import './AdminLayout.css';
 
 const rolePermissions = {
-  'Super Admin': ['dashboard', 'animals', 'exhibits', 'attractions', 'events', 'tickets', 'shop', 'maintenance', 'staff', 'analytics', 'feedback', 'reports', 'memberships', 'animal-health', 'animal-care', 'animal-report'],
-  'Caretaker': ['dashboard', 'animals', 'exhibits', 'maintenance', 'animal-health', 'animal-care', 'animal-report'],
-  'Event Coordinator': ['dashboard', 'events', 'maintenance'],
-  'Ticket Staff': ['dashboard', 'tickets', 'maintenance'],
-  'Shop Manager': ['dashboard', 'shop', 'reports', 'maintenance'],
-  'Maintenance': ['dashboard', 'maintenance']
+  'Super Admin':       ['dashboard', 'animals', 'exhibits', 'attractions', 'events', 'tickets', 'shop', 'maintenance', 'staff', 'analytics', 'feedback', 'reports', 'memberships', 'animal-health', 'animal-care', 'animal-report'],
+  'Zoo Manager':       ['dashboard', 'animals', 'exhibits', 'attractions', 'events', 'maintenance', 'animal-health', 'animal-care', 'animal-report', 'reports', 'analytics', 'feedback'],
+  'Caretaker':         ['dashboard', 'animals', 'maintenance', 'animal-health', 'animal-care', 'animal-report'],
+  'Event Coordinator': ['dashboard', 'events', 'reports', 'maintenance'],
+  'Ticket Staff':      ['dashboard', 'tickets', 'memberships', 'reports', 'maintenance'],
+  'Shop Manager':      ['dashboard', 'shop', 'reports', 'maintenance'],
+  'Maintenance':       ['dashboard', 'maintenance'],
 };
 
 const AdminLayout = () => {
@@ -132,7 +133,7 @@ const AdminLayout = () => {
 
           {hasAny('animal-report', 'reports', 'analytics') && <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Reports & Analytics</p>}
           {renderLink('/admin/animal-report', <ClipboardList size={18} className="nav-icon" />, 'Animal Reports', 'animal-report')}
-          {renderLink('/admin/reports', <FileText size={18} className="nav-icon" />, 'Transaction Reports', 'reports')}
+          {renderLink('/admin/reports', <FileText size={18} className="nav-icon" />, 'Sales Reports', 'reports')}
           {renderLink('/admin/analytics', <LineChart size={18} className="nav-icon" />, 'Analytics', 'analytics')}
 
           {hasAny('staff', 'maintenance') && <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Administration</p>}
