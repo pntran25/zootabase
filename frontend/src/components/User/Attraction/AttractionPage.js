@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import './AttractionPage.css';
-import { Search, MapPin, Users, Clock, ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
+import { Search, MapPin, Users, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getAllAttractions } from '../../../services/attractionService';
 import { API_BASE_URL } from '../../../services/apiClient';
+import attractionsHero from '../../../assets/images/attractions-hero.png';
 
 const TYPE_META = {
   Ride:        { emoji: '🎢', gradient: 'linear-gradient(145deg, #1a4fa0 0%, #0d2a5c 100%)', fallbackDesc: 'An exciting ride through the zoo grounds, perfect for the whole family.' },
@@ -89,9 +90,6 @@ const AttractionCard = ({ attraction }) => {
           <span className={`ww-attr-status-dot ${isOpen ? 'open' : 'closed'}`} />
           {hoursDisplay || (isOpen ? 'Currently Open' : 'Currently Closed')}
         </span>
-        <button className="ww-attr-learn-btn">
-          Learn More <ArrowRight size={14} />
-        </button>
       </div>
     </article>
   );
@@ -138,8 +136,8 @@ const AttractionPage = () => {
       <section className="ww-attr-hero">
         <div className="ww-attr-hero-frame">
           <img
-            src={`${API_BASE_URL}/images/Attractions_Images/zoo-carousel2.png`}
-            alt="Wildlife Carousel"
+            src={attractionsHero}
+            alt="Attractions at Zootabase Zoo"
             className="ww-attr-hero-img"
           />
           <div className="ww-attr-hero-overlay" />
