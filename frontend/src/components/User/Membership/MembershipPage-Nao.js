@@ -274,9 +274,9 @@ const MembershipPage = () => {
       {/* ── CTA Banner ── */}
       <div className="mem-cta-wrapper">
         <section className="mem-cta-section">
-          <h2 className="mem-cta-heading">Ready to Join the Wildwood Family?</h2>
+          <h2 className="mem-cta-heading">Ready to Join the Zootabase Zoo Family?</h2>
           <p className="mem-cta-sub">
-            Start your membership today and enjoy unlimited access to all the wonder and adventure Wildwood Zoo has to offer.
+            Start your membership today and enjoy unlimited access to all the wonder and adventure Zootabase Zoo has to offer.
           </p>
           <div className="mem-cta-btns">
             <button

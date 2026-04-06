@@ -87,7 +87,7 @@ const ManageExhibits = () => {
     if (exhibit) {
       setEditingExhibit(exhibit);
       setFormData({ ...exhibit, description: exhibit.description || '', isFeatured: exhibit.isFeatured === true || exhibit.isFeatured === 1 });
-      setPreviewUrl(exhibit.imageUrl ? `${API_BASE_URL}${exhibit.imageUrl}` : null);
+      setPreviewUrl(exhibit.imageUrl ? (exhibit.imageUrl?.startsWith('http') ? exhibit.imageUrl : `${API_BASE_URL}${exhibit.imageUrl}`) : null);
       setImageFile(null);
     } else {
       setEditingExhibit(null);
@@ -165,7 +165,7 @@ const ManageExhibits = () => {
       header: '',
       enableSorting: false,
       cell: ({ row }) => row.original.imageUrl ? (
-        <img src={`${API_BASE_URL}${row.original.imageUrl}`} alt={row.original.name}
+        <img src={(row.original.imageUrl?.startsWith('http') ? row.original.imageUrl : `${API_BASE_URL}${row.original.imageUrl}`)} alt={row.original.name}
           style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover', border: '1.5px solid var(--adm-border)', display: 'block' }} />
       ) : (
         <div style={{ width: 48, height: 48, borderRadius: 8, background: 'var(--adm-bg-surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--adm-border)' }}>

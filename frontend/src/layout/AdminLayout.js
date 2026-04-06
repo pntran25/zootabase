@@ -3,7 +3,8 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, PawPrint, Map, Ticket, ShoppingBag,
   Wrench, LogOut, TicketCheck, CalendarDays,
-  Sun, Moon, Users, LineChart, FileText, HeartPulse, ClipboardList, CreditCard, UtensilsCrossed
+  Sun, Moon, Users, LineChart, FileText, HeartPulse, ClipboardList, CreditCard, UtensilsCrossed,
+  ChevronLeft, ChevronRight
 } from 'lucide-react';
 import brandLogo from '../assets/images/Logo.png';
 import { Toaster } from 'sonner';
@@ -14,12 +15,13 @@ import { API_BASE_URL } from '../services/apiClient';
 import './AdminLayout.css';
 
 const rolePermissions = {
-  'Super Admin': ['dashboard', 'animals', 'exhibits', 'attractions', 'events', 'tickets', 'shop', 'maintenance', 'staff', 'analytics', 'feedback', 'reports', 'memberships', 'animal-health', 'animal-care', 'animal-report'],
-  'Caretaker': ['dashboard', 'animals', 'exhibits', 'maintenance', 'animal-health', 'animal-care', 'animal-report'],
-  'Event Coordinator': ['dashboard', 'events', 'maintenance'],
-  'Ticket Staff': ['dashboard', 'tickets', 'maintenance'],
-  'Shop Manager': ['dashboard', 'shop', 'reports', 'maintenance'],
-  'Maintenance': ['dashboard', 'maintenance']
+  'Super Admin':       ['dashboard', 'animals', 'exhibits', 'attractions', 'events', 'tickets', 'shop', 'maintenance', 'staff', 'analytics', 'feedback', 'reports', 'memberships', 'animal-health', 'animal-care', 'animal-report'],
+  'Zoo Manager':       ['dashboard', 'animals', 'exhibits', 'attractions', 'events', 'maintenance', 'animal-health', 'animal-care', 'animal-report', 'reports', 'analytics', 'feedback'],
+  'Caretaker':         ['dashboard', 'animals', 'maintenance', 'animal-health', 'animal-care', 'animal-report'],
+  'Event Coordinator': ['dashboard', 'events', 'reports', 'maintenance'],
+  'Ticket Staff':      ['dashboard', 'tickets', 'memberships', 'reports', 'maintenance'],
+  'Shop Manager':      ['dashboard', 'shop', 'reports', 'maintenance'],
+  'Maintenance':       ['dashboard', 'maintenance'],
 };
 
 const AdminLayout = () => {
@@ -29,10 +31,13 @@ const AdminLayout = () => {
   const role = userProfile?.Role || 'Viewer';
   const myPerms = rolePermissions[role] || [];
 
+  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 1024);
   const [theme, setTheme] = useState(
     () => localStorage.getItem('admin-theme') || 'light'
   );
   const [isConnected, setIsConnected] = useState(false);
+
+  const closeSidebarOnMobile = () => { if (window.innerWidth < 1024) setSidebarOpen(false); };
 
   useEffect(() => {
     const API = (process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000').replace(/\/$/, '');
@@ -70,6 +75,7 @@ const AdminLayout = () => {
         to={to}
         end={to === '/admin'}
         className={({ isActive }) => `admin-nav-link${isActive ? ' active' : ''}`}
+        onClick={closeSidebarOnMobile}
       >
         {icon}
         <span>{label}</span>
@@ -83,11 +89,11 @@ const AdminLayout = () => {
       <Toaster position="top-right" richColors closeButton />
 
       {/* ── Sidebar ── */}
-      <aside className="admin-sidebar">
+      <aside className={`admin-sidebar${sidebarOpen ? '' : ' collapsed'}`}>
         {/* Brand */}
         <div className="admin-brand">
-          <img src={brandLogo} alt="WildWoods Logo" className="admin-brand-logo" />
-          <span className="admin-brand-text">WildWoods</span>
+          <img src={brandLogo} alt="Zootabase Zoo Logo" className="admin-brand-logo" />
+          <span className="admin-brand-text">Zootabase Zoo</span>
         </div>
 
         <div className="admin-sidebar-divider" />
@@ -127,7 +133,7 @@ const AdminLayout = () => {
 
           {hasAny('animal-report', 'reports', 'analytics') && <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Reports & Analytics</p>}
           {renderLink('/admin/animal-report', <ClipboardList size={18} className="nav-icon" />, 'Animal Reports', 'animal-report')}
-          {renderLink('/admin/reports', <FileText size={18} className="nav-icon" />, 'Transaction Reports', 'reports')}
+          {renderLink('/admin/reports', <FileText size={18} className="nav-icon" />, 'Sales Reports', 'reports')}
           {renderLink('/admin/analytics', <LineChart size={18} className="nav-icon" />, 'Analytics', 'analytics')}
 
           {hasAny('staff', 'maintenance') && <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Administration</p>}
@@ -144,13 +150,28 @@ const AdminLayout = () => {
         </div>
       </aside>
 
+      {/* ── Sidebar Toggle Tab ── */}
+      <button
+        className="admin-sidebar-toggle"
+        style={{ left: sidebarOpen ? 'var(--adm-sidebar-width)' : 0 }}
+        onClick={() => setSidebarOpen(o => !o)}
+        aria-label="Toggle sidebar"
+      >
+        {sidebarOpen ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
+      </button>
+
+      {/* ── Mobile Backdrop ── */}
+      {sidebarOpen && (
+        <div className="admin-mobile-backdrop" onClick={() => setSidebarOpen(false)} />
+      )}
+
       {/* ── Content Wrapper ── */}
       <div className="admin-content-wrapper">
         {/* Top Bar */}
         <div className="admin-topbar">
           <div className="admin-topbar-left">
             <span className="admin-topbar-breadcrumb">
-              WildWoods <span>Admin Portal</span>
+              Zootabase Zoo <span>Admin Portal</span>
             </span>
           </div>
           <div className="admin-topbar-right">

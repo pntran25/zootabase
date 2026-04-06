@@ -31,8 +31,8 @@ const UserLayout = () => {
       <header className="ww-header">
         <div className="ww-header-container">
           <NavLink to="/" className="ww-header-brand">
-            <img src={brandLogo} alt="WildWoods Logo" style={{ width: '56px', height: '56px', objectFit: 'contain' }} />
-            <span className="ww-logo-text">Wildwood Zoo</span>
+            <img src={brandLogo} alt="Zootabase Zoo Logo" style={{ width: '56px', height: '56px', objectFit: 'contain' }} />
+            <span className="ww-logo-text">Zootabase Zoo</span>
           </NavLink>
 
           {/* Desktop Navigation */}
@@ -64,7 +64,7 @@ const UserLayout = () => {
           </div>
 
           {/* Mobile Menu Button */}
-          <button 
+          <button
             className="ww-mobile-toggle"
             onClick={() => setIsOpen(!isOpen)}
             aria-label="Toggle menu"
@@ -72,6 +72,35 @@ const UserLayout = () => {
             {isOpen ? <XIcon /> : <MenuIcon />}
           </button>
         </div>
+
+        {/* Mobile Dropdown Menu */}
+        {isOpen && (
+          <div className="ww-mobile-menu">
+            <nav className="ww-mobile-nav">
+              <NavLink to="/" end className={({ isActive }) => `ww-mobile-nav-link ${isActive ? 'active' : ''}`} onClick={() => setIsOpen(false)}>Home</NavLink>
+              <NavLink to="/exhibits" className={({ isActive }) => `ww-mobile-nav-link ${isActive ? 'active' : ''}`} onClick={() => setIsOpen(false)}>Exhibits</NavLink>
+              <NavLink to="/attractions" className={({ isActive }) => `ww-mobile-nav-link ${isActive ? 'active' : ''}`} onClick={() => setIsOpen(false)}>Attractions</NavLink>
+              <NavLink to="/animals" className={({ isActive }) => `ww-mobile-nav-link ${isActive ? 'active' : ''}`} onClick={() => setIsOpen(false)}>Animals</NavLink>
+              <NavLink to="/events" className={({ isActive }) => `ww-mobile-nav-link ${isActive ? 'active' : ''}`} onClick={() => setIsOpen(false)}>Events</NavLink>
+              <NavLink to="/products" className={({ isActive }) => `ww-mobile-nav-link ${isActive ? 'active' : ''}`} onClick={() => setIsOpen(false)}>Gift Shop</NavLink>
+              <NavLink to="/membership" className={({ isActive }) => `ww-mobile-nav-link ${isActive ? 'active' : ''}`} onClick={() => setIsOpen(false)}>Membership</NavLink>
+              {userProfile?.isStaff && (
+                <NavLink to="/admin" className={({ isActive }) => `ww-mobile-nav-link ${isActive ? 'active' : ''}`} onClick={() => setIsOpen(false)}>Admin</NavLink>
+              )}
+            </nav>
+            <div className="ww-mobile-actions">
+              {currentUser ? (
+                <>
+                  <span className="ww-greeting-text">Hello, {firstName}!</span>
+                  <button className="ww-mobile-signout" onClick={() => { handleLogout(); setIsOpen(false); }}>Sign Out</button>
+                </>
+              ) : (
+                <NavLink to="/login" className="ww-mobile-nav-link" onClick={() => setIsOpen(false)}><UserIcon /> Login</NavLink>
+              )}
+              <NavLink to="/ticketing" className="ww-mobile-btn-tickets" onClick={() => setIsOpen(false)}><TicketIcon /> Buy Tickets</NavLink>
+            </div>
+          </div>
+        )}
       </header>
 
       <main className="ww-main-content" style={{ flex: 1 }}>

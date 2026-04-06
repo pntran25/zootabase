@@ -138,7 +138,7 @@ const ExhibitPage = () => {
               <article className="ww-card" key={exhibit.ExhibitID}>
                 <div className="ww-card-img-wrap">
                   <img 
-                    src={exhibit.ImageUrl ? `${API_BASE_URL}${exhibit.ImageUrl}` : placeholderImg}
+                    src={exhibit.ImageUrl ? (exhibit.ImageUrl?.startsWith('http') ? exhibit.ImageUrl : `${API_BASE_URL}${exhibit.ImageUrl}`) : placeholderImg}
                     alt={exhibit.ExhibitName}
                   />
                   {exhibit.AreaName && (
@@ -194,9 +194,6 @@ const ExhibitPage = () => {
                         <span className="acres">{((exhibit.ExhibitID * 3) % 20 + 5)} acres</span>
                       </span>
                     </div>
-                    <button className="ww-visit-btn">
-                      Visit <ArrowRight />
-                    </button>
                   </div>
                 </div>
               </article>

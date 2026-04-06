@@ -138,7 +138,7 @@ const ExhibitPage = () => {
               <article className="ww-card" key={exhibit.ExhibitID}>
                 <div className="ww-card-img-wrap">
                   <img 
-                    src={exhibit.ImageUrl ? `${API_BASE_URL}${exhibit.ImageUrl}` : placeholderImg}
+                    src={exhibit.ImageUrl ? (exhibit.ImageUrl?.startsWith('http') ? exhibit.ImageUrl : `${API_BASE_URL}${exhibit.ImageUrl}`) : placeholderImg}
                     alt={exhibit.ExhibitName}
                   />
                   {exhibit.AreaName && (

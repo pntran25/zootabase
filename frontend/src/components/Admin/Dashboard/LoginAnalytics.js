@@ -8,8 +8,9 @@ import '../AdminTable.css';
 
 const roleColors = {
   'Super Admin':       { bg: 'rgba(16,185,129,0.15)',  color: '#10b981' },
+  'Zoo Manager':       { bg: 'rgba(8,145,178,0.15)',   color: '#0891b2' },
   'Caretaker':         { bg: 'rgba(59,130,246,0.15)',  color: '#3b82f6' },
-  'Event Coordinator': { bg: 'rgba(168,85,247,0.15)', color: '#a855f7' },
+  'Event Coordinator': { bg: 'rgba(168,85,247,0.15)',  color: '#a855f7' },
   'Ticket Staff':      { bg: 'rgba(234,179,8,0.15)',   color: '#ca8a04' },
   'Shop Manager':      { bg: 'rgba(249,115,22,0.15)',  color: '#ea580c' },
   'Maintenance':       { bg: 'rgba(239,68,68,0.15)',   color: '#ef4444' },
