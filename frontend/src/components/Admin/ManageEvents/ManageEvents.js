@@ -77,7 +77,7 @@ const ManageEvents = () => {
     setImageFile(null);
     if (event) {
       setEditingEvent(event);
-      setPreviewUrl(event.imageUrl ? `${API_BASE_URL}${event.imageUrl}` : null);
+      setPreviewUrl(event.imageUrl ? (event.imageUrl?.startsWith('http') ? event.imageUrl : `${API_BASE_URL}${event.imageUrl}`) : null);
       setFormData({
         name: event.name,
         date: event.date,

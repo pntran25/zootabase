@@ -70,9 +70,6 @@ const HomePage = () => {
             
             <div className="ww-hero-ctas">
               <Link to="/ticketing" className="ww-btn ww-btn-primary">Plan Your Visit</Link>
-              <button className="ww-btn ww-btn-outline" type="button">
-                <PlayIcon /> Watch Video
-              </button>
             </div>
             
             <div className="ww-hero-stats">
@@ -155,7 +152,7 @@ const HomePage = () => {
               {displayExhibits.map((exhibit, idx) => {
                 const isBig = idx === 0 || idx === 5;
                 const imgSrc = exhibit.ImageUrl
-                  ? `${API_BASE_URL}${exhibit.ImageUrl}`
+                  ? (exhibit.ImageUrl?.startsWith('http') ? exhibit.ImageUrl : `${API_BASE_URL}${exhibit.ImageUrl}`)
                   : placeholderImg;
 
                 return (

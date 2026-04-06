@@ -33,6 +33,9 @@ jobs:
           npm run test --if-present
         working-directory: ./backend
 
+      - name: Write Firebase service account
+        run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}' > ./backend/service-account.json
+
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
