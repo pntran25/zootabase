@@ -48,7 +48,7 @@ const HomePage = () => {
       {/* ═══ HERO ═══ */}
       <section className="ww-hero">
         <div className="ww-hero-bg">
-          <img src={lionImage} alt="Wildlife at Wildwood Zoo" />
+          <img src={lionImage} alt="Wildlife at Zootabase Zoo" />
         </div>
         <div className="ww-hero-overlay-1" />
         <div className="ww-hero-overlay-2" />
@@ -155,7 +155,7 @@ const HomePage = () => {
               {displayExhibits.map((exhibit, idx) => {
                 const isBig = idx === 0 || idx === 5;
                 const imgSrc = exhibit.ImageUrl
-                  ? `${API_BASE_URL}${exhibit.ImageUrl}`
+                  ? (exhibit.ImageUrl?.startsWith('http') ? exhibit.ImageUrl : `${API_BASE_URL}${exhibit.ImageUrl}`)
                   : placeholderImg;
 
                 return (

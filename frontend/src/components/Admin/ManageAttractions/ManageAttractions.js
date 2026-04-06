@@ -79,7 +79,7 @@ const ManageAttractions = () => {
       setEditingAttraction(attraction);
       setFormData({ ...EMPTY_FORM, ...attraction });
       setImageFile(null);
-      setPreviewUrl(attraction.imageUrl ? `${API_BASE_URL}${attraction.imageUrl}` : null);
+      setPreviewUrl(attraction.imageUrl ? (attraction.imageUrl?.startsWith('http') ? attraction.imageUrl : `${API_BASE_URL}${attraction.imageUrl}`) : null);
     } else {
       setEditingAttraction(null);
       setFormData(EMPTY_FORM);
@@ -141,7 +141,7 @@ const ManageAttractions = () => {
       cell: ({ row }) => {
         const a = row.original;
         return a.imageUrl ? (
-          <img src={`${API_BASE_URL}${a.imageUrl}`} alt={a.name}
+          <img src={(a.imageUrl?.startsWith('http') ? a.imageUrl : `${API_BASE_URL}${a.imageUrl}`)} alt={a.name}
             style={{ width: 48, height: 48, minWidth: 48, borderRadius: 8, objectFit: 'cover', border: '1.5px solid var(--adm-border)', display: 'block' }} />
         ) : (
           <div style={{ width: 48, height: 48, borderRadius: 8, background: 'var(--adm-bg-surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--adm-border)' }}>

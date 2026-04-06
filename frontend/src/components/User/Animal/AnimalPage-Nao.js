@@ -203,7 +203,7 @@ const AnimalPage = () => {
                 >
                   <div className="relative aspect-square overflow-hidden bg-muted">
                     <img
-                      src={animal.imageUrl ? `${API_BASE_URL}${animal.imageUrl}` : placeholderImg}
+                      src={animal.imageUrl ? (animal.imageUrl?.startsWith('http') ? animal.imageUrl : `${API_BASE_URL}${animal.imageUrl}`) : placeholderImg}
                       alt={animal.name}
                       className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                     />
@@ -257,7 +257,7 @@ const AnimalPage = () => {
                 <article key={`${animal.id}-${viewMode}`} className="animal-card-enter group flex flex-col md:flex-row overflow-hidden rounded-2xl bg-card border border-border transition-all duration-300 hover:shadow-xl hover:border-primary/20" style={{ animationDelay: `${idx * 40}ms` }}>
                   <div className="relative w-full md:w-64 shrink-0 aspect-video md:aspect-square overflow-hidden bg-muted">
                     <img
-                      src={animal.imageUrl ? `${API_BASE_URL}${animal.imageUrl}` : placeholderImg}
+                      src={animal.imageUrl ? (animal.imageUrl?.startsWith('http') ? animal.imageUrl : `${API_BASE_URL}${animal.imageUrl}`) : placeholderImg}
                       alt={animal.name}
                       className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />

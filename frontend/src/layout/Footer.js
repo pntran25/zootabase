@@ -11,8 +11,8 @@ const Footer = () => {
         {/* Brand Column */}
         <div className="ww-footer-brand-col">
           <Link to="/" className="ww-footer-logo">
-            <img src={brandLogo} alt="WildWoods Logo" style={{ width: '56px', height: '56px', objectFit: 'contain' }} />
-            <span className="ww-footer-logo-text">WildWoods Zoo</span>
+            <img src={brandLogo} alt="Zootabase Zoo Logo" style={{ width: '56px', height: '56px', objectFit: 'contain' }} />
+            <span className="ww-footer-logo-text">Zootabase Zoo</span>
           </Link>
           <p className="ww-footer-tagline">
             Connecting people with wildlife and inspiring conservation action since 1985.
@@ -75,7 +75,7 @@ const Footer = () => {
 
       <div className="ww-footer-bottom">
         <p className="ww-footer-copyright">
-          © 2026 WildWoods Zoo. All rights reserved.
+          © 2026 Zootabase Zoo. All rights reserved.
         </p>
         <div className="ww-footer-legal">
           <a href="#privacy">Privacy Policy</a>
