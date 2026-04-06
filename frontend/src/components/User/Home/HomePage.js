@@ -70,9 +70,6 @@ const HomePage = () => {
             
             <div className="ww-hero-ctas">
               <Link to="/ticketing" className="ww-btn ww-btn-primary">Plan Your Visit</Link>
-              <button className="ww-btn ww-btn-outline" type="button">
-                <PlayIcon /> Watch Video
-              </button>
             </div>
             
             <div className="ww-hero-stats">

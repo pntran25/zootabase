@@ -1,5 +1,14 @@
 import './App.css';
-import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Outlet, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [pathname]);
+  return null;
+}
 import UserLayout from './layout/UserLayout';
 import HomePage from './components/User/Home/HomePage';
 import EventsPage from './components/User/Attraction/EventsPage';
@@ -40,6 +49,7 @@ const allStaffRoles = ['Super Admin', 'Caretaker', 'Event Coordinator', 'Ticket 
 function App() {
   return (
     <Router>
+      <ScrollToTop />
       <div className="app-shell">
         <Routes>
           {/* User Routes */}
