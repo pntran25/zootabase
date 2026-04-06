@@ -203,7 +203,7 @@ const Dashboard = () => {
       <div className="admin-page-header">
         <div>
           <h1 className="admin-page-title">Dashboard Overview</h1>
-          <p className="admin-page-subtitle">Welcome back — here's what's happening at WildWoods today.</p>
+          <p className="admin-page-subtitle">Welcome back — here's what's happening at Zootabase Zoo today.</p>
         </div>
         <div className="dashboard-date">
           {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}

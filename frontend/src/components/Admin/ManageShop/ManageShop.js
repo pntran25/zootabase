@@ -74,7 +74,7 @@ const ManageShop = () => {
         stockQuantity: product.stockQuantity,
         lowStockThreshold: product.lowStockThreshold ?? 10,
       });
-      setPreviewUrl(product.imageUrl ? `${API_BASE_URL}${product.imageUrl}` : null);
+      setPreviewUrl(product.imageUrl ? (product.imageUrl?.startsWith('http') ? product.imageUrl : `${API_BASE_URL}${product.imageUrl}`) : null);
     } else {
       setEditingProduct(null);
       setFormData({ name: '', category: '', price: 0, stockQuantity: 0, lowStockThreshold: 10 });
@@ -138,7 +138,7 @@ const ManageShop = () => {
         const img = row.original.imageUrl;
         return img ? (
           <img
-            src={`${API_BASE_URL}${img}`}
+            src={(img?.startsWith('http') ? img : `${API_BASE_URL}${img}`)}
             alt=""
             style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'cover', border: '1px solid var(--adm-border)', display: 'block' }}
           />
