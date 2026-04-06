@@ -379,6 +379,16 @@ async function runMigrations(pool) {
 		    CardLastFour         NVARCHAR(4)   NULL,
 		    PlacedAt             DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME()
 		  )`,
+		// GuestFeedback table
+		`IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='GuestFeedback' AND xtype='U')
+		  CREATE TABLE GuestFeedback (
+		    FeedbackID    INT IDENTITY(1,1) PRIMARY KEY,
+		    Rating        INT NOT NULL CHECK (Rating >= 1 AND Rating <= 5),
+		    Comment       NVARCHAR(1000) NULL,
+		    LocationTag   NVARCHAR(100) NULL,
+		    DateSubmitted DATE NOT NULL DEFAULT CONVERT(DATE, GETUTCDATE()),
+		    CreatedAt     DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME()
+		  )`,
 	];
 
 	for (const sql of steps) {
