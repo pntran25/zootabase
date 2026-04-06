@@ -1,14 +1,7 @@
+
 import './App.css';
 import { BrowserRouter as Router, Routes, Route, Outlet, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
-
-function ScrollToTop() {
-  const { pathname } = useLocation();
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [pathname]);
-  return null;
-}
 import UserLayout from './layout/UserLayout';
 import HomePage from './components/User/Home/HomePage';
 import EventsPage from './components/User/Attraction/EventsPage';
@@ -23,7 +16,6 @@ import MembershipPage from './components/User/Membership/MembershipPage';
 import Login from './components/User/Auth/Login';
 import Signup from './components/User/Auth/SignUp';
 import ForgotPassword from './components/User/Auth/ForgotPassword';
-
 // Admin Imports
 import AdminLayout from './layout/AdminLayout';
 import Dashboard from './components/Admin/Dashboard/Dashboard';
@@ -43,6 +35,14 @@ import AnimalHealth from './components/Admin/AnimalHealth/AnimalHealth';
 import AnimalReport from './components/Admin/AnimalHealth/AnimalReport';
 import AnimalCare from './components/Admin/AnimalHealth/AnimalCare';
 import ManageMemberships from './components/Admin/ManageMemberships/ManageMemberships';
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [pathname]);
+  return null;
+}
 
 const allStaffRoles = ['Super Admin', 'Caretaker', 'Event Coordinator', 'Ticket Staff', 'Shop Manager', 'Maintenance'];
 
