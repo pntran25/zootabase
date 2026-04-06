@@ -15,12 +15,13 @@ import { API_BASE_URL } from '../services/apiClient';
 import './AdminLayout.css';
 
 const rolePermissions = {
-  'Super Admin': ['dashboard', 'animals', 'exhibits', 'attractions', 'events', 'tickets', 'shop', 'maintenance', 'staff', 'analytics', 'feedback', 'reports', 'memberships', 'animal-health', 'animal-care', 'animal-report', 'health-report'],
-  'Caretaker': ['dashboard', 'animals', 'exhibits', 'maintenance', 'animal-health', 'animal-care', 'animal-report', 'health-report'],
-  'Event Coordinator': ['dashboard', 'events', 'maintenance'],
-  'Ticket Staff': ['dashboard', 'tickets', 'maintenance'],
-  'Shop Manager': ['dashboard', 'shop', 'reports', 'maintenance'],
-  'Maintenance': ['dashboard', 'maintenance']
+  'Super Admin':       ['dashboard', 'animals', 'exhibits', 'attractions', 'events', 'tickets', 'shop', 'maintenance', 'staff', 'analytics', 'feedback', 'reports', 'memberships', 'animal-health', 'animal-care', 'animal-report', 'health-report'],
+  'Zoo Manager':       ['dashboard', 'animals', 'exhibits', 'attractions', 'events', 'maintenance', 'animal-health', 'animal-care', 'animal-report', 'reports', 'analytics', 'feedback'],
+  'Caretaker':         ['dashboard', 'animals', 'maintenance', 'animal-health', 'animal-care', 'animal-report', 'health-report'],
+  'Event Coordinator': ['dashboard', 'events', 'reports', 'maintenance'],
+  'Ticket Staff':      ['dashboard', 'tickets', 'memberships', 'reports', 'maintenance'],
+  'Shop Manager':      ['dashboard', 'shop', 'reports', 'maintenance'],
+  'Maintenance':       ['dashboard', 'maintenance'],
 };
 
 const AdminLayout = () => {

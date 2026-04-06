@@ -411,11 +411,11 @@
 }
 
 .ww-exhibit-page .ww-card-footer {
-  margin-top: 1.5rem;
+  margin-top: auto;
+  padding-top: 1.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-top: 0.5rem;
 }
 
 .ww-exhibit-page .ww-card-stats {
