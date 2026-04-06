@@ -16,7 +16,6 @@ router.get('/', verifyToken, requireRole(['Super Admin']), async (req, res) => {
 });
 
 // Add new staff (Super Admin only)
-// Note: StaffID is auto-generated
 router.post('/', verifyToken, requireRole(['Super Admin']), async (req, res) => {
     const { firstName, lastName, email, dateOfBirth, ssn, role, contactNumber, salary, hireDate } = req.body;
     try {
@@ -27,16 +26,18 @@ router.post('/', verifyToken, requireRole(['Super Admin']), async (req, res) => 
             .input('SSN', ssn)
             .query(`SELECT StaffID FROM Staff WHERE SSN = @SSN AND DeletedAt IS NULL`);
         if (ssnCheck.recordset.length > 0) {
-            return res.status(409).json({ error: 'SSN is already used by another employee.' });
+            return res.status(409).json({ error: 'SSN is already in use by another employee — please re-enter a unique SSN.' });
         }
 
-        // Create Firebase User
+        const fullName = `${firstName || ''} ${lastName || ''}`.trim();
+
+        // Create Firebase user
         let firebaseUid = null;
         try {
             const firebaseUser = await admin.auth().createUser({
-                email: email,
+                email,
                 password: 'ZooStaff2026!',
-                displayName: `${firstName || ''} ${lastName || ''}`.trim()
+                displayName: fullName
             });
             firebaseUid = firebaseUser.uid;
         } catch (fbError) {
@@ -59,50 +60,15 @@ router.post('/', verifyToken, requireRole(['Super Admin']), async (req, res) => 
             .input('ContactNumber', contactNumber)
             .input('Salary', salary || 0)
             .input('HireDate', hireDate || new Date().toISOString().split('T')[0])
-            .input('FullName', `${firstName || ''} ${lastName || ''}`.trim())
+            .input('FullName', fullName)
             .input('FirebaseUid', firebaseUid)
             .query(`INSERT INTO Staff (FirstName, LastName, Email, DateOfBirth, SSN, Role, ContactNumber, Salary, HireDate, FullName, FirebaseUid)
                     OUTPUT INSERTED.*
                     VALUES (@FirstName, @LastName, @Email, @DateOfBirth, @SSN, @Role, @ContactNumber, @Salary, @HireDate, @FullName, @FirebaseUid)`);
 
-        // Create Firebase auth user first
-        let firebaseUserRecord;
-        try {
-            firebaseUserRecord = await admin.auth().createUser({
-                email: email,
-                password: 'ZooStaff2026!', // Default password for new staff
-                displayName: fullName
-            });
-        } catch (authErr) {
-            return res.status(400).json({ error: 'Failed to create Firebase user: ' + authErr.message });
-        }
-
-        try {
-            const result = await pool.request()
-                .input('FirstName', firstName)
-                .input('LastName', lastName)
-                .input('Email', email)
-                .input('DateOfBirth', dateOfBirth)
-                .input('SSN', ssn)
-                .input('Role', role)
-                .input('ContactNumber', contactNumber)
-                .input('Salary', salary || 0)
-                .input('HireDate', hireDate || new Date().toISOString().split('T')[0])
-                .input('FullName', fullName)
-                .input('FirebaseUid', firebaseUserRecord.uid)
-                .query(`INSERT INTO Staff (FirstName, LastName, Email, DateOfBirth, SSN, Role, ContactNumber, Salary, HireDate, FullName, FirebaseUid)
-                        OUTPUT INSERTED.*
-                        VALUES (@FirstName, @LastName, @Email, @DateOfBirth, @SSN, @Role, @ContactNumber, @Salary, @HireDate, @FullName, @FirebaseUid)`);
-
-            res.status(201).json(result.recordset[0]);
-        } catch (dbErr) {
-            // Rollback Firebase user creation if DB insert fails
-            if (firebaseUserRecord) {
-                await admin.auth().deleteUser(firebaseUserRecord.uid).catch(() => { });
-            }
-            throw dbErr;
-        }
+        res.status(201).json(result.recordset[0]);
     } catch (err) {
+        // Rollback Firebase user if DB insert fails
         res.status(500).json({ error: err.message });
     }
 });
@@ -120,7 +86,7 @@ router.put('/:id', verifyToken, requireRole(['Super Admin']), async (req, res) =
             .input('StaffID', id)
             .query(`SELECT StaffID FROM Staff WHERE SSN = @SSN AND DeletedAt IS NULL AND StaffID != @StaffID`);
         if (ssnCheck.recordset.length > 0) {
-            return res.status(409).json({ error: 'SSN is already used by another employee.' });
+            return res.status(409).json({ error: 'SSN is already in use by another employee — please re-enter a unique SSN.' });
         }
 
         const fullName = `${firstName || ''} ${lastName || ''}`.trim();
