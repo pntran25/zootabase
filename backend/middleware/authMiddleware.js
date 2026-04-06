@@ -17,10 +17,25 @@ const verifyToken = async (req, res, next) => {
         // Also fetch user role from SQL database to attach to req.userProfile
         const pool = await connectToDb();
         
-        // Check if user is Staff
-        const staffResult = await pool.request()
+        // Check if user is Staff — first by FirebaseUid, then fallback to email
+        let staffResult = await pool.request()
             .input('FirebaseUid', decodedToken.uid)
-            .query(`SELECT StaffID, FirstName, LastName, Email, Role FROM Staff WHERE FirebaseUid = @FirebaseUid`);
+            .query(`SELECT StaffID, FirstName, LastName, Email, Role FROM Staff WHERE FirebaseUid = @FirebaseUid AND DeletedAt IS NULL`);
+
+        // Fallback: if UID not found, try matching by email (handles UID changes)
+        if (staffResult.recordset.length === 0 && decodedToken.email) {
+            staffResult = await pool.request()
+                .input('Email', decodedToken.email)
+                .query(`SELECT StaffID, FirstName, LastName, Email, Role FROM Staff WHERE Email = @Email AND DeletedAt IS NULL`);
+
+            // Auto-link the current FirebaseUid so future lookups work by UID
+            if (staffResult.recordset.length > 0) {
+                await pool.request()
+                    .input('FirebaseUid', decodedToken.uid)
+                    .input('StaffID', staffResult.recordset[0].StaffID)
+                    .query(`UPDATE Staff SET FirebaseUid = @FirebaseUid WHERE StaffID = @StaffID`);
+            }
+        }
 
         if (staffResult.recordset.length > 0) {
             req.userProfile = staffResult.recordset[0];

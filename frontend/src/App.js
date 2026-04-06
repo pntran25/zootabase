@@ -1,5 +1,14 @@
 import './App.css';
-import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Outlet, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [pathname]);
+  return null;
+}
 import UserLayout from './layout/UserLayout';
 import HomePage from './components/User/Home/HomePage';
 import EventsPage from './components/User/Attraction/EventsPage';
@@ -35,11 +44,12 @@ import AnimalReport from './components/Admin/AnimalHealth/AnimalReport';
 import AnimalCare from './components/Admin/AnimalHealth/AnimalCare';
 import ManageMemberships from './components/Admin/ManageMemberships/ManageMemberships';
 
-const allStaffRoles = ['Super Admin', 'Caretaker', 'Event Coordinator', 'Ticket Staff', 'Shop Manager', 'Maintenance'];
+const allStaffRoles = ['Super Admin', 'Zoo Manager', 'Caretaker', 'Event Coordinator', 'Ticket Staff', 'Shop Manager', 'Maintenance'];
 
 function App() {
   return (
     <Router>
+      <ScrollToTop />
       <div className="app-shell">
         <Routes>
           {/* User Routes */}

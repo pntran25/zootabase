@@ -7,7 +7,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-const imageDir = process.env.NODE_ENV === "production" ? "/tmp/images/Event_Images" : path.join(__dirname, '../../frontend/src/assets/images/Event_Images');
+const imageDir = path.join(__dirname, '../uploads/Event_Images');
 if (!fs.existsSync(imageDir)) fs.mkdirSync(imageDir, { recursive: true });
 
 const storage = multer.diskStorage({
@@ -129,7 +129,7 @@ router.post('/api/events', optionalAuth, async (req, res) => {
 
         try {
             const request = new sql.Request(transaction);
-            const exhibitId = await getOrCreateExhibitId(request, exhibit);
+            const exhibitId = await resolveOrCreateExhibit(request, exhibit);
 
             const result = await request
                 .input('name', sql.NVarChar, name)
@@ -179,7 +179,7 @@ router.put('/api/events/:id', optionalAuth, async (req, res) => {
 
         try {
             const request = new sql.Request(transaction);
-            const exhibitId = await getOrCreateExhibitId(request, exhibit);
+            const exhibitId = await resolveOrCreateExhibit(request, exhibit);
 
             await request
                 .input('id', sql.Int, parseInt(req.params.id, 10))

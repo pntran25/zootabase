@@ -25,7 +25,68 @@
   overflow: hidden;
   border-right: 1px solid var(--adm-border-sidebar);
   box-shadow: var(--adm-sidebar-shadow);
-  transition: background-color 0.3s ease;
+  transition: width 0.3s ease, transform 0.3s ease, background-color 0.3s ease;
+}
+
+.admin-sidebar.collapsed {
+  width: 0;
+}
+
+@media (max-width: 1023px) {
+  .admin-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: var(--adm-sidebar-width);
+    z-index: 200;
+    transform: translateX(0);
+  }
+  .admin-sidebar.collapsed {
+    width: var(--adm-sidebar-width);
+    transform: translateX(-100%);
+  }
+}
+
+/* ── Sidebar Toggle Tab ── */
+.admin-sidebar-toggle {
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 300;
+  width: 20px;
+  height: 48px;
+  background: var(--adm-bg-sidebar);
+  border: 1px solid var(--adm-border-sidebar);
+  border-left: none;
+  border-radius: 0 8px 8px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--adm-text-sidebar);
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+  transition: left 0.3s ease, background-color 0.2s ease;
+  padding: 0;
+}
+
+.admin-sidebar-toggle:hover {
+  background: var(--adm-bg-sidebar-hover);
+}
+
+/* ── Mobile Backdrop ── */
+.admin-mobile-backdrop {
+  display: none;
+}
+
+@media (max-width: 1023px) {
+  .admin-mobile-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 199;
+  }
 }
 
 /* Brand / Logo */

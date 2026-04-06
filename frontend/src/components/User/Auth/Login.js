@@ -32,6 +32,10 @@ const Login = () => {
           }
       });
       
+      if (!response.ok) {
+        const errBody = await response.json().catch(() => ({}));
+        throw new Error(errBody.error || 'Sync failed');
+      }
       const data = await response.json();
       const intent = sessionStorage.getItem('membership-intent');
       if (intent && !data.isStaff) {
@@ -61,6 +65,10 @@ const Login = () => {
           }
       });
       
+      if (!response.ok) {
+        const errBody = await response.json().catch(() => ({}));
+        throw new Error(errBody.error || 'Sync failed');
+      }
       const data = await response.json();
       const intent = sessionStorage.getItem('membership-intent');
       if (intent && !data.isStaff) {

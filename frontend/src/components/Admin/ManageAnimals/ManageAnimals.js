@@ -182,7 +182,7 @@ const ManageAnimals = () => {
       setSpeciesOpen(false);
       setSpeciesSearch('');
       setImageFile(null);
-      setPreviewUrl(animal.imageUrl ? `${API_BASE_URL}${animal.imageUrl}` : null);
+      setPreviewUrl(animal.imageUrl ? (animal.imageUrl?.startsWith('http') ? animal.imageUrl : `${API_BASE_URL}${animal.imageUrl}`) : null);
     } else {
       setEditingAnimal(null);
       setFormData({ name: '', species: '', speciesDetail: '', exhibit: '', age: '', gender: 'Unknown', diet: '', health: 'Good', dateArrived: '', lifespan: '', weight: '', region: '', funFact: '', isEndangered: false, isDisplay: false });
@@ -321,7 +321,7 @@ const ManageAnimals = () => {
       cell: ({ row }) => {
         const animal = row.original;
         return animal.imageUrl ? (
-          <img src={`${API_BASE_URL}${animal.imageUrl}`} alt={animal.name}
+          <img src={(animal.imageUrl?.startsWith('http') ? animal.imageUrl : `${API_BASE_URL}${animal.imageUrl}`)} alt={animal.name}
             style={{ width: 48, height: 48, minWidth: 48, borderRadius: 8, objectFit: 'cover', border: '1.5px solid var(--adm-border)', display: 'block' }} />
         ) : (
           <div style={{ width: 48, height: 48, borderRadius: 8, background: 'var(--adm-bg-surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--adm-border)' }}>
