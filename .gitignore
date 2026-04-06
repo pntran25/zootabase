@@ -42,13 +42,8 @@ coverage/
 __pycache__/
 *.pyc
 
-# Claude
-.claude/
-
 # dotenv environment example
 .env.example
-.claude  
-.claude/  
 Zoo UI Redesing/
 Zoo UI Redesing
 
