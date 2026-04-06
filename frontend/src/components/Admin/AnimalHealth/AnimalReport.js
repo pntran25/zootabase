@@ -3,7 +3,7 @@ import '../AdminTable.css';
 import './AnimalReport.css';
 import {
   ClipboardList, ChevronDown, ChevronRight, PawPrint, HeartPulse,
-  Scale, Users, UtensilsCrossed, AlertTriangle, CheckCircle, Search
+  Users, UtensilsCrossed, Search
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getAnimalReport, getAnimalsForDropdown } from '../../../services/animalHealthService';
@@ -272,41 +272,6 @@ const AnimalReport = () => {
                     )}
                   </Section>
 
-                  {/* ── Health Metrics ── */}
-                  <Section icon={<Scale size={16} color="#0ea5e9" />} title="Health Metrics" count={report.healthMetrics.length}>
-                    {report.healthMetrics.length === 0 ? (
-                      <div className="ar-empty-section">No health metrics recorded.</div>
-                    ) : (
-                      <table className="ar-mini-table">
-                        <thead><tr><th>Date</th><th>Weight</th><th>Range</th><th>Activity</th><th>Appetite</th><th>Conditions</th><th>Treatments</th></tr></thead>
-                        <tbody>
-                          {report.healthMetrics.map(m => {
-                            const w = m.Weight;
-                            const lo = m.WeightRangeLow;
-                            const hi = m.WeightRangeHigh;
-                            const outOfRange = w && ((lo && w < lo) || (hi && w > hi));
-                            return (
-                              <tr key={m.MetricID}>
-                                <td>{fmtDate(m.RecordDate)}</td>
-                                <td style={{ color: outOfRange ? '#ef4444' : 'inherit', fontWeight: outOfRange ? 700 : 'inherit' }}>
-                                  {w != null ? `${Number(w).toFixed(1)} kg` : '—'}
-                                  {outOfRange && ' ⚠'}
-                                </td>
-                                <td style={{ fontSize: '0.8rem', color: 'var(--adm-text-secondary)' }}>
-                                  {lo || hi ? `${lo ? Number(lo).toFixed(0) : '?'} – ${hi ? Number(hi).toFixed(0) : '?'} kg` : '—'}
-                                </td>
-                                <td>{m.ActivityLevel || '—'}</td>
-                                <td>{m.AppetiteStatus || '—'}</td>
-                                <td style={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.MedicalConditions || '—'}</td>
-                                <td style={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.RecentTreatments || '—'}</td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    )}
-                  </Section>
-
                   {/* ── Keeper Assignments ── */}
                   <Section icon={<Users size={16} color="#8b5cf6" />} title="Keeper Assignments" count={report.keepers.length}>
                     {report.keepers.length === 0 ? (
@@ -341,31 +306,6 @@ const AnimalReport = () => {
                               <td>{f.FeedTime ? new Date(f.FeedTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '—'}</td>
                               <td>{f.FoodType || '—'}</td>
                               <td>{f.StaffName || '—'}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    )}
-                  </Section>
-
-                  {/* ── Health Alerts ── */}
-                  <Section icon={<AlertTriangle size={16} color="#ef4444" />} title="Health Alerts" count={report.alerts.length} defaultOpen={report.alerts.length > 0}>
-                    {report.alerts.length === 0 ? (
-                      <div className="ar-empty-section">No alerts triggered for this animal.</div>
-                    ) : (
-                      <table className="ar-mini-table">
-                        <thead><tr><th>Type</th><th>Message</th><th>Date</th><th>Status</th></tr></thead>
-                        <tbody>
-                          {report.alerts.map(al => (
-                            <tr key={al.AlertID}>
-                              <td style={{ fontWeight: 600 }}>{al.AlertType}</td>
-                              <td style={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{al.AlertMessage}</td>
-                              <td>{fmtDate(al.CreatedAt)}</td>
-                              <td>
-                                {al.IsResolved
-                                  ? <span style={{ color: '#16a34a', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}><CheckCircle size={13} /> Resolved</span>
-                                  : <span style={{ color: '#ef4444', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}><AlertTriangle size={13} /> Active</span>}
-                              </td>
                             </tr>
                           ))}
                         </tbody>

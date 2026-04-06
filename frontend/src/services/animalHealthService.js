@@ -21,6 +21,9 @@ export const resolveHealthAlert = (id) => apiPut(`/api/animal-health/alerts/${id
 // ── Comprehensive Report ────────────────────────────────────────────
 export const getAnimalReport = (animalId) => apiGet(`/api/animal-health/report/${animalId}`);
 
+// ── Aggregate Health Report (all animals) ───────────────────────────
+export const getHealthReport = () => apiGet('/api/animal-health/health-report');
+
 // ── Dropdown helpers ────────────────────────────────────────────────
 export const getAnimalsForDropdown = () => apiGet('/api/animal-health/animals-list');
 export const getStaffForDropdown = () => apiGet('/api/animal-health/staff-list');
