@@ -3,7 +3,8 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, PawPrint, Map, Ticket, ShoppingBag,
   Wrench, LogOut, TicketCheck, CalendarDays,
-  Sun, Moon, Users, LineChart, FileText, HeartPulse, ClipboardList, CreditCard, UtensilsCrossed
+  Sun, Moon, Users, LineChart, FileText, HeartPulse, ClipboardList, CreditCard, UtensilsCrossed,
+  ChevronLeft, ChevronRight
 } from 'lucide-react';
 import brandLogo from '../assets/images/Logo.png';
 import { Toaster } from 'sonner';
@@ -29,10 +30,13 @@ const AdminLayout = () => {
   const role = userProfile?.Role || 'Viewer';
   const myPerms = rolePermissions[role] || [];
 
+  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 1024);
   const [theme, setTheme] = useState(
     () => localStorage.getItem('admin-theme') || 'light'
   );
   const [isConnected, setIsConnected] = useState(false);
+
+  const closeSidebarOnMobile = () => { if (window.innerWidth < 1024) setSidebarOpen(false); };
 
   useEffect(() => {
     const API = (process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000').replace(/\/$/, '');
@@ -70,6 +74,7 @@ const AdminLayout = () => {
         to={to}
         end={to === '/admin'}
         className={({ isActive }) => `admin-nav-link${isActive ? ' active' : ''}`}
+        onClick={closeSidebarOnMobile}
       >
         {icon}
         <span>{label}</span>
@@ -83,11 +88,11 @@ const AdminLayout = () => {
       <Toaster position="top-right" richColors closeButton />
 
       {/* ── Sidebar ── */}
-      <aside className="admin-sidebar">
+      <aside className={`admin-sidebar${sidebarOpen ? '' : ' collapsed'}`}>
         {/* Brand */}
         <div className="admin-brand">
-          <img src={brandLogo} alt="WildWoods Logo" className="admin-brand-logo" />
-          <span className="admin-brand-text">WildWoods</span>
+          <img src={brandLogo} alt="Zootabase Zoo Logo" className="admin-brand-logo" />
+          <span className="admin-brand-text">Zootabase Zoo</span>
         </div>
 
         <div className="admin-sidebar-divider" />
@@ -144,13 +149,28 @@ const AdminLayout = () => {
         </div>
       </aside>
 
+      {/* ── Sidebar Toggle Tab ── */}
+      <button
+        className="admin-sidebar-toggle"
+        style={{ left: sidebarOpen ? 'var(--adm-sidebar-width)' : 0 }}
+        onClick={() => setSidebarOpen(o => !o)}
+        aria-label="Toggle sidebar"
+      >
+        {sidebarOpen ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
+      </button>
+
+      {/* ── Mobile Backdrop ── */}
+      {sidebarOpen && (
+        <div className="admin-mobile-backdrop" onClick={() => setSidebarOpen(false)} />
+      )}
+
       {/* ── Content Wrapper ── */}
       <div className="admin-content-wrapper">
         {/* Top Bar */}
         <div className="admin-topbar">
           <div className="admin-topbar-left">
             <span className="admin-topbar-breadcrumb">
-              WildWoods <span>Admin Portal</span>
+              Zootabase Zoo <span>Admin Portal</span>
             </span>
           </div>
           <div className="admin-topbar-right">

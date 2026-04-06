@@ -15,7 +15,7 @@ const TYPE_META = {
 };
 
 function getTypeMeta(type) {
-  return TYPE_META[type] || { emoji: '🎡', gradient: 'linear-gradient(145deg, #374151 0%, #111827 100%)', fallbackDesc: 'A fun and memorable experience awaiting you at Wildwood Zoo.' };
+  return TYPE_META[type] || { emoji: '🎡', gradient: 'linear-gradient(145deg, #374151 0%, #111827 100%)', fallbackDesc: 'A fun and memorable experience awaiting you at Zootabase Zoo.' };
 }
 
 // Convert "HH:MM–HH:MM" → "9AM – 5PM" for display

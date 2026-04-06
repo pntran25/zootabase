@@ -155,7 +155,7 @@ const HomePage = () => {
               {displayExhibits.map((exhibit, idx) => {
                 const isBig = idx === 0 || idx === 5;
                 const imgSrc = exhibit.ImageUrl
-                  ? `${API_BASE_URL}${exhibit.ImageUrl}`
+                  ? (exhibit.ImageUrl?.startsWith('http') ? exhibit.ImageUrl : `${API_BASE_URL}${exhibit.ImageUrl}`)
                   : placeholderImg;
 
                 return (
