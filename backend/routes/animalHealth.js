@@ -310,6 +310,96 @@ router.put('/alerts/:id/resolve', verifyToken, async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════
+// AGGREGATE HEALTH REPORT (all animals, for the Health Report page)
+// ═══════════════════════════════════════════════════════════════════
+router.get('/health-report', async (req, res) => {
+    try {
+        const pool = await connectToDb();
+
+        // Summary stats
+        const stats = await pool.request().query(`
+            SELECT
+              (SELECT COUNT(*) FROM Animal WHERE DeletedAt IS NULL) AS TotalAnimals,
+              (SELECT COUNT(*) FROM HealthAlert WHERE IsResolved = 0) AS UnresolvedAlerts,
+              (SELECT COUNT(*) FROM AnimalKeeperAssignment WHERE DeletedAt IS NULL AND EndDate IS NULL) AS ActiveAssignments,
+              (SELECT COUNT(*) FROM FeedingSchedule WHERE DeletedAt IS NULL) AS TotalSchedules,
+              (SELECT AVG(CAST(HealthScore AS FLOAT)) FROM AnimalHealthRecord WHERE DeletedAt IS NULL) AS AvgHealthScore
+        `);
+
+        // Health alerts (all, with animal info)
+        const alerts = await pool.request().query(`
+            SELECT ha.AlertID, ha.AnimalID, ha.AlertType, ha.AlertMessage,
+                   ha.CreatedAt, ha.IsResolved, ha.ResolvedAt,
+                   a.Name AS AnimalName, a.Species, a.AnimalCode
+            FROM HealthAlert ha
+            JOIN Animal a ON ha.AnimalID = a.AnimalID
+            WHERE a.DeletedAt IS NULL
+            ORDER BY ha.IsResolved ASC, ha.CreatedAt DESC
+        `);
+
+        // Keeper assignments (all, with animal + staff info)
+        const keepers = await pool.request().query(`
+            SELECT ka.AssignmentID, ka.AnimalID, ka.StaffID, ka.StartDate, ka.EndDate,
+                   a.Name AS AnimalName, a.Species, a.AnimalCode,
+                   s.FullName AS KeeperName, s.Role
+            FROM AnimalKeeperAssignment ka
+            JOIN Animal a ON ka.AnimalID = a.AnimalID
+            JOIN Staff s ON ka.StaffID = s.StaffID
+            WHERE ka.DeletedAt IS NULL AND a.DeletedAt IS NULL
+            ORDER BY ka.EndDate ASC, ka.StartDate DESC
+        `);
+
+        // Feeding schedules (all, with animal + staff info)
+        const feedings = await pool.request().query(`
+            SELECT fs.ScheduleID, fs.AnimalID, fs.FeedTime, fs.FoodType, fs.StaffID,
+                   a.Name AS AnimalName, a.Species, a.AnimalCode,
+                   s.FullName AS StaffName
+            FROM FeedingSchedule fs
+            JOIN Animal a ON fs.AnimalID = a.AnimalID
+            LEFT JOIN Staff s ON fs.StaffID = s.StaffID
+            WHERE fs.DeletedAt IS NULL AND a.DeletedAt IS NULL
+            ORDER BY fs.FeedTime
+        `);
+
+        // Health metrics (all, with animal info)
+        const metrics = await pool.request().query(`
+            SELECT m.MetricID, m.AnimalID, m.RecordDate, m.ActivityLevel,
+                   m.Weight, m.WeightRangeLow, m.WeightRangeHigh,
+                   m.MedicalConditions, m.RecentTreatments, m.AppetiteStatus, m.Notes,
+                   a.Name AS AnimalName, a.Species, a.AnimalCode
+            FROM AnimalHealthMetrics m
+            JOIN Animal a ON m.AnimalID = a.AnimalID
+            WHERE m.DeletedAt IS NULL AND a.DeletedAt IS NULL
+            ORDER BY m.RecordDate DESC
+        `);
+
+        // Health records (all, with animal + staff info)
+        const records = await pool.request().query(`
+            SELECT r.RecordID, r.AnimalID, r.CheckupDate, r.HealthScore, r.Notes, r.StaffID,
+                   a.Name AS AnimalName, a.Species, a.AnimalCode,
+                   s.FullName AS StaffName
+            FROM AnimalHealthRecord r
+            JOIN Animal a ON r.AnimalID = a.AnimalID
+            LEFT JOIN Staff s ON r.StaffID = s.StaffID
+            WHERE r.DeletedAt IS NULL AND a.DeletedAt IS NULL
+            ORDER BY r.CheckupDate DESC
+        `);
+
+        res.json({
+            stats: stats.recordset[0],
+            alerts: alerts.recordset,
+            keepers: keepers.recordset,
+            feedings: feedings.recordset,
+            metrics: metrics.recordset,
+            records: records.recordset,
+        });
+    } catch (error) {
+        console.error('Error building health report:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ═══════════════════════════════════════════════════════════════════
 // COMPREHENSIVE ANIMAL REPORT (all data for a single animal)
 // ═══════════════════════════════════════════════════════════════════
 router.get('/report/:animalId', async (req, res) => {
