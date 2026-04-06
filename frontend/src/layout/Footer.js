@@ -11,8 +11,8 @@ const Footer = () => {
         {/* Brand Column */}
         <div className="ww-footer-brand-col">
           <Link to="/" className="ww-footer-logo">
-            <img src={brandLogo} alt="WildWoods Logo" style={{ width: '56px', height: '56px', objectFit: 'contain' }} />
-            <span className="ww-footer-logo-text">WildWoods Zoo</span>
+            <img src={brandLogo} alt="Zootabase Zoo Logo" style={{ width: '56px', height: '56px', objectFit: 'contain' }} />
+            <span className="ww-footer-logo-text">Zootabase Zoo</span>
           </Link>
           <p className="ww-footer-tagline">
             Connecting people with wildlife and inspiring conservation action since 1985.
@@ -31,10 +31,8 @@ const Footer = () => {
             <h4>VISIT</h4>
             <ul>
               <li><Link to="/ticketing">Hours & Admission</Link></li>
-              <li><a href="#getting-here">Getting Here</a></li>
-              <li><a href="#accessibility">Accessibility</a></li>
-              <li><a href="#map">Zoo Map</a></li>
-              <li><a href="#faq">FAQ</a></li>
+              <li><Link to="/ticketing">Buy Tickets</Link></li>
+              <li><Link to="/attractions">Attractions</Link></li>
             </ul>
           </div>
 
@@ -44,7 +42,6 @@ const Footer = () => {
               <li><Link to="/exhibits">Exhibits</Link></li>
               <li><Link to="/animals">Animals</Link></li>
               <li><Link to="/events">Events</Link></li>
-              <li><a href="#dining">Dining</a></li>
               <li><Link to="/products">Gift Shop</Link></li>
             </ul>
           </div>
@@ -53,21 +50,18 @@ const Footer = () => {
             <h4>SUPPORT</h4>
             <ul>
               <li><Link to="/membership">Membership</Link></li>
-              <li><a href="#donate">Donate</a></li>
-              <li><a href="#adopt">Adopt an Animal</a></li>
-              <li><a href="#volunteer">Volunteer</a></li>
-              <li><a href="#corporate">Corporate Partners</a></li>
+              <li><Link to="/login">Sign In</Link></li>
+              <li><Link to="/signup">Create Account</Link></li>
             </ul>
           </div>
 
           <div className="ww-footer-col">
             <h4>ABOUT</h4>
             <ul>
-              <li><a href="#mission">Our Mission</a></li>
-              <li><a href="#conservation">Conservation</a></li>
-              <li><a href="#research">Research</a></li>
-              <li><a href="#careers">Careers</a></li>
-              <li><a href="#press">Press</a></li>
+              <li><Link to="/">Home</Link></li>
+              <li><Link to="/animals">Animals</Link></li>
+              <li><Link to="/exhibits">Exhibits</Link></li>
+              <li><Link to="/membership">Membership</Link></li>
             </ul>
           </div>
         </div>
@@ -75,7 +69,7 @@ const Footer = () => {
 
       <div className="ww-footer-bottom">
         <p className="ww-footer-copyright">
-          © 2026 WildWoods Zoo. All rights reserved.
+          © 2026 Zootabase Zoo. All rights reserved.
         </p>
         <div className="ww-footer-legal">
           <a href="#privacy">Privacy Policy</a>

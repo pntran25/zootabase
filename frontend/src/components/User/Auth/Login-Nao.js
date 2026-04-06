@@ -87,8 +87,8 @@ const Login = () => {
         <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-black/20" />
         <div className="absolute inset-0 flex flex-col justify-end p-12">
           <Link to="/" className="absolute top-8 left-8 flex items-center gap-2">
-            <img src={brandLogo} alt="WildWoods Logo" className="h-14 w-14 object-contain" />
-            <span className="text-xl font-bold tracking-tight text-white">Wildwood Zoo</span>
+            <img src={brandLogo} alt="Zootabase Zoo Logo" className="h-14 w-14 object-contain" />
+            <span className="text-xl font-bold tracking-tight text-white">Zootabase Zoo</span>
           </Link>
           <div className="max-w-md mt-auto">
             <h2 className="text-3xl font-bold text-white mb-4 m-0">
@@ -106,8 +106,8 @@ const Login = () => {
         {/* Mobile Header */}
         <div className="lg:hidden p-4 border-b border-border">
           <Link to="/" className="flex items-center gap-2 text-decoration-none">
-            <img src={brandLogo} alt="WildWoods Logo" className="h-14 w-14 object-contain" />
-            <span className="text-lg font-bold tracking-tight text-foreground">Wildwood Zoo</span>
+            <img src={brandLogo} alt="Zootabase Zoo Logo" className="h-14 w-14 object-contain" />
+            <span className="text-lg font-bold tracking-tight text-foreground">Zootabase Zoo</span>
           </Link>
         </div>
 

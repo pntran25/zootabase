@@ -1,0 +1,29 @@
+{
+  "files": {
+    "main.css": "/static/css/main.0b00245b.css",
+    "main.js": "/static/js/main.82d40de7.js",
+    "static/js/453.64aababc.chunk.js": "/static/js/453.64aababc.chunk.js",
+    "static/media/attractions-hero.png": "/static/media/attractions-hero.40f6f4fdf90b52e76cb2.png",
+    "static/media/BreakfastWithGiraffes.png": "/static/media/BreakfastWithGiraffes.7e2072443807a7868162.png",
+    "static/media/ExhibitsComingSoon.png": "/static/media/ExhibitsComingSoon.8216a6b2ef08dbdcf0c0.png",
+    "static/media/Logo.png": "/static/media/Logo.bcb9fddf3412047743bd.png",
+    "static/media/zootabase-lo.png": "/static/media/zootabase-lo.bcb9fddf3412047743bd.png",
+    "static/media/zoo-giftshop.jpg": "/static/media/zoo-giftshop.f0bb59b5285d58f7868f.jpg",
+    "static/media/cheetah-4k.jpg": "/static/media/cheetah-4k.013dae8afecd30294b7e.jpg",
+    "static/media/giraffe-habitat.jpg": "/static/media/giraffe-habitat.056fd19fa5079f37cb67.jpg",
+    "static/media/tiger1.jpg": "/static/media/tiger1.cb76edbb6a11351c01de.jpg",
+    "static/media/login_lion.png": "/static/media/login_lion.ae6d9c65452e47971777.png",
+    "static/media/AppleGaramond.ttf": "/static/media/AppleGaramond.0ae25b7cfb9d8a1385d4.ttf",
+    "static/media/AppleGaramond-Bold.ttf": "/static/media/AppleGaramond-Bold.f39aff89cda1a68cae06.ttf",
+    "static/media/AppleGaramond-Italic.ttf": "/static/media/AppleGaramond-Italic.1544e40873b51450ee55.ttf",
+    "static/media/events-hero1.jpg": "/static/media/events-hero1.8574f576dcc41822c4ec.jpg",
+    "index.html": "/index.html",
+    "main.0b00245b.css.map": "/static/css/main.0b00245b.css.map",
+    "main.82d40de7.js.map": "/static/js/main.82d40de7.js.map",
+    "453.64aababc.chunk.js.map": "/static/js/453.64aababc.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.0b00245b.css",
+    "static/js/main.82d40de7.js"
+  ]
+}
