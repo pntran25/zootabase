@@ -34,6 +34,7 @@ import DataReports from './components/Admin/DataReports/DataReports';
 import AnimalHealth from './components/Admin/AnimalHealth/AnimalHealth';
 import AnimalReport from './components/Admin/AnimalHealth/AnimalReport';
 import AnimalCare from './components/Admin/AnimalHealth/AnimalCare';
+import HealthReport from './components/Admin/AnimalHealth/HealthReport';
 import ManageMemberships from './components/Admin/ManageMemberships/ManageMemberships';
 
 function ScrollToTop() {
@@ -88,6 +89,7 @@ function App() {
              <Route path="animal-health" element={<ProtectedRoute allowedRoles={['Super Admin', 'Caretaker']}><AnimalHealth /></ProtectedRoute>} />
              <Route path="animal-care" element={<ProtectedRoute allowedRoles={['Super Admin', 'Caretaker']}><AnimalCare /></ProtectedRoute>} />
              <Route path="animal-report" element={<ProtectedRoute allowedRoles={['Super Admin', 'Caretaker']}><AnimalReport /></ProtectedRoute>} />
+             <Route path="health-report" element={<ProtectedRoute allowedRoles={['Super Admin', 'Caretaker']}><HealthReport /></ProtectedRoute>} />
              <Route path="reports" element={<ProtectedRoute allowedRoles={['Super Admin', 'Shop Manager']}><DataReports /></ProtectedRoute>} />
              <Route path="memberships" element={<ProtectedRoute allowedRoles={['Super Admin']}><ManageMemberships /></ProtectedRoute>} />
           </Route>
