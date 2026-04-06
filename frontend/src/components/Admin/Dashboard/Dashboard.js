@@ -142,8 +142,9 @@ const Dashboard = () => {
     : 'vs Last Month';
 
   // Weekly visitor trend
-  const weeklyTotal     = dashStats.weeklyVisitors.reduce((s, d) => s + d.visitors, 0);
-  const prevWeeklyTotal = dashStats.weeklyVisitors.reduce((s, d) => s + d.prev, 0);
+  const weeklyVisitorsArr = Array.isArray(dashStats.weeklyVisitors) ? dashStats.weeklyVisitors : [];
+  const weeklyTotal     = weeklyVisitorsArr.reduce((s, d) => s + d.visitors, 0);
+  const prevWeeklyTotal = weeklyVisitorsArr.reduce((s, d) => s + d.prev, 0);
   const weeklyDelta     = pctDelta(weeklyTotal, prevWeeklyTotal);
   const weeklyTrendUp   = weeklyTotal >= prevWeeklyTotal;
 
@@ -202,7 +203,7 @@ const Dashboard = () => {
       <div className="admin-page-header">
         <div>
           <h1 className="admin-page-title">Dashboard Overview</h1>
-          <p className="admin-page-subtitle">Welcome back — here's what's happening at WildWoods today.</p>
+          <p className="admin-page-subtitle">Welcome back — here's what's happening at Zootabase Zoo today.</p>
         </div>
         <div className="dashboard-date">
           {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}

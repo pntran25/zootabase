@@ -1,0 +1,13 @@
+/* Tailwind handles styling now */
+
+/* ── Category carousel slide animation ── */
+.ps-cat-filters {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+@keyframes ps-slide-in-right { from { transform: translateX(18px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes ps-slide-in-left  { from { transform: translateX(-18px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+.ps-cat-filters.ps-slide-right { animation: ps-slide-in-right 0.22s ease; }
+.ps-cat-filters.ps-slide-left  { animation: ps-slide-in-left  0.22s ease; }

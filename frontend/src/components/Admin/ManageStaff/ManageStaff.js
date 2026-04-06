@@ -9,15 +9,16 @@ import '../AdminTable.css';
 
 const DEFAULT_PASSWORD = 'ZooStaff2026!';
 
-const ROLES = ['Super Admin', 'Caretaker', 'Event Coordinator', 'Ticket Staff', 'Shop Manager', 'Maintenance'];
+const ROLES = ['Super Admin', 'Zoo Manager', 'Caretaker', 'Event Coordinator', 'Ticket Staff', 'Shop Manager', 'Maintenance'];
 
 const roleColors = {
-  'Super Admin': { bg: 'rgba(16,185,129,0.15)', color: '#10b981' },
-  'Caretaker': { bg: 'rgba(59,130,246,0.15)', color: '#3b82f6' },
-  'Event Coordinator': { bg: 'rgba(168,85,247,0.15)', color: '#a855f7' },
-  'Ticket Staff': { bg: 'rgba(234,179,8,0.15)', color: '#ca8a04' },
-  'Shop Manager': { bg: 'rgba(249,115,22,0.15)', color: '#ea580c' },
-  'Maintenance': { bg: 'rgba(239,68,68,0.15)', color: '#ef4444' },
+  'Super Admin':       { bg: 'rgba(16,185,129,0.15)',  color: '#10b981' },
+  'Zoo Manager':       { bg: 'rgba(8,145,178,0.15)',   color: '#0891b2' },
+  'Caretaker':         { bg: 'rgba(59,130,246,0.15)',  color: '#3b82f6' },
+  'Event Coordinator': { bg: 'rgba(168,85,247,0.15)',  color: '#a855f7' },
+  'Ticket Staff':      { bg: 'rgba(234,179,8,0.15)',   color: '#ca8a04' },
+  'Shop Manager':      { bg: 'rgba(249,115,22,0.15)',  color: '#ea580c' },
+  'Maintenance':       { bg: 'rgba(239,68,68,0.15)',   color: '#ef4444' },
 };
 
 const ManageStaff = () => {
@@ -27,6 +28,7 @@ const ManageStaff = () => {
   const [editingStaff, setEditingStaff] = useState(null);
   const [sortCol, setSortCol] = useState(null);
   const [sortDir, setSortDir] = useState('asc');
+  const [ssnError, setSsnError] = useState('');
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -64,6 +66,7 @@ const ManageStaff = () => {
   useEffect(() => { fetchStaff(); }, []);
 
   const handleOpenModal = (staff = null) => {
+    setSsnError('');
     if (staff) {
       setEditingStaff(staff);
       setFormData({
@@ -83,12 +86,31 @@ const ManageStaff = () => {
     setShowModal(true);
   };
 
+  const handleSsnChange = (val) => {
+    const formatted = formatSSN(val);
+    setFormData(f => ({ ...f, ssn: formatted }));
+    const normalized = formatted.replace(/\D/g, '');
+    if (normalized.length === 9) {
+      const conflict = staffList.find(s =>
+        s.SSN && s.SSN.replace(/\D/g, '') === normalized &&
+        s.StaffID !== editingStaff?.StaffID
+      );
+      setSsnError(conflict
+        ? `SSN is already in use by ${conflict.FirstName} ${conflict.LastName} — please re-enter a unique SSN.`
+        : ''
+      );
+    } else {
+      setSsnError('');
+    }
+  };
+
   const req = <span style={{ color: '#ef4444', marginLeft: 2 }}>*</span>;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.dateOfBirth) { toast.error('Date of birth is required.'); return; }
     if (!formData.ssn) { toast.error('SSN is required.'); return; }
+    if (ssnError) { toast.error(ssnError); return; }
     try {
       const token = await getToken();
       const url = editingStaff ? `${API_BASE_URL}/api/staff/${editingStaff.StaffID}` : `${API_BASE_URL}/api/staff`;
@@ -106,7 +128,8 @@ const ManageStaff = () => {
         const data = await res.json();
         toast.error(data.error || 'SSN is already used by another employee.');
       } else {
-        toast.error('Failed to save staff member');
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || 'Failed to save staff member');
       }
     } catch (err) {
       toast.error('An error occurred');
@@ -268,7 +291,18 @@ const ManageStaff = () => {
           </div>
           <div className="form-group">
             <label>SSN{req}</label>
-            <input type="text" value={formData.ssn} onChange={e => setFormData({ ...formData, ssn: formatSSN(e.target.value) })} placeholder="XXX-XX-XXXX" />
+            <input
+              type="text"
+              value={formData.ssn}
+              onChange={e => handleSsnChange(e.target.value)}
+              placeholder="XXX-XX-XXXX"
+              style={ssnError ? { borderColor: '#ef4444' } : undefined}
+            />
+            {ssnError && (
+              <span style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: 4, display: 'block' }}>
+                {ssnError}
+              </span>
+            )}
           </div>
         </div>
         <div className="form-row">

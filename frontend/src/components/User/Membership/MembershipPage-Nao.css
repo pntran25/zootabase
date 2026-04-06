@@ -1,0 +1,503 @@
+/* ── Page wrapper ── */
+.mem-page {
+  background: #f5f3ef;
+  min-height: 100vh;
+}
+
+/* ── Hero ── */
+.mem-hero {
+  position: relative;
+  height: 540px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+.mem-hero-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 30%;
+}
+.mem-hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, rgba(0,0,0,0.65) 45%, rgba(0,0,0,0.18));
+}
+.mem-hero-fade-bottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 130px;
+  background: linear-gradient(to bottom, transparent, #fff);
+  z-index: 1;
+}
+.mem-hero-content {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 18px;
+}
+.mem-hero-badge {
+  display: inline-block;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.3);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 5px 14px;
+  border-radius: 20px;
+  width: fit-content;
+  backdrop-filter: blur(4px);
+}
+.mem-hero-heading {
+  font-size: 3.2rem;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.12;
+  margin: 0;
+}
+.mem-hero-green {
+  color: #4ade80;
+}
+.mem-hero-desc {
+  color: rgba(255,255,255,0.82);
+  font-size: 1rem;
+  max-width: 480px;
+  line-height: 1.6;
+  margin: 0;
+}
+.mem-hero-btns {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.mem-btn-primary {
+  background: #2d6a4f;
+  color: #fff;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.mem-btn-primary:hover { background: #1b4332; }
+.mem-btn-secondary {
+  background: #fff;
+  color: #1a1a1a;
+  border: 1.5px solid #fff;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.mem-btn-secondary:hover { background: #f0f0f0; }
+
+/* ── Section common ── */
+.mem-section-title {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #1a1a1a;
+  text-align: center;
+  margin: 0 0 8px;
+}
+.mem-section-sub {
+  font-size: 0.95rem;
+  color: #666;
+  text-align: center;
+  margin: 0 0 40px;
+}
+
+/* ── Section wrappers (distinct cream shades) ── */
+.mem-benefits-wrapper {
+  background: oklch(0.98 0.005 90); /* matches events page --background */
+  width: 100%;
+}
+.mem-plans-wrapper {
+  background: #f0ede6;
+  width: 100%;
+}
+
+/* ── Benefits ── */
+.mem-benefits {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 72px 32px 64px;
+}
+.mem-benefits-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+.mem-benefit-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 28px 24px;
+  border: 1px solid #e8e5df;
+}
+.mem-benefit-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background: #e8f2ec;
+  border-radius: 12px;
+  color: #2d6a4f;
+  margin-bottom: 14px;
+  flex-shrink: 0;
+}
+.mem-benefit-title {
+  font-size: 0.97rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 6px;
+}
+.mem-benefit-desc {
+  font-size: 0.85rem;
+  color: #777;
+  margin: 0;
+  line-height: 1.55;
+}
+
+/* ── Plans section ── */
+.mem-plans-section {
+  max-width: 1100px;
+  margin: 0 auto;
+  /* Extra bottom padding so sticky bar doesn't overlap content */
+  padding: 64px 32px 100px;
+}
+.mem-loading {
+  text-align: center;
+  color: #888;
+  padding: 40px 0;
+}
+
+/* ── Billing toggle (sliding) ── */
+.mem-billing-toggle {
+  position: relative;
+  display: flex;
+  width: fit-content;
+  margin: 0 auto 44px;
+  background: #cdc9c1;
+  border-radius: 50px;
+  padding: 4px;
+}
+/* Sliding white pill — sits behind buttons */
+.mem-toggle-indicator {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  bottom: 4px;
+  /* Width = one button (150px) exactly */
+  width: 150px;
+  background: #fff;
+  border-radius: 50px;
+  box-shadow: 0 1px 5px rgba(0,0,0,0.15);
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 0;
+  pointer-events: none;
+}
+.mem-toggle-indicator.right {
+  /* Slide exactly one button width to the right */
+  transform: translateX(150px);
+}
+.mem-toggle-btn {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+  border: none;
+  /* Fixed equal width for both buttons — indicator matches */
+  width: 150px;
+  padding: 9px 0;
+  border-radius: 50px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #888;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  white-space: nowrap;
+  transition: color 0.2s;
+}
+.mem-toggle-btn.active {
+  color: #1a1a1a;
+}
+.mem-save-badge {
+  background: #dce9dc;
+  color: #4a7a55;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+/* ── Plan cards ── */
+.mem-plans-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.mem-plan-card {
+  background: #fff;
+  border-radius: 16px;
+  border: 1.5px solid #e5e3de;
+  padding: 28px 24px 24px;
+  position: relative;
+  cursor: pointer;
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+.mem-plan-card:hover {
+  box-shadow: 0 4px 18px rgba(0,0,0,0.08);
+}
+.mem-plan-card.popular {
+  border-color: #2d6a4f;
+  border-width: 2px;
+}
+.mem-plan-card.selected {
+  border-color: #2d6a4f;
+  box-shadow: 0 0 0 3px rgba(45,106,79,0.15);
+}
+.mem-popular-badge {
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #2d6a4f;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 16px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.mem-plan-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+.mem-plan-name {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #1a1a1a;
+  margin: 0 0 4px;
+}
+.mem-plan-desc {
+  font-size: 0.85rem;
+  color: #888;
+  margin: 0 0 16px;
+}
+.mem-plan-price {
+  font-size: 1.9rem;
+  font-weight: 800;
+  color: #1a1a1a;
+  margin: 0 0 16px;
+}
+.mem-select-btn {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 20px;
+  border: 1.5px solid #d1cfc9;
+  background: #fff;
+  color: #1a1a1a;
+}
+.mem-select-btn:hover { border-color: #2d6a4f; color: #2d6a4f; }
+.mem-select-btn.selected {
+  background: #2d6a4f;
+  color: #fff;
+  border-color: #2d6a4f;
+}
+
+/* ── Feature list ── */
+.mem-features-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mem-feature {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 0.85rem;
+  color: #2d6a4f;
+  font-weight: 500;
+}
+.mem-feature.excluded {
+  color: #aaa;
+}
+.mem-feature-icon {
+  flex-shrink: 0;
+  display: flex;
+  color: #2d6a4f;
+}
+.mem-feature-icon.dash {
+  color: #bbb;
+}
+
+/* ── FAQ ── */
+.mem-faq-wrapper {
+  background: oklch(0.98 0.005 90);
+  width: 100%;
+}
+.mem-faq-section {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 72px 32px 64px;
+}
+.mem-faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 40px;
+}
+.mem-faq-card {
+  background: #fff;
+  border: 1px solid #e8e5df;
+  border-radius: 14px;
+  padding: 24px 28px;
+}
+.mem-faq-q {
+  font-size: 0.97rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 8px;
+}
+.mem-faq-a {
+  font-size: 0.88rem;
+  color: #777;
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* ── CTA Banner ── */
+.mem-cta-wrapper {
+  background: #1e5c2e;
+  width: 100%;
+}
+.mem-cta-section {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 48px 32px;
+  text-align: center;
+}
+.mem-cta-heading {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #fff;
+  margin: 0 0 14px;
+}
+.mem-cta-sub {
+  font-size: 1rem;
+  color: rgba(255,255,255,0.78);
+  line-height: 1.6;
+  margin: 0 0 32px;
+}
+.mem-cta-btns {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.mem-cta-btn-primary {
+  background: #e8dfc0;
+  color: #1e5c2e;
+  border: none;
+  padding: 13px 28px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.mem-cta-btn-primary:hover { background: #ddd4ab; }
+.mem-cta-btn-outline {
+  background: transparent;
+  color: #fff;
+  border: 1.5px solid rgba(255,255,255,0.55);
+  padding: 13px 28px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.mem-cta-btn-outline:hover { border-color: #fff; background: rgba(255,255,255,0.08); }
+
+/* ── Sticky continue bar ── */
+.mem-sticky-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border-top: 1px solid #e5e3de;
+  padding: 16px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  z-index: 100;
+  box-shadow: 0 -4px 16px rgba(0,0,0,0.08);
+}
+.mem-sticky-info {
+  font-size: 0.95rem;
+  color: #555;
+}
+.mem-sticky-info strong {
+  color: #1a1a1a;
+}
+.mem-continue-btn {
+  background: #2d6a4f;
+  color: #fff;
+  border: none;
+  padding: 12px 28px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.mem-continue-btn:hover { background: #1b4332; }
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .mem-benefits-grid,
+  .mem-plans-grid {
+    grid-template-columns: 1fr;
+  }
+  .mem-hero-heading { font-size: 2rem; }
+  .mem-hero-content { padding: 0 24px; }
+  .mem-hero { height: 480px; }
+}
+@media (max-width: 600px) {
+  .mem-hero-heading { font-size: 1.7rem; }
+  .mem-benefits { padding: 48px 20px 40px; }
+  .mem-plans-section { padding: 48px 20px 56px; }
+}

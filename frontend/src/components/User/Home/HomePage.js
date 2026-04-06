@@ -5,7 +5,7 @@ import { getExhibits } from '../../../services/exhibitService';
 import { API_BASE_URL } from '../../../services/apiClient';
 
 // Fallback images
-import lionImage from '../../../assets/images/HomePage.png';
+import lionImage from '../../../assets/images/cheetah-4k.jpg';
 import placeholderImg from '../../../assets/images/Exhibits_Images/ExhibitsComingSoon.png';
 
 // Inline simple SVG icons to replicate lucide-react visuals without modifying dependencies
@@ -48,7 +48,7 @@ const HomePage = () => {
       {/* ═══ HERO ═══ */}
       <section className="ww-hero">
         <div className="ww-hero-bg">
-          <img src={lionImage} alt="Wildlife at Wildwood Zoo" />
+          <img src={lionImage} alt="Wildlife at Zootabase Zoo" />
         </div>
         <div className="ww-hero-overlay-1" />
         <div className="ww-hero-overlay-2" />
@@ -70,9 +70,6 @@ const HomePage = () => {
             
             <div className="ww-hero-ctas">
               <Link to="/ticketing" className="ww-btn ww-btn-primary">Plan Your Visit</Link>
-              <button className="ww-btn ww-btn-outline" type="button">
-                <PlayIcon /> Watch Video
-              </button>
             </div>
             
             <div className="ww-hero-stats">
@@ -155,7 +152,7 @@ const HomePage = () => {
               {displayExhibits.map((exhibit, idx) => {
                 const isBig = idx === 0 || idx === 5;
                 const imgSrc = exhibit.ImageUrl
-                  ? `${API_BASE_URL}${exhibit.ImageUrl}`
+                  ? (exhibit.ImageUrl?.startsWith('http') ? exhibit.ImageUrl : `${API_BASE_URL}${exhibit.ImageUrl}`)
                   : placeholderImg;
 
                 return (

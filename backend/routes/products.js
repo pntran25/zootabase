@@ -8,7 +8,7 @@ const path = require('path');
 const fs = require('fs');
 
 // Ensure image directory exists
-const imageDir = process.env.NODE_ENV === "production" ? "/tmp/images/Product_Images" : path.join(__dirname, '../../frontend/src/assets/images/Product_Images');
+const imageDir = path.join(__dirname, '../uploads/Product_Images');
 if (!fs.existsSync(imageDir)) fs.mkdirSync(imageDir, { recursive: true });
 
 const storage = multer.diskStorage({

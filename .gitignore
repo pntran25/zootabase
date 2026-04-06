@@ -4,6 +4,9 @@ node_modules/
 # Environment variables
 .env
 
+# Firebase service account key
+service-account.json
+
 # Logs
 logs/
 *.log
@@ -48,4 +51,6 @@ __pycache__/
 .claude/  
 Zoo UI Redesing/
 Zoo UI Redesing
+
+# Secrets
 service-account.json
