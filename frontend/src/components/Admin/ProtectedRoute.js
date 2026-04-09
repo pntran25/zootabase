@@ -9,7 +9,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     }
 
     if (!userProfile) {
-        return <Navigate to="/login" replace />;
+        return <Navigate to="/" replace />;
     }
 
     // Super Admin has access to everything

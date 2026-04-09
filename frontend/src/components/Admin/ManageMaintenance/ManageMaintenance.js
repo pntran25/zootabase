@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import '../AdminTable.css';
+import '../AnimalHealth/HealthReport.css';
 import { Wrench, Search, Plus, CheckCircle, Edit2, Trash2, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import { useReactTable, getCoreRowModel, getSortedRowModel, getPaginationRowModel, flexRender } from '@tanstack/react-table';
 import { toast } from 'sonner';
@@ -40,6 +41,7 @@ const statusDotColor = (status) => {
 const ManageMaintenance = () => {
   const [logs, setLogs] = useState([]);
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLog, setEditingLog] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -76,10 +78,16 @@ const ManageMaintenance = () => {
   useEffect(() => { loadData(); }, []);
 
   const filteredLogs = useMemo(() =>
-    logs.filter(log =>
-      log.issueType.toLowerCase().includes(search.toLowerCase()) ||
-      log.location.toLowerCase().includes(search.toLowerCase())
-    ), [logs, search]);
+    logs.filter(log => {
+      const matchesSearch =
+        log.issueType.toLowerCase().includes(search.toLowerCase()) ||
+        log.location.toLowerCase().includes(search.toLowerCase());
+      const matchesStatus =
+        statusFilter === 'all' ? true :
+        statusFilter === 'active' ? log.status !== 'Completed' :
+        log.status === 'Completed';
+      return matchesSearch && matchesStatus;
+    }), [logs, search, statusFilter]);
 
   const handleOpenModal = (log = null) => {
     if (log) {
@@ -235,10 +243,6 @@ const ManageMaintenance = () => {
           <p className="admin-page-subtitle">Track and manage park repair requests.</p>
         </div>
         <div className="admin-page-actions">
-          <div className="admin-search-container">
-            <Search className="search-icon" size={16} />
-            <input type="text" placeholder="Search requests..." className="admin-search-input" value={search} onChange={e => setSearch(e.target.value)} />
-          </div>
           <button className="admin-btn-primary" onClick={() => handleOpenModal()}>
             <Plus size={16} /> New Request
           </button>
@@ -253,6 +257,31 @@ const ManageMaintenance = () => {
           </p>
         </div>
       )}
+
+      {/* Search + status filter bar */}
+      <div className="hr-toolbar">
+        <div className="hr-search-wrap">
+          <Search className="hr-search-icon" size={15} />
+          <input
+            type="text"
+            placeholder="Search by issue or location..."
+            className="hr-search-input"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </div>
+        <div className="hr-filter-group">
+          {['all', 'active', 'completed'].map(f => (
+            <button
+              key={f}
+              className={`hr-filter-btn${statusFilter === f ? ' hr-filter-active' : ''}`}
+              onClick={() => setStatusFilter(f)}
+            >
+              {f.charAt(0).toUpperCase() + f.slice(1)}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="admin-table-container">
         <table className="admin-table">
@@ -281,7 +310,7 @@ const ManageMaintenance = () => {
                   <div className="admin-table-empty-icon"><Wrench size={22} /></div>
                   <p className="admin-table-empty-title">No maintenance logs found</p>
                   <p className="admin-table-empty-desc">
-                    {search ? 'Try adjusting your search.' : 'Log a new request to get started.'}
+                    {search || statusFilter !== 'all' ? 'Try adjusting your search or filter.' : 'Log a new request to get started.'}
                   </p>
                 </div>
               </td></tr>

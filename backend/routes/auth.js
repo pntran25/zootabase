@@ -37,6 +37,11 @@ router.post('/sync', verifyToken, async (req, res) => {
                     .query(`UPDATE Staff SET FirebaseUid = @FirebaseUid WHERE StaffID = @StaffID`);
             }
 
+            // Log staff login
+            await pool.request()
+                .input('StaffID', userId)
+                .query(`INSERT INTO StaffLoginAudit (StaffID, LoginTime) VALUES (@StaffID, SYSUTCDATETIME())`);
+
         } else {
             console.log(`[AUTH SYNC] User ${firebaseUser.email} IS NOT STAFF. Attempting to match Customer.`);
             // 2. Check if user exists in Customer table by FirebaseUid or Email
@@ -69,6 +74,11 @@ router.post('/sync', verifyToken, async (req, res) => {
             await pool.request()
                 .input('CustomerID', userId)
                 .query(`UPDATE Customer SET LastLoginAt = SYSUTCDATETIME() WHERE CustomerID = @CustomerID`);
+
+            // Log customer login
+            await pool.request()
+                .input('CustomerID', userId)
+                .query(`INSERT INTO CustomerLoginAudit (CustomerID, LoginTime) VALUES (@CustomerID, SYSUTCDATETIME())`);
 
         }
 

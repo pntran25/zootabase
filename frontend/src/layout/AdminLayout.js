@@ -4,7 +4,7 @@ import {
   LayoutDashboard, PawPrint, Map, Ticket, ShoppingBag,
   Wrench, LogOut, TicketCheck, CalendarDays,
   Sun, Moon, Users, LineChart, FileText, HeartPulse, ClipboardList, CreditCard, UtensilsCrossed,
-  ChevronLeft, ChevronRight
+  ChevronLeft, ChevronRight, ExternalLink
 } from 'lucide-react';
 import brandLogo from '../assets/images/Logo.png';
 import { Toaster } from 'sonner';
@@ -135,7 +135,7 @@ const AdminLayout = () => {
           {renderLink('/admin/animal-report', <ClipboardList size={18} className="nav-icon" />, 'Animal Reports', 'animal-report')}
           {renderLink('/admin/health-report', <HeartPulse size={18} className="nav-icon" />, 'Health Reports', 'health-report')}
           {renderLink('/admin/reports', <FileText size={18} className="nav-icon" />, 'Transaction Reports', 'reports')}
-          {renderLink('/admin/analytics', <LineChart size={18} className="nav-icon" />, 'Analytics', 'analytics')}
+          {renderLink('/admin/analytics', <LineChart size={18} className="nav-icon" />, 'Login Analytics', 'analytics')}
 
           {hasAny('staff', 'maintenance') && <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Administration</p>}
           {renderLink('/admin/staff', <Users size={18} className="nav-icon" />, 'Staff Management', 'staff')}
@@ -176,6 +176,23 @@ const AdminLayout = () => {
             </span>
           </div>
           <div className="admin-topbar-right">
+            <button
+              onClick={() => navigate('/')}
+              aria-label="Switch to user view"
+              title="User View"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                padding: '6px 12px', borderRadius: '8px', fontSize: '0.8rem',
+                fontWeight: 600, background: 'transparent',
+                color: 'var(--adm-text-secondary)', border: '1px solid var(--adm-border)',
+                whiteSpace: 'nowrap', cursor: 'pointer', transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--adm-text-primary)'; e.currentTarget.style.background = 'var(--adm-bg-surface-2)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--adm-text-secondary)'; e.currentTarget.style.background = 'transparent'; }}
+            >
+              <span style={{ letterSpacing: '0.02em' }}>User View</span>
+            </button>
+            <div className="admin-topbar-divider" />
             <button
               className="admin-theme-toggle"
               onClick={toggleTheme}

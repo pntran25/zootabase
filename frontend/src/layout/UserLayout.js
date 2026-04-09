@@ -53,10 +53,24 @@ const UserLayout = () => {
 
           <div className="ww-header-actions">
             {currentUser ? (
-              <div className="ww-user-greeting">
-                <span className="ww-greeting-text">Hello, {firstName}!</span>
-                <button className="ww-btn-signout" onClick={handleLogout}>Sign Out</button>
-              </div>
+              userProfile?.isStaff ? (
+                <NavLink
+                  to="/admin"
+                  className="ww-btn-admin-view"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', padding: '6px 14px', borderRadius: '8px',
+                    fontSize: '0.85rem', fontWeight: 600, background: '#e5e7eb',
+                    color: '#374151', textDecoration: 'none', transition: 'all 0.2s',
+                  }}
+                >
+                  Admin View
+                </NavLink>
+              ) : (
+                <div className="ww-user-greeting">
+                  <span className="ww-greeting-text">Hello, {firstName}!</span>
+                  <button className="ww-btn-signout" onClick={handleLogout}>Sign Out</button>
+                </div>
+              )
             ) : (
               <NavLink to="/login" className="ww-btn-login"><UserIcon /> Login</NavLink>
             )}
@@ -90,10 +104,21 @@ const UserLayout = () => {
             </nav>
             <div className="ww-mobile-actions">
               {currentUser ? (
-                <>
-                  <span className="ww-greeting-text">Hello, {firstName}!</span>
-                  <button className="ww-mobile-signout" onClick={() => { handleLogout(); setIsOpen(false); }}>Sign Out</button>
-                </>
+                userProfile?.isStaff ? (
+                  <NavLink
+                    to="/admin"
+                    className="ww-mobile-nav-link"
+                    onClick={() => setIsOpen(false)}
+                    style={{ color: '#374151', fontWeight: 600, background: '#e5e7eb', padding: '10px', borderRadius: '6px', textAlign: 'center' }}
+                  >
+                    Admin View
+                  </NavLink>
+                ) : (
+                  <>
+                    <span className="ww-greeting-text">Hello, {firstName}!</span>
+                    <button className="ww-mobile-signout" onClick={() => { handleLogout(); setIsOpen(false); }}>Sign Out</button>
+                  </>
+                )
               ) : (
                 <NavLink to="/login" className="ww-mobile-nav-link" onClick={() => setIsOpen(false)}><UserIcon /> Login</NavLink>
               )}

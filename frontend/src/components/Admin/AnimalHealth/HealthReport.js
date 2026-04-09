@@ -341,7 +341,7 @@ const HealthReport = () => {
                           </td>
                           <td>{m.Species}</td>
                           <td>{fmtDate(m.RecordDate)}</td>
-                          <td style={{ color: outOfRange ? '#ef4444' : 'inherit', fontWeight: outOfRange ? 700 : 'inherit' }}>
+                          <td style={{ color: outOfRange ? '#ef4444' : 'var(--adm-text-primary)', fontWeight: outOfRange ? 700 : 500 }}>
                             {w != null ? `${Number(w).toFixed(1)} kg` : '—'}
                             {outOfRange && ' ⚠'}
                           </td>
