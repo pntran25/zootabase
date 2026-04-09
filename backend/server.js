@@ -343,9 +343,10 @@ async function runMigrations(pool) {
 		`IF COL_LENGTH('MembershipSubscriptions','FirstName') IS NULL ALTER TABLE MembershipSubscriptions ADD FirstName NVARCHAR(50) NULL`,
 		`IF COL_LENGTH('MembershipSubscriptions','LastName') IS NULL ALTER TABLE MembershipSubscriptions ADD LastName NVARCHAR(50) NULL`,
 		// Backfill FirstName/LastName from FullName for rows created before the split
-		`IF COL_LENGTH('Orders','FullName') IS NOT NULL UPDATE Orders SET FirstName = LTRIM(RTRIM(LEFT(FullName, CHARINDEX(' ', FullName + ' ') - 1))), LastName = NULLIF(LTRIM(RTRIM(SUBSTRING(FullName, CHARINDEX(' ', FullName + ' ') + 1, LEN(FullName)))), '') WHERE FirstName IS NULL AND FullName IS NOT NULL`,
-		`IF COL_LENGTH('TicketOrders','FullName') IS NOT NULL UPDATE TicketOrders SET FirstName = LTRIM(RTRIM(LEFT(FullName, CHARINDEX(' ', FullName + ' ') - 1))), LastName = NULLIF(LTRIM(RTRIM(SUBSTRING(FullName, CHARINDEX(' ', FullName + ' ') + 1, LEN(FullName)))), '') WHERE FirstName IS NULL AND FullName IS NOT NULL`,
-		`IF COL_LENGTH('MembershipSubscriptions','FullName') IS NOT NULL UPDATE MembershipSubscriptions SET FirstName = LTRIM(RTRIM(LEFT(FullName, CHARINDEX(' ', FullName + ' ') - 1))), LastName = NULLIF(LTRIM(RTRIM(SUBSTRING(FullName, CHARINDEX(' ', FullName + ' ') + 1, LEN(FullName)))), '') WHERE FirstName IS NULL AND FullName IS NOT NULL`,
+		// Wrapped in EXEC() so SQL Server only compiles the UPDATE when the column still exists
+		`IF COL_LENGTH('Orders','FullName') IS NOT NULL EXEC('UPDATE Orders SET FirstName = LTRIM(RTRIM(LEFT(FullName, CHARINDEX('' '', FullName + '' '') - 1))), LastName = NULLIF(LTRIM(RTRIM(SUBSTRING(FullName, CHARINDEX('' '', FullName + '' '') + 1, LEN(FullName)))), '''') WHERE FirstName IS NULL AND FullName IS NOT NULL')`,
+		`IF COL_LENGTH('TicketOrders','FullName') IS NOT NULL EXEC('UPDATE TicketOrders SET FirstName = LTRIM(RTRIM(LEFT(FullName, CHARINDEX('' '', FullName + '' '') - 1))), LastName = NULLIF(LTRIM(RTRIM(SUBSTRING(FullName, CHARINDEX('' '', FullName + '' '') + 1, LEN(FullName)))), '''') WHERE FirstName IS NULL AND FullName IS NOT NULL')`,
+		`IF COL_LENGTH('MembershipSubscriptions','FullName') IS NOT NULL EXEC('UPDATE MembershipSubscriptions SET FirstName = LTRIM(RTRIM(LEFT(FullName, CHARINDEX('' '', FullName + '' '') - 1))), LastName = NULLIF(LTRIM(RTRIM(SUBSTRING(FullName, CHARINDEX('' '', FullName + '' '') + 1, LEN(FullName)))), '''') WHERE FirstName IS NULL AND FullName IS NOT NULL')`,
 		// Drop the now-redundant FullName column
 		`IF COL_LENGTH('Orders','FullName') IS NOT NULL ALTER TABLE Orders DROP COLUMN FullName`,
 		`IF COL_LENGTH('TicketOrders','FullName') IS NOT NULL ALTER TABLE TicketOrders DROP COLUMN FullName`,
