@@ -46,9 +46,6 @@ const UserLayout = () => {
             <NavLink to="/events" className={({ isActive }) => `ww-nav-link ${isActive ? 'active' : ''}`}>Events</NavLink>
             <NavLink to="/products" className={({ isActive }) => `ww-nav-link ${isActive ? 'active' : ''}`}>Gift Shop</NavLink>
             <NavLink to="/membership" className={({ isActive }) => `ww-nav-link ${isActive ? 'active' : ''}`}>Membership</NavLink>
-            {userProfile?.isStaff && (
-              <NavLink to="/admin" className={({ isActive }) => `ww-nav-link ${isActive ? 'active' : ''}`}>Admin</NavLink>
-            )}
           </nav>
 
           <div className="ww-header-actions">
@@ -98,9 +95,6 @@ const UserLayout = () => {
               <NavLink to="/events" className={({ isActive }) => `ww-mobile-nav-link ${isActive ? 'active' : ''}`} onClick={() => setIsOpen(false)}>Events</NavLink>
               <NavLink to="/products" className={({ isActive }) => `ww-mobile-nav-link ${isActive ? 'active' : ''}`} onClick={() => setIsOpen(false)}>Gift Shop</NavLink>
               <NavLink to="/membership" className={({ isActive }) => `ww-mobile-nav-link ${isActive ? 'active' : ''}`} onClick={() => setIsOpen(false)}>Membership</NavLink>
-              {userProfile?.isStaff && (
-                <NavLink to="/admin" className={({ isActive }) => `ww-mobile-nav-link ${isActive ? 'active' : ''}`} onClick={() => setIsOpen(false)}>Admin</NavLink>
-              )}
             </nav>
             <div className="ww-mobile-actions">
               {currentUser ? (
