@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import './HomePage.css';
 import { getExhibits } from '../../../services/exhibitService';
-import { API_BASE_URL } from '../../../services/apiClient';
+import { apiGet, API_BASE_URL } from '../../../services/apiClient';
 
 // Fallback images
 import lionImage from '../../../assets/images/cheetah-4k.jpg';
@@ -24,6 +24,7 @@ const LeafIcon = () => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor
 
 const HomePage = () => {
   const [exhibits, setExhibits] = useState([]);
+  const [stats, setStats] = useState({ totalAnimals: 0, startingPrice: 0, totalExhibits: 0, endangeredCount: 0 });
 
   useEffect(() => {
     const fetchExhibits = async () => {
@@ -34,7 +35,16 @@ const HomePage = () => {
         console.error('Failed to fetch exhibits:', err);
       }
     };
+    const fetchStats = async () => {
+      try {
+        const data = await apiGet('/api/zoo-stats');
+        setStats(data);
+      } catch (err) {
+        console.error('Failed to fetch zoo stats:', err);
+      }
+    };
     fetchExhibits();
+    fetchStats();
   }, []);
 
   // Featured exhibits first, then fill to 8 with the rest
@@ -74,16 +84,16 @@ const HomePage = () => {
             
             <div className="ww-hero-stats">
               <div>
-                <p className="ww-hero-stat-value">500+</p>
-                <p className="ww-hero-stat-label">Animal Species</p>
+                <p className="ww-hero-stat-value">{stats.totalAnimals || '—'}</p>
+                <p className="ww-hero-stat-label">Animals</p>
               </div>
               <div>
-                <p className="ww-hero-stat-value">200</p>
-                <p className="ww-hero-stat-label">Acres of Habitat</p>
+                <p className="ww-hero-stat-value">{stats.totalExhibits || '—'}</p>
+                <p className="ww-hero-stat-label">Exhibits</p>
               </div>
               <div>
-                <p className="ww-hero-stat-value">1M+</p>
-                <p className="ww-hero-stat-label">Annual Visitors</p>
+                <p className="ww-hero-stat-value">{stats.endangeredCount || '—'}</p>
+                <p className="ww-hero-stat-label">Endangered Species</p>
               </div>
             </div>
           </div>
@@ -122,14 +132,14 @@ const HomePage = () => {
               <div className="ww-info-icon-wrap"><TicketIcon /></div>
               <div>
                 <p className="ww-info-label">Adult Tickets</p>
-                <p className="ww-info-value">From $29.99</p>
+                <p className="ww-info-value">From ${stats.startingPrice ? stats.startingPrice.toFixed(2) : '—'}</p>
               </div>
             </div>
             <div className="ww-info-item">
               <div className="ww-info-icon-wrap"><UsersIcon /></div>
               <div>
-                <p className="ww-info-label">Visitors Today</p>
-                <p className="ww-info-value">2,847</p>
+                <p className="ww-info-label">Total Animals</p>
+                <p className="ww-info-value">{stats.totalAnimals || '—'}</p>
               </div>
             </div>
           </div>
@@ -264,16 +274,16 @@ const HomePage = () => {
 
           <div className="ww-con-stats">
             <div className="ww-con-stat">
-              <p className="ww-con-stat-val">47</p>
-              <p className="ww-con-stat-label">Conservation Projects</p>
+              <p className="ww-con-stat-val">{stats.endangeredCount || '—'}</p>
+              <p className="ww-con-stat-label">Endangered Species Protected</p>
             </div>
             <div className="ww-con-stat">
-              <p className="ww-con-stat-val">$12M+</p>
-              <p className="ww-con-stat-label">Funds Raised</p>
+              <p className="ww-con-stat-val">{stats.totalExhibits || '—'}</p>
+              <p className="ww-con-stat-label">Exhibit Habitats</p>
             </div>
             <div className="ww-con-stat">
-              <p className="ww-con-stat-val">18</p>
-              <p className="ww-con-stat-label">Species Protected</p>
+              <p className="ww-con-stat-val">{stats.totalAnimals || '—'}</p>
+              <p className="ww-con-stat-label">Animals in Our Care</p>
             </div>
           </div>
 

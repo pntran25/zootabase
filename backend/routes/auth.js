@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { connectToDb } = require('../services/admin');
 const { verifyToken } = require('../middleware/authMiddleware');
+const Q = require('../queries/authQueries');
 
 // Sync Firebase Auth with SQL Database and Log Traffic
 router.post('/sync', verifyToken, async (req, res) => {
@@ -20,7 +21,7 @@ router.post('/sync', verifyToken, async (req, res) => {
         console.log(`[AUTH SYNC] Checking Staff table for email: ${firebaseUser.email}`);
         const staffResult = await pool.request()
             .input('Email', firebaseUser.email)
-            .query(`SELECT StaffID, FirebaseUid FROM Staff WHERE Email = @Email AND DeletedAt IS NULL`);
+            .query(Q.findStaffByEmail);
 
         console.log(`[AUTH SYNC] Staff query result length: ${staffResult.recordset.length}`);
 
@@ -34,13 +35,13 @@ router.post('/sync', verifyToken, async (req, res) => {
                 await pool.request()
                     .input('FirebaseUid', firebaseUser.uid)
                     .input('StaffID', userId)
-                    .query(`UPDATE Staff SET FirebaseUid = @FirebaseUid WHERE StaffID = @StaffID`);
+                    .query(Q.updateStaffFirebaseUid);
             }
 
             // Log staff login
             await pool.request()
                 .input('StaffID', userId)
-                .query(`INSERT INTO StaffLoginAudit (StaffID, LoginTime) VALUES (@StaffID, SYSUTCDATETIME())`);
+                .query(Q.insertStaffLoginAudit);
 
         } else {
             console.log(`[AUTH SYNC] User ${firebaseUser.email} IS NOT STAFF. Attempting to match Customer.`);
@@ -48,7 +49,7 @@ router.post('/sync', verifyToken, async (req, res) => {
             const custResult = await pool.request()
                 .input('FirebaseUid', firebaseUser.uid)
                 .input('Email', firebaseUser.email)
-                .query(`SELECT CustomerID FROM Customer WHERE FirebaseUid = @FirebaseUid OR Email = @Email`);
+                .query(Q.findCustomer);
 
             if (custResult.recordset.length > 0) {
                 userId = custResult.recordset[0].CustomerID;
@@ -57,7 +58,7 @@ router.post('/sync', verifyToken, async (req, res) => {
                 await pool.request()
                     .input('FirebaseUid', firebaseUser.uid)
                     .input('CustomerID', userId)
-                    .query(`UPDATE Customer SET FirebaseUid = @FirebaseUid WHERE CustomerID = @CustomerID`);
+                    .query(Q.updateCustomerFirebaseUid);
             } else {
                 // Completely new Customer
                 const newName = fullName || firebaseUser.name || firebaseUser.email.split('@')[0];
@@ -65,7 +66,7 @@ router.post('/sync', verifyToken, async (req, res) => {
                     .input('FullName', newName)
                     .input('Email', firebaseUser.email)
                     .input('FirebaseUid', firebaseUser.uid)
-                    .query(`INSERT INTO Customer (FullName, Email, FirebaseUid) VALUES (@FullName, @Email, @FirebaseUid); SELECT SCOPE_IDENTITY() AS CustomerID;`);
+                    .query(Q.insertCustomer);
                 
                 userId = insertResult.recordset[0].CustomerID;
             }
@@ -73,12 +74,12 @@ router.post('/sync', verifyToken, async (req, res) => {
             // Update LastLoginAt for Customer
             await pool.request()
                 .input('CustomerID', userId)
-                .query(`UPDATE Customer SET LastLoginAt = SYSUTCDATETIME() WHERE CustomerID = @CustomerID`);
+                .query(Q.updateCustomerLastLogin);
 
             // Log customer login
             await pool.request()
                 .input('CustomerID', userId)
-                .query(`INSERT INTO CustomerLoginAudit (CustomerID, LoginTime) VALUES (@CustomerID, SYSUTCDATETIME())`);
+                .query(Q.insertCustomerLoginAudit);
 
         }
 

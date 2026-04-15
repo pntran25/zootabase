@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { connectToDb } = require('../services/admin');
 const { verifyToken, requireRole } = require('../middleware/authMiddleware');
+const Q = require('../queries/analyticsQueries');
 
 // Get segregated login analytics
 router.get('/logins', verifyToken, requireRole(['Super Admin']), async (req, res) => {
@@ -16,21 +17,9 @@ router.get('/logins', verifyToken, requireRole(['Super Admin']), async (req, res
             .input('start', start)
             .input('end',   end);
 
-        const staffLogins = await mkReq().query(`
-            SELECT TOP 500 s.LogID, s.LoginTime, st.FirstName, st.LastName, st.Role, st.Email, st.StaffID
-            FROM StaffLoginAudit s
-            JOIN Staff st ON s.StaffID = st.StaffID
-            WHERE CAST(s.LoginTime AS DATE) >= @start AND CAST(s.LoginTime AS DATE) <= @end
-            ORDER BY s.LoginTime DESC
-        `);
+        const staffLogins = await mkReq().query(Q.staffLogins);
 
-        const customerLogins = await mkReq().query(`
-            SELECT TOP 500 c.LogID, c.LoginTime, cu.FullName, cu.Email, cu.CustomerID
-            FROM CustomerLoginAudit c
-            JOIN Customer cu ON c.CustomerID = cu.CustomerID
-            WHERE CAST(c.LoginTime AS DATE) >= @start AND CAST(c.LoginTime AS DATE) <= @end
-            ORDER BY c.LoginTime DESC
-        `);
+        const customerLogins = await mkReq().query(Q.customerLogins);
 
         res.json({
             staffLogins: staffLogins.recordset,
@@ -58,57 +47,17 @@ router.get('/overview', async (req, res) => {
 
         // ── KPIs ────────────────────────────────────────────────────
         const [shopKpi, ticketKpi, memberKpi, eventKpi] = await Promise.all([
-            mkReq().query(`
-                SELECT ISNULL(SUM(Total),0) AS revenue, COUNT(*) AS cnt
-                FROM Orders
-                WHERE CAST(PlacedAt AS DATE) >= @start AND CAST(PlacedAt AS DATE) <= @end
-            `),
-            mkReq().query(`
-                SELECT ISNULL(SUM(Total),0) AS revenue,
-                       ISNULL(SUM(AdultQty+ChildQty+SeniorQty),0) AS ticketCount,
-                       COUNT(*) AS orderCount
-                FROM TicketOrders
-                WHERE CAST(PlacedAt AS DATE) >= @start AND CAST(PlacedAt AS DATE) <= @end
-            `),
-            mkReq().query(`
-                SELECT ISNULL(SUM(Total),0) AS revenue, COUNT(*) AS cnt
-                FROM MembershipSubscriptions
-                WHERE CAST(PlacedAt AS DATE) >= @start AND CAST(PlacedAt AS DATE) <= @end
-            `),
-            mkReq().query(`
-                SELECT ISNULL(SUM(Total),0) AS revenue,
-                       ISNULL(SUM(Quantity),0) AS attendees,
-                       COUNT(*) AS cnt
-                FROM EventBookings
-                WHERE CAST(PlacedAt AS DATE) >= @start AND CAST(PlacedAt AS DATE) <= @end
-            `),
+            mkReq().query(Q.shopKpi),
+            mkReq().query(Q.ticketKpi),
+            mkReq().query(Q.memberKpi),
+            mkReq().query(Q.eventKpi),
         ]);
 
         // ── Choose granularity based on range width ──────────────────
         const daysDiff = Math.round((new Date(end) - new Date(start)) / 86400000);
         const granularity = daysDiff <= 60 ? 'daily' : 'monthly';
 
-        const trendSql = (table) => granularity === 'daily' ? `
-            SELECT FORMAT(CAST(PlacedAt AS DATE), 'MMM d') AS month,
-                   YEAR(PlacedAt) AS yr,
-                   MONTH(PlacedAt) AS mo,
-                   DAY(PlacedAt) AS dy,
-                   ISNULL(SUM(Total),0) AS rev
-            FROM ${table}
-            WHERE CAST(PlacedAt AS DATE) >= @start AND CAST(PlacedAt AS DATE) <= @end
-            GROUP BY FORMAT(CAST(PlacedAt AS DATE), 'MMM d'), YEAR(PlacedAt), MONTH(PlacedAt), DAY(PlacedAt)
-            ORDER BY yr, mo, dy
-        ` : `
-            SELECT FORMAT(PlacedAt,'MMM') AS month,
-                   YEAR(PlacedAt) AS yr,
-                   MONTH(PlacedAt) AS mo,
-                   0 AS dy,
-                   ISNULL(SUM(Total),0) AS rev
-            FROM ${table}
-            WHERE CAST(PlacedAt AS DATE) >= @start AND CAST(PlacedAt AS DATE) <= @end
-            GROUP BY FORMAT(PlacedAt,'MMM'), YEAR(PlacedAt), MONTH(PlacedAt)
-            ORDER BY yr, mo
-        `;
+        const trendSql = (table) => granularity === 'daily' ? Q.trendDaily(table) : Q.trendMonthly(table);
         const [orderTrend, ticketTrend, memberTrend, eventTrend] = await Promise.all([
             mkReq().query(trendSql('Orders')),
             mkReq().query(trendSql('TicketOrders')),
@@ -135,51 +84,19 @@ router.get('/overview', async (req, res) => {
 
         // ── Tier breakdowns ──────────────────────────────────────────
         const [ticketTiers, memberTiers, eventTiers] = await Promise.all([
-            mkReq().query(`
-                SELECT TicketType AS tier, COUNT(*) AS count
-                FROM TicketOrders
-                WHERE CAST(PlacedAt AS DATE) >= @start AND CAST(PlacedAt AS DATE) <= @end
-                GROUP BY TicketType ORDER BY count DESC
-            `),
-            mkReq().query(`
-                SELECT PlanName AS tier, COUNT(*) AS count
-                FROM MembershipSubscriptions
-                WHERE CAST(PlacedAt AS DATE) >= @start AND CAST(PlacedAt AS DATE) <= @end
-                GROUP BY PlanName ORDER BY count DESC
-            `),
-            mkReq().query(`
-                SELECT e.Category AS tier, COUNT(*) AS count
-                FROM EventBookings eb
-                JOIN Event e ON eb.EventID = e.EventID
-                WHERE CAST(eb.PlacedAt AS DATE) >= @start AND CAST(eb.PlacedAt AS DATE) <= @end
-                GROUP BY e.Category ORDER BY count DESC
-            `),
+            mkReq().query(Q.ticketTiers),
+            mkReq().query(Q.memberTiers),
+            mkReq().query(Q.eventTiers),
         ]);
 
         // ── Gift shop categories (OPENJSON on OrderItems) ────────────
         let giftCats = [];
         try {
-            const catRes = await mkReq().query(`
-                SELECT JSON_VALUE(item.value, '$.category') AS category, COUNT(*) AS count
-                FROM Orders o
-                CROSS APPLY OPENJSON(o.OrderItems) AS item
-                WHERE CAST(o.PlacedAt AS DATE) >= @start AND CAST(o.PlacedAt AS DATE) <= @end
-                  AND JSON_VALUE(item.value, '$.category') IS NOT NULL
-                GROUP BY JSON_VALUE(item.value, '$.category')
-                ORDER BY count DESC
-            `);
+            const catRes = await mkReq().query(Q.shopCategoryBreakdown);
             giftCats = catRes.recordset;
             // Fallback: group by product name if no category field in JSON
             if (giftCats.length === 0) {
-                const nameRes = await mkReq().query(`
-                    SELECT JSON_VALUE(item.value, '$.name') AS category, COUNT(*) AS count
-                    FROM Orders o
-                    CROSS APPLY OPENJSON(o.OrderItems) AS item
-                    WHERE CAST(o.PlacedAt AS DATE) >= @start AND CAST(o.PlacedAt AS DATE) <= @end
-                      AND JSON_VALUE(item.value, '$.name') IS NOT NULL
-                    GROUP BY JSON_VALUE(item.value, '$.name')
-                    ORDER BY count DESC
-                `);
+                const nameRes = await mkReq().query(Q.shopNameFallback);
                 giftCats = nameRes.recordset;
             }
         } catch (_) { /* OPENJSON not supported or OrderItems null */ }

@@ -6,6 +6,7 @@ const { optionalAuth, verifyToken } = require('../middleware/authMiddleware');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const Q = require('../queries/eventQueries');
 
 const imageDir = path.join(__dirname, '../uploads/Event_Images');
 if (!fs.existsSync(imageDir)) fs.mkdirSync(imageDir, { recursive: true });
@@ -31,37 +32,20 @@ async function resolveOrCreateExhibit(request, exhibitName) {
     // Try to find existing
     const exhRes = await request
         .input('exhName', sql.NVarChar, exhibitName)
-        .query('SELECT ExhibitID FROM Exhibit WHERE ExhibitName = @exhName');
+        .query(Q.findExhibit);
 
     if (exhRes.recordset.length > 0) {
         return exhRes.recordset[0].ExhibitID;
     }
 
     // Create an Area -> Exhibit chain if missing
-    const areaRes = await request.query(`
-        IF NOT EXISTS (SELECT 1 FROM Area WHERE AreaName = 'Events Space')
-        BEGIN
-            DECLARE @AreaOut TABLE (AreaID INT);
-            INSERT INTO Area (AreaName) OUTPUT INSERTED.AreaID INTO @AreaOut VALUES ('Events Space');
-            SELECT AreaID FROM @AreaOut;
-        END
-        ELSE
-        BEGIN
-            SELECT AreaID FROM Area WHERE AreaName = 'Events Space';
-        END
-    `);
+    const areaRes = await request.query(Q.ensureEventsArea);
     const areaId = areaRes.recordset[0].AreaID;
 
     const newExhRes = await request
         .input('newExhName', sql.NVarChar, exhibitName)
         .input('areaId', sql.Int, areaId)
-        .query(`
-            DECLARE @ExhOut TABLE (ExhibitID INT);
-            INSERT INTO Exhibit (ExhibitName, AreaID, Capacity, OpeningHours)
-            OUTPUT INSERTED.ExhibitID INTO @ExhOut
-            VALUES (@newExhName, @areaId, 250, '09:00-17:00');
-            SELECT ExhibitID FROM @ExhOut;
-        `);
+        .query(Q.createExhibit);
     return newExhRes.recordset[0].ExhibitID;
 }
 
@@ -69,13 +53,7 @@ async function resolveOrCreateExhibit(request, exhibitName) {
 router.get('/api/events', async (req, res) => {
     try {
         const pool = await connectToDb();
-        const result = await pool.request().query(`
-            SELECT e.*, ex.ExhibitName,
-              ISNULL((SELECT SUM(Quantity) FROM EventBookings WHERE EventID = e.EventID), 0) AS SpotsBooked
-            FROM Event e
-            LEFT JOIN Exhibit ex ON e.ExhibitID = ex.ExhibitID
-            WHERE e.DeletedAt IS NULL
-        `);
+        const result = await pool.request().query(Q.getAll);
 
         const mappedResult = result.recordset.map(row => {
             // Format times removing seconds (e.g. '10:30:00' -> '10:30')
@@ -144,13 +122,7 @@ router.post('/api/events', optionalAuth, async (req, res) => {
                 .input('isFeatured', sql.Bit, isFeatured ? 1 : 0)
                 .input('price', sql.Decimal(10, 2), parseFloat(price || 0))
                 .input('createdBy', sql.NVarChar, adminName)
-                .query(`
-                    DECLARE @Out TABLE (id INT);
-                    INSERT INTO Event (EventName, EventDate, EndDate, StartTime, EndTime, ExhibitID, Capacity, Description, Category, IsFeatured, Price, CreatedBy)
-                    OUTPUT INSERTED.EventID INTO @Out
-                    VALUES (@name, @date, @endDate, @startTime, @endTime, @exhId, @capacity, @description, @category, @isFeatured, @price, @createdBy);
-                    SELECT id FROM @Out;
-                `);
+                .query(Q.insert);
 
             await transaction.commit();
             res.status(201).json({ id: result.recordset[0].id.toString(), ...req.body });
@@ -195,15 +167,7 @@ router.put('/api/events/:id', optionalAuth, async (req, res) => {
                 .input('isFeatured', sql.Bit, isFeatured ? 1 : 0)
                 .input('price', sql.Decimal(10, 2), parseFloat(price || 0))
                 .input('updatedBy', sql.NVarChar, adminName)
-                .query(`
-                    UPDATE Event
-                    SET EventName = @name, EventDate = @date, EndDate = @endDate,
-                        StartTime = @startTime, EndTime = @endTime, ExhibitID = @exhId,
-                        Capacity = @capacity, Description = @description, Category = @category,
-                        IsFeatured = @isFeatured, Price = @price,
-                        UpdatedAt = SYSUTCDATETIME(), UpdatedBy = @updatedBy
-                    WHERE EventID = @id
-                `);
+                .query(Q.update);
 
             await transaction.commit();
             res.json({ success: true });
@@ -225,7 +189,7 @@ router.delete('/api/events/:id', optionalAuth, async (req, res) => {
         await pool.request()
             .input('id', sql.Int, parseInt(req.params.id, 10))
             .input('deletedBy', sql.NVarChar, adminName)
-            .query('UPDATE Event SET DeletedAt = SYSUTCDATETIME(), DeletedBy = @deletedBy WHERE EventID = @id');
+            .query(Q.softDelete);
 
         res.json({ success: true });
     } catch (error) {
@@ -243,7 +207,7 @@ router.post('/api/events/:id/image', verifyToken, upload.single('image'), async 
         await pool.request()
             .input('id', sql.Int, parseInt(req.params.id, 10))
             .input('imageUrl', sql.NVarChar, imageUrl)
-            .query('UPDATE Event SET ImageUrl = @imageUrl WHERE EventID = @id');
+            .query(Q.updateImage);
         res.json({ message: 'Image uploaded successfully', imageUrl });
     } catch (error) {
         console.error('Error uploading event image:', error);
@@ -272,11 +236,7 @@ router.post('/api/event-bookings', async (req, res) => {
         // Fetch event to validate date range + get price + check capacity
         const evRes = await pool.request()
             .input('evId', sql.Int, parseInt(eventId, 10))
-            .query(`
-                SELECT EventDate, EndDate, Price, Capacity,
-                  ISNULL((SELECT SUM(Quantity) FROM EventBookings WHERE EventID = @evId), 0) AS SpotsBooked
-                FROM Event WHERE EventID = @evId AND DeletedAt IS NULL
-            `);
+            .query(Q.validateEvent);
         if (!evRes.recordset.length) return res.status(404).json({ error: 'Event not found.' });
 
         const ev = evRes.recordset[0];
@@ -319,27 +279,7 @@ router.post('/api/event-bookings', async (req, res) => {
             .input('billingState', sql.NVarChar, billingState || null)
             .input('billingZip', sql.NVarChar, billingZip || null)
             .input('cardLastFour', sql.NVarChar, cardLastFour || null)
-            .query(`
-                DECLARE @Out TABLE (EventBookingID INT);
-                INSERT INTO EventBookings (
-                    EventID, BookingDate, Quantity, UnitPrice, Subtotal, Total,
-                    FirstName, LastName, Email, Phone,
-                    AddressLine1, AddressLine2, City, StateProvince, ZipCode,
-                    BillingSameAsContact, BillingFullName,
-                    BillingAddress1, BillingAddress2, BillingCity, BillingState, BillingZip,
-                    CardLastFour
-                )
-                OUTPUT INSERTED.EventBookingID INTO @Out
-                VALUES (
-                    @eventId, @bookingDate, @quantity, @unitPrice, @subtotal, @total,
-                    @firstName, @lastName, @email, @phone,
-                    @addressLine1, @addressLine2, @city, @stateProvince, @zipCode,
-                    @billingSame, @billingFullName,
-                    @billingAddress1, @billingAddress2, @billingCity, @billingState, @billingZip,
-                    @cardLastFour
-                );
-                SELECT EventBookingID FROM @Out;
-            `);
+            .query(Q.insertBooking);
 
         res.status(201).json({ success: true, bookingId: result.recordset[0].EventBookingID });
     } catch (error) {
@@ -375,22 +315,8 @@ router.get('/api/event-bookings', async (req, res) => {
             mkReq()
                 .input('limit', sql.Int, limit)
                 .input('offset', sql.Int, offset)
-                .query(`
-                    SELECT eb.EventBookingID, eb.FirstName, eb.LastName, eb.Email,
-                           eb.BookingDate, eb.Quantity, eb.Total, eb.PlacedAt,
-                           e.EventName, e.Category
-                    FROM EventBookings eb
-                    JOIN Event e ON eb.EventID = e.EventID
-                    WHERE 1=1 ${conditions}
-                    ORDER BY eb.PlacedAt DESC
-                    OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY
-                `),
-            mkReq().query(`
-                SELECT COUNT(*) AS total
-                FROM EventBookings eb
-                JOIN Event e ON eb.EventID = e.EventID
-                WHERE 1=1 ${conditions}
-            `),
+                .query(Q.listBookings(conditions)),
+            mkReq().query(Q.countBookings(conditions)),
         ]);
 
         const rows = rowsRes.recordset.map(row => ({
@@ -411,13 +337,7 @@ router.get('/api/event-bookings/:id', async (req, res) => {
         const pool = await connectToDb();
         const result = await pool.request()
             .input('id', sql.Int, parseInt(req.params.id, 10))
-            .query(`
-                SELECT eb.*, e.EventName, e.Category, ex.ExhibitName AS Location
-                FROM EventBookings eb
-                JOIN Event e ON eb.EventID = e.EventID
-                LEFT JOIN Exhibit ex ON e.ExhibitID = ex.ExhibitID
-                WHERE eb.EventBookingID = @id
-            `);
+            .query(Q.getBookingById);
         if (!result.recordset.length) return res.status(404).json({ error: 'Booking not found.' });
         const row = result.recordset[0];
         res.json({

@@ -21,11 +21,13 @@ try {
             credential: admin.credential.cert(serviceAccount)
         });
         console.log('Firebase Admin initialized with service account file.');
-    } else {
+    } else if (process.env.FIREBASE_PROJECT_ID) {
         admin.initializeApp({
-            projectId: 'wildwoods-zoo-auth-v1'
+            projectId: process.env.FIREBASE_PROJECT_ID
         });
-        console.log('Firebase Admin initialized with projectId: wildwoods-zoo-auth-v1');
+        console.log(`Firebase Admin initialized with projectId: ${process.env.FIREBASE_PROJECT_ID}`);
+    } else {
+        console.error('CRITICAL: No Firebase credentials configured. Set FIREBASE_SERVICE_ACCOUNT_JSON, FIREBASE_SERVICE_ACCOUNT_PATH, or FIREBASE_PROJECT_ID.');
     }
 } catch (error) {
     console.error('CRITICAL: Firebase Admin SDK initialization failed:', error.message);

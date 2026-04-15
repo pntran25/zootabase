@@ -41,6 +41,7 @@ const SortIcon = ({ column }) => {
 const ManageExhibits = () => {
   const [exhibits, setExhibits] = useState([]);
   const [search, setSearch] = useState('');
+  const [filterArea, setFilterArea] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingExhibit, setEditingExhibit] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -77,11 +78,15 @@ const ManageExhibits = () => {
 
   useEffect(() => { loadData(); }, []);
 
+  const areas = useMemo(() => [...new Set(exhibits.map(e => e.area).filter(Boolean))].sort(), [exhibits]);
+
   const filteredExhibits = useMemo(() =>
-    exhibits.filter(exhibit =>
-      exhibit.name.toLowerCase().includes(search.toLowerCase()) ||
-      exhibit.area.toLowerCase().includes(search.toLowerCase())
-    ), [exhibits, search]);
+    exhibits.filter(exhibit => {
+      const matchesSearch = exhibit.name.toLowerCase().includes(search.toLowerCase()) ||
+        exhibit.area.toLowerCase().includes(search.toLowerCase());
+      const matchesArea = !filterArea || exhibit.area === filterArea;
+      return matchesSearch && matchesArea;
+    }), [exhibits, search, filterArea]);
 
   const handleOpenModal = (exhibit = null) => {
     if (exhibit) {
@@ -274,6 +279,14 @@ const ManageExhibits = () => {
             <Search className="search-icon" size={16} />
             <input type="text" placeholder="Search exhibits..." className="admin-search-input" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
+          <select
+            value={filterArea}
+            onChange={e => setFilterArea(e.target.value)}
+            style={{ padding: '7px 12px', borderRadius: 8, border: '1px solid var(--adm-border)', background: 'var(--adm-bg-surface)', color: 'var(--adm-text-primary)', fontSize: '0.82rem', cursor: 'pointer', minWidth: 140 }}
+          >
+            <option value="">All Areas</option>
+            {areas.map(a => <option key={a} value={a}>{a}</option>)}
+          </select>
           <button className="admin-btn-primary" onClick={() => handleOpenModal()}>
             <Plus size={16} /> Add Exhibit
           </button>

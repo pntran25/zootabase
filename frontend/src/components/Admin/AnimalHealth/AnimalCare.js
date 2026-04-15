@@ -400,12 +400,9 @@ const AnimalCare = () => {
   /* ── Dropdown options ──────────────────────────────────── */
   const animalOptions = animals.map(a => ({ value: String(a.AnimalID), label: `${a.Name} (${a.Species})` }));
   const staffOptions = staff
-    .filter(s => s.Role === 'Caretaker' || s.Role === 'Super Admin')
-    .sort((a, b) => {
-      if (a.Role !== b.Role) return a.Role === 'Caretaker' ? -1 : 1;
-      return a.FullName.localeCompare(b.FullName);
-    })
-    .map(s => ({ value: String(s.StaffID), label: `${s.FullName} — ${s.Role}` }));
+    .filter(s => s.Role === 'Caretaker')
+    .sort((a, b) => a.FullName.localeCompare(b.FullName))
+    .map(s => ({ value: String(s.StaffID), label: s.FullName }));
 
   const activeCount = activeTab === 'feedings' ? filteredFeedings.length : filteredAssignments.length;
 

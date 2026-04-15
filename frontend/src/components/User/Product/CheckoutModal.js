@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Lock, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '../../../services/apiClient';
+import { useAuth } from '../../../context/AuthContext';
 import './CheckoutModal.css';
 
 const SHIPPING_COST = 6.99;
@@ -59,7 +60,8 @@ const PaymentIcons = ({ size = 'sm' }) => (
 );
 
 const CheckoutModal = ({ isOpen, onClose, cart, cartTotal, membershipDiscount = 0, onOrderPlaced }) => {
-  const [ship, setShip] = useState({ email: '', firstName: '', lastName: '', address1: '', address2: '', city: '', state: '', zip: '', phone: '' });
+  const { currentUser } = useAuth();
+  const [ship, setShip] = useState({ email: currentUser?.email || '', firstName: '', lastName: '', address1: '', address2: '', city: '', state: '', zip: '', phone: '' });
   const [card, setCard] = useState({ number: '', expiry: '', cvv: '' });
   const [billingSame, setBillingSame] = useState(true);
   const [bill, setBill] = useState({ firstName: '', lastName: '', address1: '', address2: '', city: '', state: '', zip: '' });

@@ -37,6 +37,7 @@ const SortIcon = ({ column }) => {
 const ManageAttractions = () => {
   const [attractions, setAttractions] = useState([]);
   const [search, setSearch] = useState('');
+  const [filterType, setFilterType] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAttraction, setEditingAttraction] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -61,10 +62,12 @@ const ManageAttractions = () => {
   useEffect(() => { loadData(); }, []);
 
   const filteredAttractions = useMemo(() =>
-    attractions.filter(attr =>
-      attr.name.toLowerCase().includes(search.toLowerCase()) ||
-      attr.type.toLowerCase().includes(search.toLowerCase())
-    ), [attractions, search]);
+    attractions.filter(attr => {
+      const matchesSearch = attr.name.toLowerCase().includes(search.toLowerCase()) ||
+        attr.type.toLowerCase().includes(search.toLowerCase());
+      const matchesType = !filterType || attr.type === filterType;
+      return matchesSearch && matchesType;
+    }), [attractions, search, filterType]);
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -258,6 +261,16 @@ const ManageAttractions = () => {
             <Search className="search-icon" size={16} />
             <input type="text" placeholder="Search attractions..." className="admin-search-input" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
+          <select
+            value={filterType}
+            onChange={e => setFilterType(e.target.value)}
+            style={{ padding: '7px 12px', borderRadius: 8, border: '1px solid var(--adm-border)', background: 'var(--adm-bg-surface)', color: 'var(--adm-text-primary)', fontSize: '0.82rem', cursor: 'pointer', minWidth: 120 }}
+          >
+            <option value="">All Types</option>
+            {TYPES.map(t => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
           <button className="admin-btn-primary" onClick={() => handleOpenModal()}>
             <Plus size={16} /> Add Attraction
           </button>

@@ -88,7 +88,7 @@ const TicketingPage = () => {
 
   const addOnsTotal = selectedAddOns.reduce((sum, id) => {
     const addOn = addons.find(a => a.id === id);
-    return sum + (addOn ? addOn.price * totalGuests : 0);
+    return sum + (addOn ? addOn.price : 0);
   }, 0);
 
   const total = ticketSubtotal + addOnsTotal;
@@ -380,7 +380,7 @@ const TicketingPage = () => {
                   ))}
                 </div>
                 <p className="text-xs text-muted-foreground mt-3 m-0">
-                  Add-on prices are per person
+                  Each add-on is added once to your order
                 </p>
               </div>
             </div>
@@ -431,8 +431,8 @@ const TicketingPage = () => {
                         const addOn = addons.find(a => a.id === id);
                         return (
                           <div key={id} className="flex justify-between text-sm mt-2">
-                            <span className="text-muted-foreground">{addOn.name} x{totalGuests}</span>
-                            <span className="text-foreground">${(addOn.price * totalGuests).toFixed(2)}</span>
+                            <span className="text-muted-foreground">{addOn.name}</span>
+                            <span className="text-foreground">${addOn.price.toFixed(2)}</span>
                           </div>
                         )
                       })}

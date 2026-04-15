@@ -3,12 +3,13 @@ const router = express.Router();
 const sql = require('mssql');
 const { connectToDb } = require('../services/admin');
 const { verifyToken } = require('../middleware/authMiddleware');
+const Q = require('../queries/feedbackQueries');
 
 // GET all feedback
 router.get('/api/feedback', async (req, res) => {
     try {
         const pool = await connectToDb();
-        const result = await pool.request().query('SELECT * FROM GuestFeedback ORDER BY DateSubmitted DESC');
+        const result = await pool.request().query(Q.getAll);
         
         const mappedResult = result.recordset.map(row => ({
             id: row.FeedbackID.toString(),
@@ -36,13 +37,7 @@ router.post('/api/feedback', async (req, res) => {
             .input('comment', sql.NVarChar, comment)
             .input('location', sql.NVarChar, location)
             .input('date', sql.Date, date)
-            .query(`
-                DECLARE @Out TABLE (FeedbackID INT);
-                INSERT INTO GuestFeedback (Rating, Comment, LocationTag, DateSubmitted)
-                OUTPUT INSERTED.FeedbackID INTO @Out
-                VALUES (@rating, @comment, @location, @date);
-                SELECT FeedbackID FROM @Out;
-            `);
+            .query(Q.insert);
             
         res.status(201).json({ id: result.recordset[0].FeedbackID.toString(), ...req.body });
     } catch (error) {
@@ -57,7 +52,7 @@ router.delete('/api/feedback/:id', verifyToken, async (req, res) => {
         const pool = await connectToDb();
         await pool.request()
             .input('id', sql.Int, parseInt(req.params.id, 10))
-            .query('DELETE FROM GuestFeedback WHERE FeedbackID = @id');
+            .query(Q.remove);
             
         res.json({ success: true });
     } catch (error) {

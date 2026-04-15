@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { connectToDb } = require('../services/admin');
 const sql = require('mssql');
+const Q = require('../queries/orderQueries');
 
 // POST /api/orders — place a new order (no auth required, public)
 router.post('/', async (req, res) => {
@@ -44,17 +45,7 @@ router.post('/', async (req, res) => {
                 .input('Tax',                   sql.Decimal(10,2), tax)
                 .input('Total',                 sql.Decimal(10,2), total)
                 .input('OrderItems',            sql.NVarChar(sql.MAX), orderItems || null)
-                .query(`
-                    DECLARE @NewOrder TABLE (OrderID INT);
-                    INSERT INTO Orders
-                        (FirstName, LastName, Email, Phone, AddressLine1, AddressLine2, City, StateProvince,
-                         ZipCode, BillingSameAsShipping, CardLastFour, Subtotal, Shipping, Tax, Total, OrderItems)
-                    OUTPUT INSERTED.OrderID INTO @NewOrder
-                    VALUES
-                        (@FirstName, @LastName, @Email, @Phone, @AddressLine1, @AddressLine2, @City, @StateProvince,
-                         @ZipCode, @BillingSameAsShipping, @CardLastFour, @Subtotal, @Shipping, @Tax, @Total, @OrderItems);
-                    SELECT OrderID FROM @NewOrder;
-                `);
+                .query(Q.insert);
 
             const orderId = result.recordset[0].OrderID;
 
@@ -98,17 +89,9 @@ router.get('/', async (req, res) => {
             addFilters(pool.request())
                 .input('limit',  sql.Int, limit)
                 .input('offset', sql.Int, offset)
-                .query(`
-                    SELECT OrderID, FirstName, LastName,
-                           CONCAT(ISNULL(FirstName,''),' ',ISNULL(LastName,'')) AS FullName,
-                           Email, Phone, City, StateProvince, ZipCode,
-                           CardLastFour, Subtotal, Shipping, Tax, Total, PlacedAt
-                    FROM Orders ${where}
-                    ORDER BY PlacedAt DESC
-                    OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY
-                `),
+                .query(Q.list(where)),
             addFilters(pool.request())
-                .query(`SELECT COUNT(*) AS total FROM Orders ${where}`),
+                .query(Q.count(where)),
         ]);
 
         res.json({ rows: dataResult.recordset, total: countResult.recordset[0].total });
@@ -123,7 +106,7 @@ router.get('/:id', async (req, res) => {
         const pool = await connectToDb();
         const result = await pool.request()
             .input('id', sql.Int, parseInt(req.params.id, 10))
-            .query(`SELECT *, CONCAT(ISNULL(FirstName,''),' ',ISNULL(LastName,'')) AS FullName FROM Orders WHERE OrderID = @id`);
+            .query(Q.getById);
         if (!result.recordset.length) return res.status(404).json({ error: 'Order not found.' });
         const row = result.recordset[0];
         let items = [];

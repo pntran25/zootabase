@@ -6,6 +6,7 @@ const { optionalAuth, verifyToken } = require('../middleware/authMiddleware');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const Q = require('../queries/attractionQueries');
 
 // Ensure image directory exists
 const imageDir = path.join(__dirname, '../uploads/Attractions_Images');
@@ -33,7 +34,7 @@ const upload = multer({
 router.get('/api/attractions', async (req, res) => {
     try {
         const pool = await connectToDb();
-        const result = await pool.request().query('SELECT *, CreatedBy, UpdatedBy FROM Attraction WHERE DeletedAt IS NULL');
+        const result = await pool.request().query(Q.getAll);
         const mappedResult = result.recordset.map(row => ({
             id: row.AttractionID.toString(),
             name: row.AttractionName,
@@ -76,13 +77,7 @@ router.post('/api/attractions', optionalAuth, async (req, res) => {
             .input('ageGroup', sql.NVarChar, ageGroup || '')
             .input('price', sql.Decimal(10, 2), parseFloat(price || 0))
             .input('createdBy', sql.NVarChar, adminName)
-            .query(`
-                DECLARE @Out TABLE (AttractionID INT);
-                INSERT INTO Attraction (AttractionName, AttractionType, LocationDesc, CapacityVisitors, ActiveFlag, Description, Hours, Duration, AgeGroup, Price, CreatedBy)
-                OUTPUT INSERTED.AttractionID INTO @Out
-                VALUES (@name, @type, @location, @capacity, @activeFlag, @description, @hours, @duration, @ageGroup, @price, @createdBy);
-                SELECT AttractionID FROM @Out;
-            `);
+            .query(Q.insert);
         res.status(201).json({ id: result.recordset[0].AttractionID.toString(), ...req.body });
     } catch (error) {
         console.error('Error creating attraction:', error);
@@ -110,14 +105,7 @@ router.put('/api/attractions/:id', optionalAuth, async (req, res) => {
             .input('ageGroup', sql.NVarChar, ageGroup || '')
             .input('price', sql.Decimal(10, 2), parseFloat(price || 0))
             .input('updatedBy', sql.NVarChar, adminName)
-            .query(`
-                UPDATE Attraction
-                SET AttractionName = @name, AttractionType = @type, LocationDesc = @location,
-                    CapacityVisitors = @capacity, ActiveFlag = @activeFlag, UpdatedAt = SYSUTCDATETIME(),
-                    Description = @description, Hours = @hours, Duration = @duration,
-                    AgeGroup = @ageGroup, Price = @price, UpdatedBy = @updatedBy
-                WHERE AttractionID = @id
-            `);
+            .query(Q.update);
         res.json({ success: true });
     } catch (error) {
         console.error('Error updating attraction:', error);
@@ -134,7 +122,7 @@ router.post('/api/attractions/:id/image', verifyToken, upload.single('image'), a
         await pool.request()
             .input('id', sql.Int, parseInt(req.params.id, 10))
             .input('imageUrl', sql.NVarChar, imageUrl)
-            .query('UPDATE Attraction SET ImageUrl = @imageUrl, UpdatedAt = SYSUTCDATETIME() WHERE AttractionID = @id');
+            .query(Q.updateImage);
         res.json({ message: 'Image uploaded successfully', imageUrl });
     } catch (err) {
         console.error('Error uploading attraction image:', err);
@@ -150,7 +138,7 @@ router.delete('/api/attractions/:id', optionalAuth, async (req, res) => {
         await pool.request()
             .input('id', sql.Int, parseInt(req.params.id, 10))
             .input('deletedBy', sql.NVarChar, adminName)
-            .query('UPDATE Attraction SET DeletedAt = SYSUTCDATETIME(), DeletedBy = @deletedBy WHERE AttractionID = @id');
+            .query(Q.softDelete);
         res.json({ success: true });
     } catch (error) {
         console.error('Error deleting attraction:', error);

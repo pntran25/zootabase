@@ -42,8 +42,10 @@ const EMPTY_FORM = {
 };
 
 const ManageEvents = () => {
+  const EVENT_CATEGORIES = Object.keys(EVENT_CATEGORY_COLORS);
   const [events, setEvents] = useState([]);
   const [search, setSearch] = useState('');
+  const [filterCategory, setFilterCategory] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -68,10 +70,12 @@ const ManageEvents = () => {
   useEffect(() => { loadData(); }, []);
 
   const filteredEvents = useMemo(() =>
-    events.filter(event =>
-      event.name.toLowerCase().includes(search.toLowerCase()) ||
-      event.exhibit.toLowerCase().includes(search.toLowerCase())
-    ), [events, search]);
+    events.filter(event => {
+      const matchesSearch = event.name.toLowerCase().includes(search.toLowerCase()) ||
+        event.exhibit.toLowerCase().includes(search.toLowerCase());
+      const matchesCategory = !filterCategory || event.category === filterCategory;
+      return matchesSearch && matchesCategory;
+    }), [events, search, filterCategory]);
 
   const handleOpenModal = (event = null) => {
     setImageFile(null);
@@ -265,6 +269,16 @@ const ManageEvents = () => {
             <Search className="search-icon" size={16} />
             <input type="text" placeholder="Search events..." className="admin-search-input" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
+          <select
+            value={filterCategory}
+            onChange={e => setFilterCategory(e.target.value)}
+            style={{ padding: '7px 12px', borderRadius: 8, border: '1px solid var(--adm-border)', background: 'var(--adm-bg-surface)', color: 'var(--adm-text-primary)', fontSize: '0.82rem', cursor: 'pointer', minWidth: 140 }}
+          >
+            <option value="">All Categories</option>
+            {EVENT_CATEGORIES.map(cat => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
           <button className="admin-btn-primary" onClick={() => handleOpenModal()}>
             <Plus size={16} /> Add Event
           </button>

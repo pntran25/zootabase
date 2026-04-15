@@ -123,7 +123,7 @@ const ProductPage = () => {
       const existing = prev.find((item) => item.id === product.id);
       if (existing) {
         if (existing.quantity >= maxStock) {
-          toast.error(`Only ${maxStock} in stock.`);
+          toast.error('Out of stock');
           return prev;
         }
         return prev.map((item) =>
@@ -145,7 +145,7 @@ const ProductPage = () => {
           if (item.id !== productId) return item;
           const newQty = Math.max(0, item.quantity + delta);
           if (delta > 0 && item.quantity >= (item.stockQuantity || Infinity)) {
-            toast.error(`Only ${item.stockQuantity} in stock.`);
+            toast.error('Out of stock');
             return item;
           }
           return { ...item, quantity: newQty };
@@ -323,20 +323,7 @@ const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0
                       }}>Out of Stock</span>
                     </div>
                   )}
-                  {product.inStock && product.stockQuantity <= (product.lowStockThreshold || 10) && (
-                    <div className="absolute top-2 left-2">
-                      <span style={{
-                        background: 'rgba(234,88,12,0.92)',
-                        color: '#fff',
-                        fontSize: '0.7rem',
-                        fontWeight: 700,
-                        letterSpacing: '0.04em',
-                        padding: '3px 8px',
-                        borderRadius: 5,
-                        boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
-                      }}>Only {product.stockQuantity} left</span>
-                    </div>
-                  )}
+
                 </div>
                 <div className="p-5 flex flex-col flex-1">
                   <h3 className="font-semibold text-foreground mb-1 line-clamp-1 tracking-tight">{product.name}</h3>

@@ -2,16 +2,13 @@ const express = require('express');
 const router = express.Router();
 const sql = require('mssql');
 const { connectToDb } = require('../services/admin');
+const Q = require('../queries/ticketQueries');
 
 // GET /api/ticket-packages
 router.get('/', async (req, res) => {
     try {
         const pool = await connectToDb();
-        const result = await pool.request().query(
-            `SELECT PackageID, Name, Description, AdultPrice, ChildPrice, SeniorPrice,
-                    IsMostPopular, Features, SortOrder
-             FROM TicketPackage WHERE DeletedAt IS NULL ORDER BY SortOrder`
-        );
+        const result = await pool.request().query(Q.getAllPackages);
         const rows = result.recordset.map(r => ({
             packageId:     r.PackageID,
             name:          r.Name,
@@ -44,11 +41,7 @@ router.post('/', async (req, res) => {
             .input('IsMostPopular', sql.Bit,            isMostPopular ? 1 : 0)
             .input('Features',      sql.NVarChar(sql.MAX), JSON.stringify(features || []))
             .input('SortOrder',     sql.Int,            sortOrder   || 0)
-            .query(`
-                INSERT INTO TicketPackage (Name,Description,AdultPrice,ChildPrice,SeniorPrice,IsMostPopular,Features,SortOrder)
-                OUTPUT INSERTED.PackageID
-                VALUES (@Name,@Description,@AdultPrice,@ChildPrice,@SeniorPrice,@IsMostPopular,@Features,@SortOrder)
-            `);
+            .query(Q.insertPackage);
         res.status(201).json({ packageId: result.recordset[0].PackageID });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -71,14 +64,7 @@ router.put('/:id', async (req, res) => {
             .input('IsMostPopular', sql.Bit,            isMostPopular ? 1 : 0)
             .input('Features',      sql.NVarChar(sql.MAX), JSON.stringify(features || []))
             .input('SortOrder',     sql.Int,            sortOrder   || 0)
-            .query(`
-                UPDATE TicketPackage SET
-                  Name=@Name, Description=@Description,
-                  AdultPrice=@AdultPrice, ChildPrice=@ChildPrice, SeniorPrice=@SeniorPrice,
-                  IsMostPopular=@IsMostPopular, Features=@Features, SortOrder=@SortOrder,
-                  UpdatedAt=SYSUTCDATETIME()
-                WHERE PackageID=@id AND DeletedAt IS NULL
-            `);
+            .query(Q.updatePackage);
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -91,7 +77,7 @@ router.delete('/:id', async (req, res) => {
         const pool = await connectToDb();
         await pool.request()
             .input('id', sql.Int, parseInt(req.params.id, 10))
-            .query(`UPDATE TicketPackage SET DeletedAt=SYSUTCDATETIME() WHERE PackageID=@id`);
+            .query(Q.deletePackage);
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });

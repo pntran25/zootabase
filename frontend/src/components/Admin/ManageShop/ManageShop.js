@@ -30,9 +30,12 @@ const SortIcon = ({ column }) => {
   );
 };
 
+const CATEGORY_OPTIONS = Object.keys(CATEGORY_COLORS);
+
 const ManageShop = () => {
   const [products, setProducts] = useState([]);
   const [search, setSearch] = useState('');
+  const [filterCategory, setFilterCategory] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -59,10 +62,12 @@ const ManageShop = () => {
   useEffect(() => { loadData(); }, []);
 
   const filteredProducts = useMemo(() =>
-    products.filter(prod =>
-      prod.name.toLowerCase().includes(search.toLowerCase()) ||
-      (prod.category || '').toLowerCase().includes(search.toLowerCase())
-    ), [products, search]);
+    products.filter(prod => {
+      const matchesSearch = prod.name.toLowerCase().includes(search.toLowerCase()) ||
+        (prod.category || '').toLowerCase().includes(search.toLowerCase());
+      const matchesCategory = !filterCategory || prod.category === filterCategory;
+      return matchesSearch && matchesCategory;
+    }), [products, search, filterCategory]);
 
   const handleOpenModal = (product = null) => {
     if (product) {
@@ -241,6 +246,17 @@ const ManageShop = () => {
             <Search className="search-icon" size={16} />
             <input type="text" placeholder="Search products..." className="admin-search-input" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
+          <select
+            className="admin-filter-select"
+            value={filterCategory}
+            onChange={e => setFilterCategory(e.target.value)}
+            style={{ padding: '7px 12px', borderRadius: 8, border: '1px solid var(--adm-border)', background: 'var(--adm-bg-surface)', color: 'var(--adm-text-primary)', fontSize: '0.82rem', cursor: 'pointer', minWidth: 160 }}
+          >
+            <option value="">All Categories</option>
+            {CATEGORY_OPTIONS.map(cat => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
           <button className="admin-btn-primary" onClick={() => handleOpenModal()}>
             <Plus size={16} /> Add Product
           </button>

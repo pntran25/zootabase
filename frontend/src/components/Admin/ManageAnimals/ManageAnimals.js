@@ -412,6 +412,7 @@ const ManageAnimals = () => {
     {
       id: 'modifiedBy',
       header: 'Modified By',
+      size: 220,
       enableSorting: false,
       cell: ({ row }) => {
         const { createdBy, updatedBy } = row.original;
@@ -427,11 +428,12 @@ const ManageAnimals = () => {
       cell: ({ row }) => (
         <div className="action-buttons">
           <button
+            className="action-btn"
             onClick={() => handleUnsetDisplay(row.original.id)}
-            title="Remove from display"
-            style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.78rem', color: 'var(--adm-text-secondary)', padding: '5px 10px', border: '1px solid var(--adm-border)', borderRadius: 6, background: 'transparent', cursor: 'pointer' }}
+            title="Undisplay"
+            style={{ color: 'var(--adm-text-secondary)' }}
           >
-            <EyeOff size={13} /> Remove
+            <EyeOff size={16} />
           </button>
           <button className="action-btn edit" onClick={() => handleOpenModal(row.original)}><Edit2 size={16} /></button>
           <button className="action-btn delete" onClick={() => handleDelete(row.original)}><Trash2 size={16} /></button>

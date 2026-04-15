@@ -99,7 +99,6 @@ const MaintenancePage = () => {
       <table className="zoo-table" aria-label="Maintenance requests table">
         <thead>
           <tr>
-            <th>Request ID</th>
             <th>Area</th>
             <th>Issue</th>
             <th>Priority</th>
@@ -109,7 +108,6 @@ const MaintenancePage = () => {
         <tbody>
           {requests.map((request) => (
             <tr key={request.id}>
-              <td>{request.id}</td>
               <td>{request.area}</td>
               <td>{request.issue}</td>
               <td>{request.priority}</td>

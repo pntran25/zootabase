@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Lock, X, Ticket } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiPost } from '../../../services/apiClient';
+import { useAuth } from '../../../context/AuthContext';
 import '../../User/Product/CheckoutModal.css';
 import './TicketCheckoutModal.css';
 
@@ -58,7 +59,8 @@ const TicketCheckoutModal = ({
   onOrderPlaced,
   prices,
 }) => {
-  const [contact, setContact] = useState({ email: '', firstName: '', lastName: '', address1: '', address2: '', city: '', state: '', zip: '', phone: '' });
+  const { currentUser } = useAuth();
+  const [contact, setContact] = useState({ email: currentUser?.email || '', firstName: '', lastName: '', address1: '', address2: '', city: '', state: '', zip: '', phone: '' });
   const [card, setCard] = useState({ number: '', expiry: '', cvv: '' });
   const [billingSame, setBillingSame] = useState(true);
   const [bill, setBill] = useState({ firstName: '', lastName: '', address1: '', address2: '', city: '', state: '', zip: '' });

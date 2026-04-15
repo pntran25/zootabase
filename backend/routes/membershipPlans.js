@@ -2,18 +2,13 @@ const express = require('express');
 const router = express.Router();
 const { connectToDb } = require('../services/admin');
 const sql = require('mssql');
+const Q = require('../queries/membershipQueries');
 
 // GET /api/membership-plans — all active plans (public)
 router.get('/', async (req, res) => {
     try {
         const pool = await connectToDb();
-        const result = await pool.request().query(
-            `SELECT PlanID, Name, Description, MonthlyPrice, YearlyPrice,
-                    Features, IsPopular, SortOrder, CreatedAt
-             FROM MembershipPlans
-             WHERE DeletedAt IS NULL
-             ORDER BY SortOrder ASC`
-        );
+        const result = await pool.request().query(Q.getAllPlans);
         const plans = result.recordset.map(row => ({
             ...row,
             Features: row.Features ? JSON.parse(row.Features) : [],
@@ -38,11 +33,7 @@ router.post('/', async (req, res) => {
             .input('Features',     sql.NVarChar(sql.MAX), features ? JSON.stringify(features) : null)
             .input('IsPopular',    sql.Bit,               isPopular ? 1 : 0)
             .input('SortOrder',    sql.Int,               sortOrder || 0)
-            .query(`
-                INSERT INTO MembershipPlans (Name, Description, MonthlyPrice, YearlyPrice, Features, IsPopular, SortOrder)
-                OUTPUT INSERTED.PlanID
-                VALUES (@Name, @Description, @MonthlyPrice, @YearlyPrice, @Features, @IsPopular, @SortOrder)
-            `);
+            .query(Q.insertPlan);
         res.status(201).json({ success: true, planId: result.recordset[0].PlanID });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -64,12 +55,7 @@ router.put('/:id', async (req, res) => {
             .input('Features',     sql.NVarChar(sql.MAX), features ? JSON.stringify(features) : null)
             .input('IsPopular',    sql.Bit,               isPopular ? 1 : 0)
             .input('SortOrder',    sql.Int,               sortOrder || 0)
-            .query(`
-                UPDATE MembershipPlans
-                SET Name=@Name, Description=@Description, MonthlyPrice=@MonthlyPrice,
-                    YearlyPrice=@YearlyPrice, Features=@Features, IsPopular=@IsPopular, SortOrder=@SortOrder
-                WHERE PlanID=@id AND DeletedAt IS NULL
-            `);
+            .query(Q.updatePlan);
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -82,7 +68,7 @@ router.delete('/:id', async (req, res) => {
         const pool = await connectToDb();
         await pool.request()
             .input('id', sql.Int, parseInt(req.params.id, 10))
-            .query(`UPDATE MembershipPlans SET DeletedAt = SYSUTCDATETIME() WHERE PlanID = @id`);
+            .query(Q.deletePlan);
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { connectToDb } = require('../services/admin');
 const sql = require('mssql');
+const Q = require('../queries/ticketQueries');
 
 // POST /api/ticket-orders — place a ticket order
 router.post('/', async (req, res) => {
@@ -58,25 +59,7 @@ router.post('/', async (req, res) => {
             .input('CardLastFour',        sql.NVarChar(4),       cardLastFour || null)
             .input('Subtotal',            sql.Decimal(10, 2),    subtotal)
             .input('Total',               sql.Decimal(10, 2),    total)
-            .query(`
-                INSERT INTO TicketOrders
-                    (FirstName, LastName, Email, Phone,
-                     AddressLine1, AddressLine2, City, StateProvince, ZipCode,
-                     BillingSameAsContact, BillingFullName, BillingAddress1, BillingAddress2,
-                     BillingCity, BillingState, BillingZip,
-                     VisitDate, TicketType, AdultQty, ChildQty, SeniorQty,
-                     AdultUnitPrice, ChildUnitPrice, SeniorUnitPrice,
-                     AddOns, CardLastFour, Subtotal, Total)
-                OUTPUT INSERTED.TicketOrderID
-                VALUES
-                    (@FirstName, @LastName, @Email, @Phone,
-                     @AddressLine1, @AddressLine2, @City, @StateProvince, @ZipCode,
-                     @BillingSameAsContact, @BillingFullName, @BillingAddress1, @BillingAddress2,
-                     @BillingCity, @BillingState, @BillingZip,
-                     @VisitDate, @TicketType, @AdultQty, @ChildQty, @SeniorQty,
-                     @AdultUnitPrice, @ChildUnitPrice, @SeniorUnitPrice,
-                     @AddOns, @CardLastFour, @Subtotal, @Total)
-            `);
+            .query(Q.insertOrder);
 
         res.status(201).json({ success: true, ticketOrderId: result.recordset[0].TicketOrderID });
     } catch (err) {
@@ -113,17 +96,9 @@ router.get('/', async (req, res) => {
             addFilters(pool.request())
                 .input('limit',  sql.Int, limit)
                 .input('offset', sql.Int, offset)
-                .query(`
-                    SELECT TicketOrderID, FirstName, LastName,
-                           CONCAT(ISNULL(FirstName,''),' ',ISNULL(LastName,'')) AS FullName,
-                           Email, VisitDate, TicketType,
-                           AdultQty, ChildQty, SeniorQty, Total, CardLastFour, PlacedAt
-                    FROM TicketOrders ${where}
-                    ORDER BY PlacedAt DESC
-                    OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY
-                `),
+                .query(Q.listOrders(where)),
             addFilters(pool.request())
-                .query(`SELECT COUNT(*) AS total FROM TicketOrders ${where}`),
+                .query(Q.countOrders(where)),
         ]);
 
         res.json({ rows: dataResult.recordset, total: countResult.recordset[0].total });
@@ -138,7 +113,7 @@ router.get('/:id', async (req, res) => {
         const pool = await connectToDb();
         const result = await pool.request()
             .input('id', sql.Int, parseInt(req.params.id, 10))
-            .query(`SELECT *, CONCAT(ISNULL(FirstName,''),' ',ISNULL(LastName,'')) AS FullName FROM TicketOrders WHERE TicketOrderID = @id`);
+            .query(Q.getOrderById);
         if (!result.recordset.length) return res.status(404).json({ error: 'Ticket order not found.' });
         const row = result.recordset[0];
         let addOns = [];

@@ -3,12 +3,13 @@ const router = express.Router();
 const { connectToDb } = require('../services/admin');
 const { verifyToken, requireRole } = require('../middleware/authMiddleware');
 const admin = require('../services/firebaseSetup');
+const Q = require('../queries/staffQueries');
 
 // Get all active staff (Super Admin only)
 router.get('/', verifyToken, requireRole(['Super Admin']), async (req, res) => {
     try {
         const pool = await connectToDb();
-        const result = await pool.request().query('SELECT StaffID, FirstName, LastName, FullName, Email, DateOfBirth, SSN, Role, ContactNumber, Salary, HireDate FROM Staff WHERE DeletedAt IS NULL ORDER BY StaffID DESC');
+        const result = await pool.request().query(Q.getAll);
         res.json(result.recordset);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -24,7 +25,7 @@ router.post('/', verifyToken, requireRole(['Super Admin']), async (req, res) => 
         // SSN uniqueness check
         const ssnCheck = await pool.request()
             .input('SSN', ssn)
-            .query(`SELECT StaffID FROM Staff WHERE SSN = @SSN AND DeletedAt IS NULL`);
+            .query(Q.checkSsnUnique);
         if (ssnCheck.recordset.length > 0) {
             return res.status(409).json({ error: 'SSN is already in use by another employee — please re-enter a unique SSN.' });
         }
@@ -62,9 +63,7 @@ router.post('/', verifyToken, requireRole(['Super Admin']), async (req, res) => 
             .input('HireDate', hireDate || new Date().toISOString().split('T')[0])
             .input('FullName', fullName)
             .input('FirebaseUid', firebaseUid)
-            .query(`INSERT INTO Staff (FirstName, LastName, Email, DateOfBirth, SSN, Role, ContactNumber, Salary, HireDate, FullName, FirebaseUid)
-                    OUTPUT INSERTED.*
-                    VALUES (@FirstName, @LastName, @Email, @DateOfBirth, @SSN, @Role, @ContactNumber, @Salary, @HireDate, @FullName, @FirebaseUid)`);
+            .query(Q.insertStaff);
 
         res.status(201).json(result.recordset[0]);
     } catch (err) {
@@ -84,7 +83,7 @@ router.put('/:id', verifyToken, requireRole(['Super Admin']), async (req, res) =
         const ssnCheck = await pool.request()
             .input('SSN', ssn)
             .input('StaffID', id)
-            .query(`SELECT StaffID FROM Staff WHERE SSN = @SSN AND DeletedAt IS NULL AND StaffID != @StaffID`);
+            .query(Q.checkSsnUniqueExclude);
         if (ssnCheck.recordset.length > 0) {
             return res.status(409).json({ error: 'SSN is already in use by another employee — please re-enter a unique SSN.' });
         }
@@ -102,11 +101,7 @@ router.put('/:id', verifyToken, requireRole(['Super Admin']), async (req, res) =
             .input('FullName', fullName)
             .input('ContactNumber', contactNumber)
             .input('Salary', salary)
-            .query(`UPDATE Staff 
-                    SET FirstName = @FirstName, LastName = @LastName, Email = @Email, 
-                        DateOfBirth = @DateOfBirth, SSN = @SSN, Role = @Role, FullName = @FullName, 
-                        ContactNumber = @ContactNumber, Salary = @Salary 
-                    WHERE StaffID = @StaffID`);
+            .query(Q.updateStaff);
 
         res.json({ success: true });
     } catch (err) {
@@ -123,11 +118,11 @@ router.delete('/:id', verifyToken, requireRole(['Super Admin']), async (req, res
         // Fetch the user's FirebaseUid before deleting
         const userResult = await pool.request()
             .input('StaffID', id)
-            .query(`SELECT FirebaseUid FROM Staff WHERE StaffID = @StaffID`);
+            .query(Q.getFirebaseUid);
 
         await pool.request()
             .input('StaffID', id)
-            .query(`UPDATE Staff SET DeletedAt = SYSUTCDATETIME() WHERE StaffID = @StaffID`);
+            .query(Q.softDelete);
 
         if (userResult.recordset.length > 0 && userResult.recordset[0].FirebaseUid) {
             try {

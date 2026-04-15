@@ -50,6 +50,7 @@ const membershipSubsRouter = require('./routes/membershipSubscriptions');
 const dashboardRouter = require('./routes/dashboard');
 const feedingSchedulesRouter = require('./routes/feedingSchedules');
 const keeperAssignmentsRouter = require('./routes/keeperAssignments');
+const staffSchedulesRouter = require('./routes/staffSchedules');
 const path = require('path');
 
 app.use('/api/exhibits', exhibitsRouter);
@@ -72,8 +73,11 @@ app.use('/api/ticket-addons', require('./routes/ticketAddons'));
 app.use('/api/membership-plans', membershipPlansRouter);
 app.use('/api/membership-subscriptions', membershipSubsRouter);
 app.use('/api/dashboard', dashboardRouter);
+app.use('/api/zoo-stats', require('./routes/zooStats'));
+app.use('/api/profile', require('./routes/profile'));
 app.use('/api/feeding-schedules', feedingSchedulesRouter);
 app.use('/api/keeper-assignments', keeperAssignmentsRouter);
+app.use('/api/staff-schedules', staffSchedulesRouter);
 
 // Serve uploaded images from local uploads directory
 app.use('/images', express.static(path.join(__dirname, 'uploads')));

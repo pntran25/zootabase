@@ -3,10 +3,12 @@ import '../AdminTable.css';
 import './AnimalReport.css';
 import {
   ClipboardList, ChevronDown, ChevronRight, PawPrint, HeartPulse,
-  Users, UtensilsCrossed, Search
+  UtensilsCrossed, Search, AlertTriangle, CheckCircle, Users
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { getAnimalReport, getAnimalsForDropdown } from '../../../services/animalHealthService';
+import { Download } from 'lucide-react';
+import { getAnimalReport, getAnimalsForDropdown, getHealthReport } from '../../../services/animalHealthService';
+import { exportSectionsToSingleSheet } from '../../../utils/exportExcel';
 
 const fmtDate = (d) => {
   if (!d) return '—';
@@ -14,15 +16,15 @@ const fmtDate = (d) => {
 };
 
 const scoreClass = (s) => {
-  if (s >= 80) return 'ah-score-excellent';
-  if (s >= 60) return 'ah-score-good';
+  if (s >= 90) return 'ah-score-excellent';
+  if (s >= 65) return 'ah-score-good';
   if (s >= 40) return 'ah-score-fair';
   return 'ah-score-critical';
 };
 
 const scoreLabel = (s) => {
-  if (s >= 80) return 'Excellent';
-  if (s >= 60) return 'Good';
+  if (s >= 90) return 'Excellent';
+  if (s >= 65) return 'Good';
   if (s >= 40) return 'Fair';
   return 'Critical';
 };
@@ -109,6 +111,61 @@ const AnimalReport = () => {
           <h1 className="admin-page-title"><ClipboardList size={26} className="title-icon" /> Animal Data Report</h1>
           <p className="admin-page-subtitle">Comprehensive report with all related data for a selected animal</p>
         </div>
+        <button
+          className="dr-details-btn"
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', fontSize: '0.82rem', fontWeight: 600, whiteSpace: 'nowrap' }}
+          disabled={animals.length === 0}
+          onClick={async () => {
+            try {
+              toast.info('Preparing full animal report...');
+              const healthData = await getHealthReport();
+              const summaryRows = animals.map(a => ({
+                'Animal ID': a.AnimalCode || '', 'Name': a.Name || '', 'Species': a.Species || '',
+                'Exhibit': a.ExhibitName || '', 'Age': a.Age || '', 'Gender': a.Gender || '',
+                'Health Status': a.HealthStatus || '',
+              }));
+              const recordRows = (healthData.records || []).map(r => ({
+                'Animal': r.AnimalName || '', 'Code': r.AnimalCode || '', 'Species': r.Species || '',
+                'Checkup Date': r.CheckupDate ? new Date(r.CheckupDate).toLocaleDateString() : '',
+                'Health Score': r.HealthScore ?? '', 'Staff': r.StaffName || '',
+                'Weight': r.Weight ?? '', 'Activity Level': r.ActivityLevel || '',
+                'Appetite': r.AppetiteStatus || '', 'Conditions': r.MedicalConditions || '',
+                'Treatments': r.RecentTreatments || '', 'Notes': r.Notes || '',
+              }));
+              const feedingRows = (healthData.feedings || []).map(f => ({
+                'Animal': f.AnimalName || '', 'Code': f.AnimalCode || '', 'Species': f.Species || '',
+                'Food Type': f.FoodType || '', 'Quantity': f.Quantity ?? '',
+                'Unit': f.Unit || '', 'Frequency': f.Frequency || '',
+                'Time': f.FeedingTime || '', 'Instructions': f.SpecialInstructions || '',
+              }));
+              const alertRows = (healthData.alerts || []).map(a => ({
+                'Animal': a.AnimalName || '', 'Code': a.AnimalCode || '', 'Species': a.Species || '',
+                'Alert Type': a.AlertType || '', 'Message': a.AlertMessage || '',
+                'Date': a.CreatedAt ? new Date(a.CreatedAt).toLocaleDateString() : '',
+                'Status': a.IsResolved ? 'Resolved' : 'Active',
+              }));
+              const keeperRows = (healthData.keepers || []).map(k => ({
+                'Animal': k.AnimalName || '', 'Code': k.AnimalCode || '', 'Species': k.Species || '',
+                'Keeper': k.KeeperName || '', 'Role': k.AssignmentRole || '',
+                'Start Date': k.StartDate ? new Date(k.StartDate).toLocaleDateString() : '',
+                'End Date': k.EndDate ? new Date(k.EndDate).toLocaleDateString() : '',
+                'Is Primary': k.IsPrimary ? 'Yes' : 'No',
+              }));
+              exportSectionsToSingleSheet([
+                { name: 'Animals Summary', data: summaryRows },
+                { name: 'Health Records', data: recordRows },
+                { name: 'Feeding Schedules', data: feedingRows },
+                { name: 'Health Alerts', data: alertRows },
+                { name: 'Keeper Assignments', data: keeperRows },
+              ], 'Animal_Report');
+              toast.success('Animal report downloaded.');
+            } catch (err) {
+              toast.error('Failed to generate report.');
+            }
+          }}
+        >
+          <Download size={15} /> Download Excel
+        </button>
       </div>
 
       {/* ── Search bar ── */}
@@ -257,14 +314,41 @@ const AnimalReport = () => {
                       <div className="ar-empty-section">No health records on file.</div>
                     ) : (
                       <table className="ar-mini-table">
-                        <thead><tr><th>Date</th><th>Score</th><th>Staff</th><th>Notes</th></tr></thead>
+                        <thead><tr><th>Date</th><th>Score</th><th>Weight</th><th>Activity</th><th>Appetite</th><th>Staff</th><th>Notes</th></tr></thead>
                         <tbody>
                           {report.healthRecords.map(r => (
                             <tr key={r.RecordID}>
                               <td>{fmtDate(r.CheckupDate)}</td>
                               <td><span className={`ah-score ${scoreClass(r.HealthScore)}`}><span className="ah-score-dot" />{r.HealthScore} — {scoreLabel(r.HealthScore)}</span></td>
+                              <td>{r.Weight != null ? `${Number(r.Weight).toFixed(1)} kg` : '—'}</td>
+                              <td>{r.ActivityLevel || '—'}</td>
+                              <td>{r.AppetiteStatus || '—'}</td>
                               <td>{r.StaffName || '—'}</td>
-                              <td style={{ maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.Notes || '—'}</td>
+                              <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.Notes || '—'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </Section>
+
+                  {/* ── Health Alerts ── */}
+                  <Section icon={<AlertTriangle size={16} color="#f59e0b" />} title="Health Alerts" count={report.alerts.length} defaultOpen={report.alerts.some(a => !a.IsResolved)}>
+                    {report.alerts.length === 0 ? (
+                      <div className="ar-empty-section">No health alerts.</div>
+                    ) : (
+                      <table className="ar-mini-table">
+                        <thead><tr><th>Date</th><th>Type</th><th>Message</th><th>Status</th></tr></thead>
+                        <tbody>
+                          {report.alerts.map(a => (
+                            <tr key={a.AlertID}>
+                              <td>{fmtDate(a.CreatedAt)}</td>
+                              <td>{a.AlertType}</td>
+                              <td style={{ maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.AlertMessage}</td>
+                              <td>{a.IsResolved
+                                ? <span style={{ color: '#10b981', fontWeight: 600, fontSize: '0.8rem' }}><CheckCircle size={13} style={{ verticalAlign: 'middle' }} /> Resolved</span>
+                                : <span style={{ color: '#ef4444', fontWeight: 600, fontSize: '0.8rem' }}><AlertTriangle size={13} style={{ verticalAlign: 'middle' }} /> Active</span>
+                              }</td>
                             </tr>
                           ))}
                         </tbody>
@@ -273,19 +357,19 @@ const AnimalReport = () => {
                   </Section>
 
                   {/* ── Keeper Assignments ── */}
-                  <Section icon={<Users size={16} color="#8b5cf6" />} title="Keeper Assignments" count={report.keepers.length}>
+                  <Section icon={<Users size={16} color="#6366f1" />} title="Keeper Assignments" count={report.keepers.length} defaultOpen={report.keepers.length > 0}>
                     {report.keepers.length === 0 ? (
-                      <div className="ar-empty-section">No keeper assignments found.</div>
+                      <div className="ar-empty-section">No keeper assignments.</div>
                     ) : (
                       <table className="ar-mini-table">
-                        <thead><tr><th>Keeper</th><th>Role</th><th>Start Date</th><th>End Date</th></tr></thead>
+                        <thead><tr><th>Keeper</th><th>Role</th><th>Start</th><th>End</th></tr></thead>
                         <tbody>
                           {report.keepers.map(k => (
                             <tr key={k.AssignmentID}>
                               <td style={{ fontWeight: 600 }}>{k.KeeperName}</td>
-                              <td>{k.Role}</td>
+                              <td>{k.Role || '—'}</td>
                               <td>{fmtDate(k.StartDate)}</td>
-                              <td>{k.EndDate ? fmtDate(k.EndDate) : <span style={{ color: '#16a34a', fontWeight: 600 }}>Active</span>}</td>
+                              <td>{k.EndDate ? fmtDate(k.EndDate) : <span style={{ color: '#10b981', fontWeight: 600 }}>Active</span>}</td>
                             </tr>
                           ))}
                         </tbody>

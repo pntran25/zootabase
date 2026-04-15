@@ -3,13 +3,14 @@ const router  = express.Router();
 const sql     = require('mssql');
 const { connectToDb } = require('../services/admin');
 const { verifyToken } = require('../middleware/authMiddleware');
+const Q = require('../queries/speciesCodeQueries');
 
 // GET /api/species-codes — all entries
 router.get('/', async (req, res) => {
     try {
         const pool = await connectToDb();
         const r = await pool.request().query(
-            'SELECT SpeciesName as speciesName, CodeSuffix as codeSuffix, LastCount as lastCount FROM SpeciesCode ORDER BY SpeciesName'
+            Q.getAll
         );
         res.json(r.recordset);
     } catch (err) {
@@ -26,7 +27,7 @@ router.get('/next', async (req, res) => {
         const pool = await connectToDb();
         const r = await pool.request()
             .input('sn', sql.NVarChar, species)
-            .query('SELECT CodeSuffix, LastCount FROM SpeciesCode WHERE SpeciesName = @sn');
+            .query(Q.getBySpecies);
         if (!r.recordset.length) return res.status(404).json({ error: 'Species code not found' });
         const { CodeSuffix, LastCount } = r.recordset[0];
         const next = String(LastCount + 1).padStart(5, '0');
@@ -48,7 +49,7 @@ router.post('/', verifyToken, async (req, res) => {
         await pool.request()
             .input('sn', sql.NVarChar, speciesName.trim())
             .input('cs', sql.NVarChar, codeSuffix.trim().toLowerCase())
-            .query('INSERT INTO SpeciesCode (SpeciesName, CodeSuffix) VALUES (@sn, @cs)');
+            .query(Q.insert);
         res.status(201).json({ speciesName: speciesName.trim(), codeSuffix: codeSuffix.trim().toLowerCase(), lastCount: 0 });
     } catch (err) {
         console.error('Error creating species code:', err);

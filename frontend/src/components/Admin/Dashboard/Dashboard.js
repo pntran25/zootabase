@@ -298,7 +298,7 @@ const Dashboard = () => {
                 <div>
                   <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--adm-text-primary)', display: 'block' }}>{p.name}</span>
                   <span style={{ fontSize: '0.75rem', color: '#fb923c' }}>
-                    {p.stockQuantity === 0 ? 'Out of stock' : `${p.stockQuantity} left`} · reorder at {p.lowStockThreshold}
+                    {p.stockQuantity === 0 ? 'Out of stock' : 'Stock is Low'}
                   </span>
                 </div>
               </div>

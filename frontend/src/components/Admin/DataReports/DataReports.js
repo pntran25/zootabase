@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { FileText, Search, X, ShoppingBag, Ticket, CreditCard, ChevronUp, ChevronDown, ChevronsUpDown, LayoutDashboard, CalendarCheck } from 'lucide-react';
+import { FileText, Search, X, ShoppingBag, Ticket, CreditCard, ChevronUp, ChevronDown, ChevronsUpDown, LayoutDashboard, CalendarCheck, Download } from 'lucide-react';
 import OverviewTab from './OverviewTab';
 import { useReactTable, getCoreRowModel, getSortedRowModel, flexRender } from '@tanstack/react-table';
 import { toast } from 'sonner';
@@ -8,6 +8,7 @@ import AdminSelect from '../AdminSelect';
 import AdminDatePicker from '../AdminDatePicker';
 import '../AdminTable.css';
 import './DataReports.css';
+import { exportSectionsToSingleSheet } from '../../../utils/exportExcel';
 
 const SortIcon = ({ column }) => {
   if (!column.getCanSort()) return null;
@@ -462,7 +463,7 @@ const computeDateRange = (dateFilter, customStart, customEnd) => {
 const DataReports = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [search, setSearch] = useState('');
-  const [dateFilter, setDateFilter] = useState('today');
+  const [dateFilter, setDateFilter] = useState('custom');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
 
@@ -628,22 +629,96 @@ const DataReports = () => {
           </h1>
           <p className="admin-page-subtitle">Purchase transaction history across all sales channels</p>
         </div>
+        <button
+          className="dr-details-btn"
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', fontSize: '0.82rem', fontWeight: 600, whiteSpace: 'nowrap' }}
+          disabled={orderRows.length === 0 && ticketRows.length === 0 && membershipRows.length === 0 && eventRows.length === 0}
+          onClick={async () => {
+            try {
+              toast.info('Preparing full sales report...');
+              const { dateFrom, dateTo } = computeDateRange(dateFilter, customStart, customEnd);
+              const buildParams = () => {
+                const p = new URLSearchParams({ limit: 100000, offset: 0 });
+                if (debouncedSearch) p.set('search', debouncedSearch);
+                if (dateFrom) p.set('dateFrom', dateFrom);
+                if (dateTo) p.set('dateTo', dateTo);
+                return p;
+              };
+              const [shopAll, ticketAll, eventAll, memberAll] = await Promise.all([
+                apiGet(`/api/orders?${buildParams()}`),
+                apiGet(`/api/ticket-orders?${buildParams()}`),
+                apiGet(`/api/event-bookings?${buildParams()}`),
+                apiGet(`/api/membership-subscriptions?${buildParams()}`),
+              ]);
+              const shopData = (shopAll.rows || []).map(r => ({
+                'Order #': r.OrderID, 'Customer': r.FullName || '', 'Email': r.Email || '',
+                'Phone': r.Phone || '', 'City': r.City || '', 'State': r.StateProvince || '',
+                'Zip': r.ZipCode || '', 'Card Last Four': r.CardLastFour || '',
+                'Subtotal': r.Subtotal != null ? Number(r.Subtotal).toFixed(2) : '',
+                'Shipping': r.Shipping != null ? Number(r.Shipping).toFixed(2) : '',
+                'Tax': r.Tax != null ? Number(r.Tax).toFixed(2) : '',
+                'Total': r.Total != null ? Number(r.Total).toFixed(2) : '',
+                'Date': r.PlacedAt ? new Date(r.PlacedAt).toLocaleDateString() : '',
+                'Time': r.PlacedAt ? new Date(r.PlacedAt).toLocaleTimeString() : '',
+              }));
+              const ticketData = (ticketAll.rows || []).map(r => ({
+                'Order #': r.TicketOrderID, 'Customer': r.FullName || '', 'Email': r.Email || '',
+                'Ticket Type': r.TicketType || '',
+                'Adult Qty': r.AdultQty ?? '', 'Child Qty': r.ChildQty ?? '', 'Senior Qty': r.SeniorQty ?? '',
+                'Visit Date': r.VisitDate ? new Date(r.VisitDate).toLocaleDateString() : '',
+                'Card Last Four': r.CardLastFour || '',
+                'Total': r.Total != null ? Number(r.Total).toFixed(2) : '',
+                'Purchased': r.PlacedAt ? new Date(r.PlacedAt).toLocaleDateString() : '',
+                'Time': r.PlacedAt ? new Date(r.PlacedAt).toLocaleTimeString() : '',
+              }));
+              const eventData = (eventAll.rows || []).map(r => ({
+                'Booking #': r.EventBookingID, 'Customer': `${r.FirstName || ''} ${r.LastName || ''}`.trim(),
+                'Email': r.Email || '', 'Event': r.EventName || '', 'Category': r.Category || '',
+                'Visit Date': r.BookingDate ? new Date(r.BookingDate).toLocaleDateString() : '',
+                'Guests': r.Quantity || '',
+                'Total': r.Total != null ? Number(r.Total).toFixed(2) : '',
+                'Purchased': r.PlacedAt ? new Date(r.PlacedAt).toLocaleDateString() : '',
+                'Time': r.PlacedAt ? new Date(r.PlacedAt).toLocaleTimeString() : '',
+              }));
+              const memberData = (memberAll.rows || []).map(r => ({
+                'Sub #': r.SubID, 'Member': r.FullName || '', 'Email': r.Email || '',
+                'Plan': r.PlanName || '', 'Billing': r.BillingPeriod || '',
+                'Start Date': r.StartDate ? new Date(r.StartDate).toLocaleDateString() : '',
+                'End Date': r.EndDate ? new Date(r.EndDate).toLocaleDateString() : '',
+                'Total': r.Total != null ? Number(r.Total).toFixed(2) : '',
+                'Purchased': r.PlacedAt ? new Date(r.PlacedAt).toLocaleDateString() : '',
+                'Time': r.PlacedAt ? new Date(r.PlacedAt).toLocaleTimeString() : '',
+              }));
+              exportSectionsToSingleSheet([
+                { name: 'Gift Shop Orders', data: shopData },
+                { name: 'Ticket Sales', data: ticketData },
+                { name: 'Event Sales', data: eventData },
+                { name: 'Memberships', data: memberData },
+              ], 'Sales_Report');
+              toast.success('Sales report downloaded.');
+            } catch (err) {
+              toast.error('Failed to generate sales report.');
+            }
+          }}
+        >
+          <Download size={15} /> Download Excel
+        </button>
       </div>
 
       <div className="dr-tabs">
         <button className={`dr-tab${activeTab === 'overview' ? ' active' : ''}`} onClick={() => setActiveTab('overview')}>
           <LayoutDashboard size={14} /> Overview
         </button>
-        <button className={`dr-tab${activeTab === 'shop' ? ' active' : ''}`} onClick={() => { setActiveTab('shop'); setSearch(''); setDateFilter('today'); setCustomStart(''); setCustomEnd(''); }}>
+        <button className={`dr-tab${activeTab === 'shop' ? ' active' : ''}`} onClick={() => { setActiveTab('shop'); setSearch(''); setDateFilter('custom'); setCustomStart(''); setCustomEnd(''); }}>
           <ShoppingBag size={14} /> Gift Shop Orders
         </button>
-        <button className={`dr-tab${activeTab === 'events' ? ' active' : ''}`} onClick={() => { setActiveTab('events'); setSearch(''); setDateFilter('today'); setCustomStart(''); setCustomEnd(''); }}>
+        <button className={`dr-tab${activeTab === 'events' ? ' active' : ''}`} onClick={() => { setActiveTab('events'); setSearch(''); setDateFilter('custom'); setCustomStart(''); setCustomEnd(''); }}>
           <CalendarCheck size={14} /> Event Sales
         </button>
-        <button className={`dr-tab${activeTab === 'tickets' ? ' active' : ''}`} onClick={() => { setActiveTab('tickets'); setSearch(''); setDateFilter('today'); setCustomStart(''); setCustomEnd(''); }}>
+        <button className={`dr-tab${activeTab === 'tickets' ? ' active' : ''}`} onClick={() => { setActiveTab('tickets'); setSearch(''); setDateFilter('custom'); setCustomStart(''); setCustomEnd(''); }}>
           <Ticket size={14} /> Ticket Sales
         </button>
-        <button className={`dr-tab${activeTab === 'memberships' ? ' active' : ''}`} onClick={() => { setActiveTab('memberships'); setSearch(''); setDateFilter('today'); setCustomStart(''); setCustomEnd(''); }}>
+        <button className={`dr-tab${activeTab === 'memberships' ? ' active' : ''}`} onClick={() => { setActiveTab('memberships'); setSearch(''); setDateFilter('custom'); setCustomStart(''); setCustomEnd(''); }}>
           <CreditCard size={14} /> Memberships
         </button>
       </div>

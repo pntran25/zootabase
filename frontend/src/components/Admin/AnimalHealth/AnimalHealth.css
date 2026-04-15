@@ -199,6 +199,107 @@
 .ah-score-critical { background: #fee2e2; color: #991b1b; }
 .ah-score-critical .ah-score-dot { background: #ef4444; }
 
+/* ── Score guide on form ── */
+.ah-score-hint {
+  display: inline-block;
+  margin-top: 5px;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: .78rem;
+  font-weight: 700;
+}
+.ah-score-guide {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.ah-score-guide-item {
+  font-size: .7rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
+/* ── Health Assessment Form ── */
+.ah-assess-section {
+  margin: 12px 0 8px;
+  padding: 14px;
+  background: var(--adm-bg-surface, #1e1e2e);
+  border: 1px solid var(--adm-border, #333);
+  border-radius: 10px;
+}
+.ah-assess-title {
+  display: block;
+  font-size: .88rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--adm-text-primary, #fff);
+}
+.ah-assess-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ah-assess-category {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ah-assess-label {
+  font-size: .8rem;
+  font-weight: 600;
+  color: var(--adm-text-secondary, #aaa);
+}
+.ah-assess-pts {
+  font-size: .7rem;
+  font-weight: 400;
+  opacity: .6;
+}
+.ah-assess-options {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.ah-assess-btn {
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--adm-border, #444);
+  background: var(--adm-bg-surface, #2a2a3e);
+  color: var(--adm-text-secondary, #bbb);
+  font-size: .78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+}
+.ah-assess-btn:hover {
+  border-color: var(--adm-accent, #10b981);
+  color: var(--adm-text-primary, #fff);
+}
+.ah-assess-btn.active {
+  border-color: transparent;
+  color: inherit;
+  font-weight: 700;
+}
+.ah-assess-result {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+.ah-assess-result .ah-score-hint {
+  font-size: .85rem;
+  padding: 4px 14px;
+}
+.ah-assess-hint-text {
+  margin-top: 10px;
+  font-size: .78rem;
+  color: var(--adm-text-secondary, #888);
+  font-style: italic;
+}
+
 /* ── Weight flags ─────────────────────────────────────── */
 .ah-weight-flag {
   display: inline-flex;
@@ -393,5 +494,108 @@
 .ah-empty p {
   margin: 8px 0 0;
   font-size: 0.88rem;
+}
+
+/* ── Expandable rows ─────────────────────────────────── */
+.ah-expandable-row {
+  transition: background 0.12s;
+}
+
+.ah-expandable-row:hover {
+  background: var(--adm-bg-surface-2, rgba(255,255,255,0.03));
+}
+
+.ah-row-expanded {
+  background: var(--adm-bg-surface-2, rgba(255,255,255,0.03));
+  border-bottom: none;
+}
+
+.ah-expand-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  color: var(--adm-text-secondary);
+  transition: all 0.15s;
+}
+
+.ah-expand-chevron:hover {
+  background: var(--adm-bg-surface-2, rgba(255,255,255,0.06));
+  color: var(--adm-accent);
+}
+
+.ah-expanded-detail-row td {
+  padding: 0 !important;
+  border-top: none !important;
+}
+
+.ah-detail-panel {
+  padding: 16px 24px 18px 56px;
+  background: var(--adm-bg-surface, #1a1a2e);
+  border-top: 1px dashed var(--adm-border, #333);
+  border-bottom: 2px solid var(--adm-border, #333);
+}
+
+.ah-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px 24px;
+}
+
+.ah-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ah-detail-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--adm-text-muted, #888);
+}
+
+.ah-detail-value {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--adm-text-primary, #eee);
+}
+
+.ah-detail-range {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--adm-text-secondary, #aaa);
+}
+
+.ah-detail-notes {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--adm-border, #333);
+}
+
+.ah-detail-notes p {
+  margin: 4px 0 0;
+  font-size: 0.82rem;
+  color: var(--adm-text-secondary, #bbb);
+  line-height: 1.5;
+}
+
+.ah-detail-empty {
+  margin: 8px 0 0;
+  font-size: 0.8rem;
+  font-style: italic;
+  color: var(--adm-text-muted, #666);
+}
+
+@media (max-width: 768px) {
+  .ah-detail-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .ah-detail-panel {
+    padding-left: 20px;
+  }
 }
 

@@ -3,12 +3,13 @@ const router = express.Router();
 const sql = require('mssql');
 const { connectToDb } = require('../services/admin');
 const { optionalAuth } = require('../middleware/authMiddleware');
+const Q = require('../queries/ticketQueries');
 
 // GET all ticket types
 router.get('/api/tickets', async (req, res) => {
     try {
         const pool = await connectToDb();
-        const result = await pool.request().query('SELECT * FROM TicketType WHERE DeletedAt IS NULL');
+        const result = await pool.request().query(Q.getAllTypes);
         
         const mappedResult = result.recordset.map(row => ({
             id: row.TicketTypeID.toString(),
@@ -40,13 +41,7 @@ router.post('/api/tickets', optionalAuth, async (req, res) => {
             .input('desc', sql.NVarChar, desc)
             .input('price', sql.Decimal(10, 2), price)
             .input('createdBy', sql.NVarChar, adminName)
-            .query(`
-                DECLARE @Out TABLE (TicketTypeID INT);
-                INSERT INTO TicketType (TypeName, Category, Description, BasePrice, CreatedBy)
-                OUTPUT INSERTED.TicketTypeID INTO @Out
-                VALUES (@type, @category, @desc, @price, @createdBy);
-                SELECT TicketTypeID FROM @Out;
-            `);
+            .query(Q.insertType);
             
         res.status(201).json({ id: result.recordset[0].TicketTypeID.toString(), ...req.body });
     } catch (error) {
@@ -69,12 +64,7 @@ router.put('/api/tickets/:id', optionalAuth, async (req, res) => {
             .input('desc', sql.NVarChar, desc)
             .input('price', sql.Decimal(10, 2), price)
             .input('updatedBy', sql.NVarChar, adminName)
-            .query(`
-                UPDATE TicketType
-                SET TypeName = @type, Category = @category, Description = @desc,
-                    BasePrice = @price, UpdatedAt = SYSUTCDATETIME(), UpdatedBy = @updatedBy
-                WHERE TicketTypeID = @id
-            `);
+            .query(Q.updateType);
             
         res.json({ success: true });
     } catch (error) {
@@ -91,7 +81,7 @@ router.delete('/api/tickets/:id', optionalAuth, async (req, res) => {
         await pool.request()
             .input('id', sql.Int, parseInt(req.params.id, 10))
             .input('deletedBy', sql.NVarChar, adminName)
-            .query('UPDATE TicketType SET DeletedAt = SYSUTCDATETIME(), DeletedBy = @deletedBy WHERE TicketTypeID = @id');
+            .query(Q.deleteType);
             
         res.json({ success: true });
     } catch (error) {

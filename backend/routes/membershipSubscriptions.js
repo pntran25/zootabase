@@ -3,6 +3,7 @@ const router = express.Router();
 const { connectToDb } = require('../services/admin');
 const sql = require('mssql');
 const { verifyToken } = require('../middleware/authMiddleware');
+const Q = require('../queries/membershipQueries');
 
 // POST /api/membership-subscriptions — purchase a membership
 router.post('/', async (req, res) => {
@@ -58,21 +59,7 @@ router.post('/', async (req, res) => {
             .input('Total',               sql.Decimal(10, 2),    total)
             .input('StartDate',           sql.Date,              startDate)
             .input('EndDate',             sql.Date,              endDate)
-            .query(`
-                INSERT INTO MembershipSubscriptions
-                    (CustomerID, PlanName, BillingPeriod, FirstName, LastName, Email, Phone,
-                     AddressLine1, AddressLine2, City, StateProvince, ZipCode,
-                     BillingSameAsContact, BillingFullName, BillingAddress1, BillingAddress2,
-                     BillingCity, BillingState, BillingZip,
-                     CardLastFour, Total, StartDate, EndDate)
-                OUTPUT INSERTED.SubID
-                VALUES
-                    (@CustomerID, @PlanName, @BillingPeriod, @FirstName, @LastName, @Email, @Phone,
-                     @AddressLine1, @AddressLine2, @City, @StateProvince, @ZipCode,
-                     @BillingSameAsContact, @BillingFullName, @BillingAddress1, @BillingAddress2,
-                     @BillingCity, @BillingState, @BillingZip,
-                     @CardLastFour, @Total, @StartDate, @EndDate)
-            `);
+            .query(Q.insertSubscription);
         res.status(201).json({ success: true, subId: result.recordset[0].SubID });
     } catch (err) {
         console.error('Membership subscription error:', err);
@@ -109,16 +96,9 @@ router.get('/', async (req, res) => {
             addFilters(pool.request())
                 .input('limit',  sql.Int, limit)
                 .input('offset', sql.Int, offset)
-                .query(`
-                    SELECT SubID, FirstName, LastName,
-                           CONCAT(ISNULL(FirstName,''),' ',ISNULL(LastName,'')) AS FullName,
-                           Email, PlanName, BillingPeriod, Total, StartDate, EndDate, PlacedAt
-                    FROM MembershipSubscriptions ${where}
-                    ORDER BY PlacedAt DESC
-                    OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY
-                `),
+                .query(Q.listSubscriptions(where)),
             addFilters(pool.request())
-                .query(`SELECT COUNT(*) AS total FROM MembershipSubscriptions ${where}`),
+                .query(Q.countSubscriptions(where)),
         ]);
 
         res.json({ rows: dataResult.recordset, total: countResult.recordset[0].total });
@@ -135,15 +115,7 @@ router.get('/active', verifyToken, async (req, res) => {
         const pool = await connectToDb();
         const result = await pool.request()
             .input('Email', sql.NVarChar(200), email)
-            .query(`
-                SELECT TOP 1 ms.PlanName, ms.EndDate, mp.Features
-                FROM MembershipSubscriptions ms
-                LEFT JOIN MembershipPlans mp
-                    ON mp.Name = ms.PlanName AND mp.DeletedAt IS NULL
-                WHERE ms.Email = @Email
-                  AND ms.EndDate >= CAST(GETDATE() AS DATE)
-                ORDER BY ms.EndDate DESC
-            `);
+            .query(Q.getActiveByEmail);
 
         if (!result.recordset.length) return res.json({ active: false });
 
@@ -171,7 +143,7 @@ router.get('/:id', async (req, res) => {
         const pool = await connectToDb();
         const result = await pool.request()
             .input('id', sql.Int, parseInt(req.params.id, 10))
-            .query(`SELECT *, CONCAT(ISNULL(FirstName,''),' ',ISNULL(LastName,'')) AS FullName FROM MembershipSubscriptions WHERE SubID = @id`);
+            .query(Q.getSubscriptionById);
         if (!result.recordset.length) return res.status(404).json({ error: 'Subscription not found.' });
         res.json(result.recordset[0]);
     } catch (err) {

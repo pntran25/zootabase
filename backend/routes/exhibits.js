@@ -6,6 +6,7 @@ const { optionalAuth, verifyToken } = require('../middleware/authMiddleware');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const Q = require('../queries/exhibitQueries');
 
 // Ensure image directory exists
 const imageDir = path.join(__dirname, '../uploads/Exhibits_Images');
@@ -38,33 +39,7 @@ const upload = multer({
 router.get('/', async (req, res) => {
     try {
         const pool = await connectToDb();
-        const result = await pool.request().query(`
-            SELECT
-                e.ExhibitID,
-                e.ExhibitName,
-                e.Capacity,
-                e.OpeningHours,
-                e.ImageUrl,
-                e.IsFeatured,
-                e.Description,
-                e.CreatedBy,
-                e.UpdatedBy,
-                a.AreaName,
-                h.HabitatType,
-                ISNULL(STUFF((
-                    SELECT DISTINCT ',' + an.Species
-                    FROM Animal an
-                    JOIN Habitat ah ON an.HabitatID = ah.HabitatID
-                    WHERE ah.ExhibitID = e.ExhibitID
-                      AND an.DeletedAt IS NULL
-                      AND an.Species IS NOT NULL
-                    FOR XML PATH(''), TYPE
-                ).value('.', 'NVARCHAR(MAX)'), 1, 1, ''), '') AS AnimalNames
-            FROM Exhibit e
-            LEFT JOIN Area a ON e.AreaID = a.AreaID
-            LEFT JOIN Habitat h ON e.ExhibitID = h.ExhibitID
-            WHERE e.DeletedAt IS NULL
-        `);
+        const result = await pool.request().query(Q.getAll);
         res.json(result.recordset);
     } catch (err) {
         console.error('Error fetching exhibits:', err);
@@ -90,13 +65,13 @@ router.post('/', optionalAuth, async (req, res) => {
             let areaId;
             const areaResult = await request
                 .input('paramAreaName', sql.NVarChar, AreaName)
-                .query('SELECT AreaID FROM Area WHERE AreaName = @paramAreaName');
+                .query(Q.findArea);
 
             if (areaResult.recordset.length > 0) {
                 areaId = areaResult.recordset[0].AreaID;
             } else {
                 const insertAreaResult = await request
-                    .query('INSERT INTO Area (AreaName) OUTPUT INSERTED.AreaID VALUES (@paramAreaName)');
+                    .query(Q.createArea);
                 areaId = insertAreaResult.recordset[0].AreaID;
             }
 
@@ -108,11 +83,7 @@ router.post('/', optionalAuth, async (req, res) => {
                 .input('paramOpeningHours', sql.NVarChar, OpeningHours)
                 .input('paramDescription', sql.NVarChar(1000), Description || null)
                 .input('paramCreatedBy', sql.NVarChar, adminName)
-                .query(`
-                    INSERT INTO Exhibit (ExhibitName, AreaID, Capacity, OpeningHours, Description, CreatedBy)
-                    OUTPUT INSERTED.ExhibitID
-                    VALUES (@paramExhibitName, @paramAreaId, @paramCapacity, @paramOpeningHours, @paramDescription, @paramCreatedBy)
-                `);
+                .query(Q.insertExhibit);
             const exhibitId = exhibitResult.recordset[0].ExhibitID;
 
             // 3. Insert Habitat if provided
@@ -120,10 +91,7 @@ router.post('/', optionalAuth, async (req, res) => {
                 await request
                     .input('paramHabitatType', sql.NVarChar, HabitatType)
                     .input('paramExhibitId', sql.Int, exhibitId)
-                    .query(`
-                        INSERT INTO Habitat (HabitatType, Size, ExhibitID)
-                        VALUES (@paramHabitatType, 100.0, @paramExhibitId)
-                    `); // Providing default Size of 100 for now, UI doesn't collect it.
+                    .query(Q.insertHabitat); // Providing default Size of 100 for now, UI doesn't collect it.
             }
 
             await transaction.commit();
@@ -165,13 +133,13 @@ router.put('/:id', optionalAuth, async (req, res) => {
             let areaId;
             const areaResult = await request
                 .input('paramAreaName', sql.NVarChar, AreaName)
-                .query('SELECT AreaID FROM Area WHERE AreaName = @paramAreaName');
+                .query(Q.findArea);
 
             if (areaResult.recordset.length > 0) {
                 areaId = areaResult.recordset[0].AreaID;
             } else {
                 const insertAreaResult = await request
-                    .query('INSERT INTO Area (AreaName) OUTPUT INSERTED.AreaID VALUES (@paramAreaName)');
+                    .query(Q.createArea);
                 areaId = insertAreaResult.recordset[0].AreaID;
             }
 
@@ -184,38 +152,20 @@ router.put('/:id', optionalAuth, async (req, res) => {
                 .input('paramOpeningHours', sql.NVarChar, OpeningHours)
                 .input('paramDescription', sql.NVarChar(1000), Description || null)
                 .input('paramUpdatedBy', sql.NVarChar, adminName)
-                .query(`
-                    UPDATE Exhibit
-                    SET ExhibitName = @paramExhibitName,
-                        AreaID = @paramAreaId,
-                        Capacity = @paramCapacity,
-                        OpeningHours = @paramOpeningHours,
-                        Description = @paramDescription,
-                        UpdatedAt = SYSUTCDATETIME(),
-                        UpdatedBy = @paramUpdatedBy
-                    WHERE ExhibitID = @paramId AND DeletedAt IS NULL
-                `);
+                .query(Q.updateExhibit);
 
             // 3. Manage Habitat
             const habitatResult = await request
-                .query('SELECT HabitatID FROM Habitat WHERE ExhibitID = @paramId');
+                .query(Q.checkHabitat);
 
             if (habitatResult.recordset.length > 0) {
                 await request
                     .input('paramHabitatType', sql.NVarChar, HabitatType)
-                    .query(`
-                        UPDATE Habitat 
-                        SET HabitatType = @paramHabitatType, 
-                            UpdatedAt = SYSUTCDATETIME()
-                        WHERE ExhibitID = @paramId
-                    `);
+                    .query(Q.updateHabitat);
             } else if (HabitatType) {
                 await request
                     .input('paramHabitatType', sql.NVarChar, HabitatType)
-                    .query(`
-                        INSERT INTO Habitat (HabitatType, Size, ExhibitID)
-                        VALUES (@paramHabitatType, 100.0, @paramId)
-                    `);
+                    .query(Q.insertHabitatForExhibit);
             }
 
             await transaction.commit();
@@ -241,7 +191,7 @@ router.patch('/:id/featured', verifyToken, async (req, res) => {
         await pool.request()
             .input('id', sql.Int, id)
             .input('isFeatured', sql.Bit, isFeatured ? 1 : 0)
-            .query('UPDATE Exhibit SET IsFeatured = @isFeatured, UpdatedAt = SYSUTCDATETIME() WHERE ExhibitID = @id AND DeletedAt IS NULL');
+            .query(Q.patchFeatured);
         res.json({ message: 'Featured status updated' });
     } catch (error) {
         console.error('Error updating featured status:', error);
@@ -259,18 +209,12 @@ router.delete('/:id', optionalAuth, async (req, res) => {
         // Unlink any animals assigned to habitats under this exhibit
         await pool.request()
             .input('id', sql.Int, id)
-            .query(`
-                UPDATE Animal SET HabitatID = NULL
-                WHERE DeletedAt IS NULL
-                  AND HabitatID IN (
-                    SELECT h.HabitatID FROM Habitat h WHERE h.ExhibitID = @id
-                  )
-            `);
+            .query(Q.unlinkAnimals);
 
         await pool.request()
             .input('id', sql.Int, id)
             .input('deletedBy', sql.NVarChar, adminName)
-            .query('UPDATE Exhibit SET DeletedAt = SYSUTCDATETIME(), DeletedBy = @deletedBy WHERE ExhibitID = @id');
+            .query(Q.softDelete);
 
         res.json({ message: 'Exhibit deleted successfully' });
     } catch (err) {
@@ -293,12 +237,7 @@ router.post('/:id/image', verifyToken, upload.single('image'), async (req, res) 
         await pool.request()
             .input('paramId', sql.Int, id)
             .input('paramImageUrl', sql.NVarChar, imageUrl)
-            .query(`
-                UPDATE Exhibit 
-                SET ImageUrl = @paramImageUrl,
-                    UpdatedAt = SYSUTCDATETIME()
-                WHERE ExhibitID = @paramId
-            `);
+            .query(Q.updateImage);
 
         res.json({ message: 'Image uploaded successfully', ImageUrl: imageUrl });
     } catch (err) {

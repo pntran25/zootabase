@@ -3,10 +3,11 @@ import '../AdminTable.css';
 import './HealthReport.css';
 import {
   Activity, AlertTriangle, CheckCircle,
-  Scale, Search, ChevronDown, ChevronUp, HeartPulse
+  Scale, Search, ChevronDown, ChevronUp, HeartPulse, Download
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getHealthReport } from '../../../services/animalHealthService';
+import { exportSectionsToSingleSheet } from '../../../utils/exportExcel';
 
 /* ── Helpers ──────────────────────────────────────────── */
 const fmtDate = (d) => {
@@ -20,15 +21,15 @@ const fmtTime = (d) => {
 };
 
 const scoreClass = (s) => {
-  if (s >= 80) return 'hr-score-excellent';
-  if (s >= 60) return 'hr-score-good';
+  if (s >= 90) return 'hr-score-excellent';
+  if (s >= 65) return 'hr-score-good';
   if (s >= 40) return 'hr-score-fair';
   return 'hr-score-critical';
 };
 
 const scoreLabel = (s) => {
-  if (s >= 80) return 'Excellent';
-  if (s >= 60) return 'Good';
+  if (s >= 90) return 'Excellent';
+  if (s >= 65) return 'Good';
   if (s >= 40) return 'Fair';
   return 'Critical';
 };
@@ -153,6 +154,55 @@ const HealthReport = () => {
           <h1 className="admin-page-title"><Activity size={26} className="title-icon" /> Health Report</h1>
           <p className="admin-page-subtitle">Comprehensive health overview across all animals</p>
         </div>
+        {data && (
+          <button
+            className="dr-details-btn"
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', fontSize: '0.82rem', fontWeight: 600, whiteSpace: 'nowrap' }}
+            onClick={() => {
+              const alertRows = (data.alerts || []).map(a => ({
+                'Animal': a.AnimalName || '', 'Code': a.AnimalCode || '', 'Species': a.Species || '',
+                'Alert Type': a.AlertType || '', 'Message': a.AlertMessage || '',
+                'Date': a.CreatedAt ? new Date(a.CreatedAt).toLocaleDateString() : '',
+                'Status': a.IsResolved ? 'Resolved' : 'Active',
+              }));
+              const recordRows = (data.records || []).map(r => ({
+                'Animal': r.AnimalName || '', 'Code': r.AnimalCode || '', 'Species': r.Species || '',
+                'Checkup Date': r.CheckupDate ? new Date(r.CheckupDate).toLocaleDateString() : '',
+                'Health Score': r.HealthScore ?? '', 'Staff': r.StaffName || '', 'Notes': r.Notes || '',
+              }));
+              const metricRows = (data.metrics || []).map(m => ({
+                'Animal': m.AnimalName || '', 'Code': m.AnimalCode || '', 'Species': m.Species || '',
+                'Date': m.RecordDate ? new Date(m.RecordDate).toLocaleDateString() : '',
+                'Weight': m.Weight ?? '', 'Activity Level': m.ActivityLevel || '',
+                'Appetite': m.AppetiteStatus || '', 'Conditions': m.MedicalConditions || '',
+                'Treatments': m.RecentTreatments || '',
+              }));
+              const keeperRows = (data.keepers || []).map(k => ({
+                'Animal': k.AnimalName || '', 'Code': k.AnimalCode || '', 'Species': k.Species || '',
+                'Keeper': k.KeeperName || '', 'Role': k.AssignmentRole || '',
+                'Start Date': k.StartDate ? new Date(k.StartDate).toLocaleDateString() : '',
+                'End Date': k.EndDate ? new Date(k.EndDate).toLocaleDateString() : '',
+                'Is Primary': k.IsPrimary ? 'Yes' : 'No',
+              }));
+              const feedingRows = (data.feedings || []).map(f => ({
+                'Animal': f.AnimalName || '', 'Code': f.AnimalCode || '', 'Species': f.Species || '',
+                'Food Type': f.FoodType || '', 'Quantity': f.Quantity ?? '',
+                'Unit': f.Unit || '', 'Frequency': f.Frequency || '',
+                'Time': f.FeedingTime || '', 'Instructions': f.SpecialInstructions || '',
+              }));
+              exportSectionsToSingleSheet([
+                { name: 'Health Alerts', data: alertRows },
+                { name: 'Health Records', data: recordRows },
+                { name: 'Health Metrics', data: metricRows },
+                { name: 'Keeper Assignments', data: keeperRows },
+                { name: 'Feeding Schedules', data: feedingRows },
+              ], 'Health_Report');
+              toast.success('Health report downloaded.');
+            }}
+          >
+            <Download size={15} /> Download Excel
+          </button>
+        )}
       </div>
 
       {loading && <div className="admin-table-empty">Loading health report...</div>}

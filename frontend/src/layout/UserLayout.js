@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { useAuth } from '../context/AuthContext';
-import { auth } from '../services/firebase';
 import './UserLayout.css';
 import Footer from './Footer';
 import brandLogo from '../assets/images/Logo.png';
@@ -10,6 +9,7 @@ import brandLogo from '../assets/images/Logo.png';
 const UserIcon = () => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} style={{ width: '1rem', height: '1rem' }}><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>;
 const TicketIcon = () => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} style={{ width: '1rem', height: '1rem' }}><path strokeLinecap="round" strokeLinejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" /></svg>;
 const CrownIcon = () => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} style={{ width: '0.95rem', height: '0.95rem' }}><path strokeLinecap="round" strokeLinejoin="round" d="M2 19h20M4 19l2-9 5 4 3-7 3 7 5-4 2 9" /></svg>;
+const SettingsIcon = () => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} style={{ width: '1.15rem', height: '1.15rem' }}><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.573-1.066z" /><circle cx="12" cy="12" r="3" /></svg>;
 const MenuIcon = () => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} style={{ width: '1.5rem', height: '1.5rem' }}><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>;
 const XIcon = () => <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} style={{ width: '1.5rem', height: '1.5rem' }}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>;
 
@@ -21,10 +21,6 @@ const UserLayout = () => {
     || currentUser?.displayName?.split(' ')[0]
     || currentUser?.email?.split('@')[0]
     || 'there';
-
-  const handleLogout = async () => {
-    try { await auth.signOut(); } catch {}
-  };
 
   return (
     <div className="ww-user-layout" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
@@ -41,8 +37,8 @@ const UserLayout = () => {
               Home
             </NavLink>
             <NavLink to="/exhibits" className={({ isActive }) => `ww-nav-link ${isActive ? 'active' : ''}`}>Exhibits</NavLink>
-            <NavLink to="/attractions" className={({ isActive }) => `ww-nav-link ${isActive ? 'active' : ''}`}>Attractions</NavLink>
             <NavLink to="/animals" className={({ isActive }) => `ww-nav-link ${isActive ? 'active' : ''}`}>Animals</NavLink>
+            <NavLink to="/attractions" className={({ isActive }) => `ww-nav-link ${isActive ? 'active' : ''}`}>Attractions</NavLink>
             <NavLink to="/events" className={({ isActive }) => `ww-nav-link ${isActive ? 'active' : ''}`}>Events</NavLink>
             <NavLink to="/products" className={({ isActive }) => `ww-nav-link ${isActive ? 'active' : ''}`}>Gift Shop</NavLink>
             <NavLink to="/membership" className={({ isActive }) => `ww-nav-link ${isActive ? 'active' : ''}`}>Membership</NavLink>
@@ -50,24 +46,25 @@ const UserLayout = () => {
 
           <div className="ww-header-actions">
             {currentUser ? (
-              userProfile?.isStaff ? (
-                <NavLink
-                  to="/admin"
-                  className="ww-btn-admin-view"
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', padding: '6px 14px', borderRadius: '8px',
-                    fontSize: '0.85rem', fontWeight: 600, background: '#e5e7eb',
-                    color: '#374151', textDecoration: 'none', transition: 'all 0.2s',
-                  }}
-                >
-                  Admin View
-                </NavLink>
-              ) : (
-                <div className="ww-user-greeting">
+              <>
+                {userProfile?.isStaff && (
+                  <NavLink
+                    to="/admin"
+                    className="ww-btn-admin-view"
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', padding: '6px 14px', borderRadius: '8px',
+                      fontSize: '0.85rem', fontWeight: 600, background: '#e5e7eb',
+                      color: '#374151', textDecoration: 'none', transition: 'all 0.2s',
+                    }}
+                  >
+                    Admin View
+                  </NavLink>
+                )}
+                <NavLink to="/profile" className="ww-user-greeting" style={{ textDecoration: 'none' }}>
                   <span className="ww-greeting-text">Hello, {firstName}!</span>
-                  <button className="ww-btn-signout" onClick={handleLogout}>Sign Out</button>
-                </div>
-              )
+                  <span className="ww-btn-profile-icon"><SettingsIcon /></span>
+                </NavLink>
+              </>
             ) : (
               <NavLink to="/login" className="ww-btn-login"><UserIcon /> Login</NavLink>
             )}
@@ -90,29 +87,29 @@ const UserLayout = () => {
             <nav className="ww-mobile-nav">
               <NavLink to="/" end className={({ isActive }) => `ww-mobile-nav-link ${isActive ? 'active' : ''}`} onClick={() => setIsOpen(false)}>Home</NavLink>
               <NavLink to="/exhibits" className={({ isActive }) => `ww-mobile-nav-link ${isActive ? 'active' : ''}`} onClick={() => setIsOpen(false)}>Exhibits</NavLink>
-              <NavLink to="/attractions" className={({ isActive }) => `ww-mobile-nav-link ${isActive ? 'active' : ''}`} onClick={() => setIsOpen(false)}>Attractions</NavLink>
               <NavLink to="/animals" className={({ isActive }) => `ww-mobile-nav-link ${isActive ? 'active' : ''}`} onClick={() => setIsOpen(false)}>Animals</NavLink>
+              <NavLink to="/attractions" className={({ isActive }) => `ww-mobile-nav-link ${isActive ? 'active' : ''}`} onClick={() => setIsOpen(false)}>Attractions</NavLink>
               <NavLink to="/events" className={({ isActive }) => `ww-mobile-nav-link ${isActive ? 'active' : ''}`} onClick={() => setIsOpen(false)}>Events</NavLink>
               <NavLink to="/products" className={({ isActive }) => `ww-mobile-nav-link ${isActive ? 'active' : ''}`} onClick={() => setIsOpen(false)}>Gift Shop</NavLink>
               <NavLink to="/membership" className={({ isActive }) => `ww-mobile-nav-link ${isActive ? 'active' : ''}`} onClick={() => setIsOpen(false)}>Membership</NavLink>
             </nav>
             <div className="ww-mobile-actions">
               {currentUser ? (
-                userProfile?.isStaff ? (
-                  <NavLink
-                    to="/admin"
-                    className="ww-mobile-nav-link"
-                    onClick={() => setIsOpen(false)}
-                    style={{ color: '#374151', fontWeight: 600, background: '#e5e7eb', padding: '10px', borderRadius: '6px', textAlign: 'center' }}
-                  >
-                    Admin View
+                <>
+                  {userProfile?.isStaff && (
+                    <NavLink
+                      to="/admin"
+                      className="ww-mobile-nav-link"
+                      onClick={() => setIsOpen(false)}
+                      style={{ color: '#374151', fontWeight: 600, background: '#e5e7eb', padding: '10px', borderRadius: '6px', textAlign: 'center' }}
+                    >
+                      Admin View
+                    </NavLink>
+                  )}
+                  <NavLink to="/profile" className="ww-mobile-nav-link" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <SettingsIcon /> My Account
                   </NavLink>
-                ) : (
-                  <>
-                    <span className="ww-greeting-text">Hello, {firstName}!</span>
-                    <button className="ww-mobile-signout" onClick={() => { handleLogout(); setIsOpen(false); }}>Sign Out</button>
-                  </>
-                )
+                </>
               ) : (
                 <NavLink to="/login" className="ww-mobile-nav-link" onClick={() => setIsOpen(false)}><UserIcon /> Login</NavLink>
               )}

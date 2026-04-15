@@ -3,6 +3,7 @@ const router = express.Router();
 const sql = require('mssql');
 const { connectToDb } = require('../services/admin');
 const { verifyToken } = require('../middleware/authMiddleware');
+const Q = require('../queries/animalHealthQueries');
 
 /* ── Helper: derive HealthStatus from score ───────────────────────── */
 function healthStatusFromScore(score) {
@@ -16,16 +17,7 @@ function healthStatusFromScore(score) {
 router.get('/records', async (req, res) => {
     try {
         const pool = await connectToDb();
-        const result = await pool.request().query(`
-            SELECT r.RecordID, r.AnimalID, r.CheckupDate, r.HealthScore, r.Notes, r.StaffID,
-                   a.Name AS AnimalName, a.Species,
-                   s.FullName AS StaffName
-            FROM AnimalHealthRecord r
-            JOIN Animal a ON r.AnimalID = a.AnimalID
-            LEFT JOIN Staff s ON r.StaffID = s.StaffID
-            WHERE r.DeletedAt IS NULL AND a.DeletedAt IS NULL
-            ORDER BY r.CheckupDate DESC
-        `);
+        const result = await pool.request().query(Q.getAllRecords);
         res.json(result.recordset);
     } catch (error) {
         console.error('Error fetching health records:', error);
@@ -39,14 +31,7 @@ router.get('/records/animal/:animalId', async (req, res) => {
         const pool = await connectToDb();
         const result = await pool.request()
             .input('animalId', sql.Int, parseInt(req.params.animalId, 10))
-            .query(`
-                SELECT r.RecordID, r.AnimalID, r.CheckupDate, r.HealthScore, r.Notes, r.StaffID,
-                       s.FullName AS StaffName
-                FROM AnimalHealthRecord r
-                LEFT JOIN Staff s ON r.StaffID = s.StaffID
-                WHERE r.AnimalID = @animalId AND r.DeletedAt IS NULL
-                ORDER BY r.CheckupDate DESC
-            `);
+            .query(Q.getRecordsByAnimal);
         res.json(result.recordset);
     } catch (error) {
         console.error('Error fetching health records for animal:', error);
@@ -57,7 +42,9 @@ router.get('/records/animal/:animalId', async (req, res) => {
 // ── POST create health record ───────────────────────────────────────
 router.post('/records', verifyToken, async (req, res) => {
     try {
-        const { AnimalID, CheckupDate, HealthScore, Notes, StaffID } = req.body;
+        const { AnimalID, CheckupDate, HealthScore, Notes, StaffID,
+                ActivityLevel, Weight, WeightRangeLow, WeightRangeHigh,
+                MedicalConditions, RecentTreatments, AppetiteStatus } = req.body;
         if (!AnimalID || !CheckupDate || HealthScore == null || !StaffID) {
             return res.status(400).json({ error: 'AnimalID, CheckupDate, HealthScore, and StaffID are required.' });
         }
@@ -72,17 +59,20 @@ router.post('/records', verifyToken, async (req, res) => {
             .input('healthScore', sql.Int, score)
             .input('notes', sql.NVarChar(1000), Notes || null)
             .input('staffId', sql.Int, parseInt(StaffID, 10))
+            .input('activityLevel', sql.NVarChar(50), ActivityLevel || null)
+            .input('weight', sql.Decimal(8, 2), Weight || null)
+            .input('weightRangeLow', sql.Decimal(8, 2), WeightRangeLow || null)
+            .input('weightRangeHigh', sql.Decimal(8, 2), WeightRangeHigh || null)
+            .input('medicalConditions', sql.NVarChar(255), MedicalConditions || null)
+            .input('recentTreatments', sql.NVarChar(255), RecentTreatments || null)
+            .input('appetiteStatus', sql.NVarChar(50), AppetiteStatus || null)
             .input('createdBy', sql.NVarChar(100), req.user?.email || 'system')
-            .query(`
-                INSERT INTO AnimalHealthRecord (AnimalID, CheckupDate, HealthScore, Notes, StaffID, CreatedAt, CreatedBy)
-                OUTPUT INSERTED.RecordID
-                VALUES (@animalId, @checkupDate, @healthScore, @notes, @staffId, SYSUTCDATETIME(), @createdBy)
-            `);
+            .query(Q.insertRecord);
         // Sync Animal.HealthStatus based on the new score
         await pool.request()
             .input('aid', sql.Int, parseInt(AnimalID, 10))
             .input('status', sql.NVarChar(50), healthStatusFromScore(score))
-            .query(`UPDATE Animal SET HealthStatus = @status WHERE AnimalID = @aid`);
+            .query(Q.syncAnimalHealth);
         res.status(201).json({ RecordID: result.recordset[0].RecordID, ...req.body });
     } catch (error) {
         console.error('Error creating health record:', error);
@@ -93,7 +83,9 @@ router.post('/records', verifyToken, async (req, res) => {
 // ── PUT update health record ────────────────────────────────────────
 router.put('/records/:id', verifyToken, async (req, res) => {
     try {
-        const { AnimalID, CheckupDate, HealthScore, Notes, StaffID } = req.body;
+        const { AnimalID, CheckupDate, HealthScore, Notes, StaffID,
+                ActivityLevel, Weight, WeightRangeLow, WeightRangeHigh,
+                MedicalConditions, RecentTreatments, AppetiteStatus } = req.body;
         const score = parseInt(HealthScore, 10);
         if (score < 0 || score > 100) {
             return res.status(400).json({ error: 'HealthScore must be between 0 and 100.' });
@@ -106,18 +98,20 @@ router.put('/records/:id', verifyToken, async (req, res) => {
             .input('healthScore', sql.Int, score)
             .input('notes', sql.NVarChar(1000), Notes || null)
             .input('staffId', sql.Int, parseInt(StaffID, 10))
+            .input('activityLevel', sql.NVarChar(50), ActivityLevel || null)
+            .input('weight', sql.Decimal(8, 2), Weight || null)
+            .input('weightRangeLow', sql.Decimal(8, 2), WeightRangeLow || null)
+            .input('weightRangeHigh', sql.Decimal(8, 2), WeightRangeHigh || null)
+            .input('medicalConditions', sql.NVarChar(255), MedicalConditions || null)
+            .input('recentTreatments', sql.NVarChar(255), RecentTreatments || null)
+            .input('appetiteStatus', sql.NVarChar(50), AppetiteStatus || null)
             .input('updatedBy', sql.NVarChar(100), req.user?.email || 'system')
-            .query(`
-                UPDATE AnimalHealthRecord
-                SET AnimalID = @animalId, CheckupDate = @checkupDate, HealthScore = @healthScore,
-                    Notes = @notes, StaffID = @staffId, UpdatedAt = SYSUTCDATETIME(), UpdatedBy = @updatedBy
-                WHERE RecordID = @id AND DeletedAt IS NULL
-            `);
+            .query(Q.updateRecord);
         // Sync Animal.HealthStatus based on the updated score
         await pool.request()
             .input('aid', sql.Int, parseInt(AnimalID, 10))
             .input('status', sql.NVarChar(50), healthStatusFromScore(score))
-            .query(`UPDATE Animal SET HealthStatus = @status WHERE AnimalID = @aid`);
+            .query(Q.syncAnimalHealth);
         res.json({ success: true });
     } catch (error) {
         console.error('Error updating health record:', error);
@@ -132,7 +126,7 @@ router.delete('/records/:id', verifyToken, async (req, res) => {
         await pool.request()
             .input('id', sql.Int, parseInt(req.params.id, 10))
             .input('deletedBy', sql.NVarChar(100), req.user?.email || 'system')
-            .query(`UPDATE AnimalHealthRecord SET DeletedAt = SYSUTCDATETIME(), DeletedBy = @deletedBy WHERE RecordID = @id`);
+            .query(Q.deleteRecord);
         res.json({ success: true });
     } catch (error) {
         console.error('Error deleting health record:', error);
@@ -148,16 +142,7 @@ router.delete('/records/:id', verifyToken, async (req, res) => {
 router.get('/metrics', async (req, res) => {
     try {
         const pool = await connectToDb();
-        const result = await pool.request().query(`
-            SELECT m.MetricID, m.AnimalID, m.RecordDate, m.ActivityLevel, m.Weight,
-                   m.WeightRangeLow, m.WeightRangeHigh, m.MedicalConditions,
-                   m.RecentTreatments, m.AppetiteStatus, m.Notes,
-                   a.Name AS AnimalName, a.Species
-            FROM AnimalHealthMetrics m
-            JOIN Animal a ON m.AnimalID = a.AnimalID
-            WHERE m.DeletedAt IS NULL AND a.DeletedAt IS NULL
-            ORDER BY m.RecordDate DESC
-        `);
+        const result = await pool.request().query(Q.getAllMetrics);
         res.json(result.recordset);
     } catch (error) {
         console.error('Error fetching health metrics:', error);
@@ -171,12 +156,7 @@ router.get('/metrics/animal/:animalId', async (req, res) => {
         const pool = await connectToDb();
         const result = await pool.request()
             .input('animalId', sql.Int, parseInt(req.params.animalId, 10))
-            .query(`
-                SELECT m.*
-                FROM AnimalHealthMetrics m
-                WHERE m.AnimalID = @animalId AND m.DeletedAt IS NULL
-                ORDER BY m.RecordDate DESC
-            `);
+            .query(Q.getMetricsByAnimal);
         res.json(result.recordset);
     } catch (error) {
         console.error('Error fetching metrics for animal:', error);
@@ -205,14 +185,7 @@ router.post('/metrics', verifyToken, async (req, res) => {
             .input('appetiteStatus', sql.NVarChar(50), AppetiteStatus || null)
             .input('notes', sql.NVarChar(1000), Notes || null)
             .input('createdBy', sql.NVarChar(100), req.user?.email || 'system')
-            .query(`
-                INSERT INTO AnimalHealthMetrics
-                    (AnimalID, RecordDate, ActivityLevel, Weight, WeightRangeLow, WeightRangeHigh,
-                     MedicalConditions, RecentTreatments, AppetiteStatus, Notes, CreatedAt, CreatedBy)
-                OUTPUT INSERTED.MetricID
-                VALUES (@animalId, @recordDate, @activityLevel, @weight, @weightRangeLow, @weightRangeHigh,
-                        @medicalConditions, @recentTreatments, @appetiteStatus, @notes, SYSUTCDATETIME(), @createdBy)
-            `);
+            .query(Q.insertMetric);
         res.status(201).json({ MetricID: result.recordset[0].MetricID, ...req.body });
     } catch (error) {
         console.error('Error creating health metric:', error);
@@ -239,15 +212,7 @@ router.put('/metrics/:id', verifyToken, async (req, res) => {
             .input('appetiteStatus', sql.NVarChar(50), AppetiteStatus || null)
             .input('notes', sql.NVarChar(1000), Notes || null)
             .input('updatedBy', sql.NVarChar(100), req.user?.email || 'system')
-            .query(`
-                UPDATE AnimalHealthMetrics
-                SET AnimalID = @animalId, RecordDate = @recordDate, ActivityLevel = @activityLevel,
-                    Weight = @weight, WeightRangeLow = @weightRangeLow, WeightRangeHigh = @weightRangeHigh,
-                    MedicalConditions = @medicalConditions, RecentTreatments = @recentTreatments,
-                    AppetiteStatus = @appetiteStatus, Notes = @notes,
-                    UpdatedAt = SYSUTCDATETIME(), UpdatedBy = @updatedBy
-                WHERE MetricID = @id AND DeletedAt IS NULL
-            `);
+            .query(Q.updateMetric);
         res.json({ success: true });
     } catch (error) {
         console.error('Error updating health metric:', error);
@@ -262,7 +227,7 @@ router.delete('/metrics/:id', verifyToken, async (req, res) => {
         await pool.request()
             .input('id', sql.Int, parseInt(req.params.id, 10))
             .input('deletedBy', sql.NVarChar(100), req.user?.email || 'system')
-            .query(`UPDATE AnimalHealthMetrics SET DeletedAt = SYSUTCDATETIME(), DeletedBy = @deletedBy WHERE MetricID = @id`);
+            .query(Q.deleteMetric);
         res.json({ success: true });
     } catch (error) {
         console.error('Error deleting health metric:', error);
@@ -276,14 +241,7 @@ router.delete('/metrics/:id', verifyToken, async (req, res) => {
 router.get('/alerts', async (req, res) => {
     try {
         const pool = await connectToDb();
-        const result = await pool.request().query(`
-            SELECT ha.AlertID, ha.AnimalID, ha.AlertType, ha.AlertMessage, ha.CreatedAt, ha.IsResolved,
-                   a.Name AS AnimalName, a.Species
-            FROM HealthAlert ha
-            JOIN Animal a ON ha.AnimalID = a.AnimalID
-            WHERE a.DeletedAt IS NULL
-            ORDER BY ha.CreatedAt DESC
-        `);
+        const result = await pool.request().query(Q.getAllAlerts);
         res.json(result.recordset);
     } catch (error) {
         // Table may not exist yet — return empty
@@ -301,7 +259,7 @@ router.put('/alerts/:id/resolve', verifyToken, async (req, res) => {
         const pool = await connectToDb();
         await pool.request()
             .input('id', sql.Int, parseInt(req.params.id, 10))
-            .query(`UPDATE HealthAlert SET IsResolved = 1, ResolvedAt = SYSUTCDATETIME() WHERE AlertID = @id`);
+            .query(Q.resolveAlert);
         res.json({ success: true });
     } catch (error) {
         console.error('Error resolving alert:', error);
@@ -317,73 +275,22 @@ router.get('/health-report', async (req, res) => {
         const pool = await connectToDb();
 
         // Summary stats
-        const stats = await pool.request().query(`
-            SELECT
-              (SELECT COUNT(*) FROM Animal WHERE DeletedAt IS NULL) AS TotalAnimals,
-              (SELECT COUNT(*) FROM HealthAlert WHERE IsResolved = 0) AS UnresolvedAlerts,
-              (SELECT COUNT(*) FROM AnimalKeeperAssignment WHERE DeletedAt IS NULL AND EndDate IS NULL) AS ActiveAssignments,
-              (SELECT COUNT(*) FROM FeedingSchedule WHERE DeletedAt IS NULL) AS TotalSchedules,
-              (SELECT AVG(CAST(HealthScore AS FLOAT)) FROM AnimalHealthRecord WHERE DeletedAt IS NULL) AS AvgHealthScore
-        `);
+        const stats = await pool.request().query(Q.healthReportStats);
 
         // Health alerts (all, with animal info)
-        const alerts = await pool.request().query(`
-            SELECT ha.AlertID, ha.AnimalID, ha.AlertType, ha.AlertMessage,
-                   ha.CreatedAt, ha.IsResolved, ha.ResolvedAt,
-                   a.Name AS AnimalName, a.Species, a.AnimalCode
-            FROM HealthAlert ha
-            JOIN Animal a ON ha.AnimalID = a.AnimalID
-            WHERE a.DeletedAt IS NULL
-            ORDER BY ha.IsResolved ASC, ha.CreatedAt DESC
-        `);
+        const alerts = await pool.request().query(Q.healthReportAlerts);
 
         // Keeper assignments (all, with animal + staff info)
-        const keepers = await pool.request().query(`
-            SELECT ka.AssignmentID, ka.AnimalID, ka.StaffID, ka.StartDate, ka.EndDate,
-                   a.Name AS AnimalName, a.Species, a.AnimalCode,
-                   s.FullName AS KeeperName, s.Role
-            FROM AnimalKeeperAssignment ka
-            JOIN Animal a ON ka.AnimalID = a.AnimalID
-            JOIN Staff s ON ka.StaffID = s.StaffID
-            WHERE ka.DeletedAt IS NULL AND a.DeletedAt IS NULL
-            ORDER BY ka.EndDate ASC, ka.StartDate DESC
-        `);
+        const keepers = await pool.request().query(Q.healthReportKeepers);
 
         // Feeding schedules (all, with animal + staff info)
-        const feedings = await pool.request().query(`
-            SELECT fs.ScheduleID, fs.AnimalID, fs.FeedTime, fs.FoodType, fs.StaffID,
-                   a.Name AS AnimalName, a.Species, a.AnimalCode,
-                   s.FullName AS StaffName
-            FROM FeedingSchedule fs
-            JOIN Animal a ON fs.AnimalID = a.AnimalID
-            LEFT JOIN Staff s ON fs.StaffID = s.StaffID
-            WHERE fs.DeletedAt IS NULL AND a.DeletedAt IS NULL
-            ORDER BY fs.FeedTime
-        `);
+        const feedings = await pool.request().query(Q.healthReportFeedings);
 
         // Health metrics (all, with animal info)
-        const metrics = await pool.request().query(`
-            SELECT m.MetricID, m.AnimalID, m.RecordDate, m.ActivityLevel,
-                   m.Weight, m.WeightRangeLow, m.WeightRangeHigh,
-                   m.MedicalConditions, m.RecentTreatments, m.AppetiteStatus, m.Notes,
-                   a.Name AS AnimalName, a.Species, a.AnimalCode
-            FROM AnimalHealthMetrics m
-            JOIN Animal a ON m.AnimalID = a.AnimalID
-            WHERE m.DeletedAt IS NULL AND a.DeletedAt IS NULL
-            ORDER BY m.RecordDate DESC
-        `);
+        const metrics = await pool.request().query(Q.healthReportMetrics);
 
         // Health records (all, with animal + staff info)
-        const records = await pool.request().query(`
-            SELECT r.RecordID, r.AnimalID, r.CheckupDate, r.HealthScore, r.Notes, r.StaffID,
-                   a.Name AS AnimalName, a.Species, a.AnimalCode,
-                   s.FullName AS StaffName
-            FROM AnimalHealthRecord r
-            JOIN Animal a ON r.AnimalID = a.AnimalID
-            LEFT JOIN Staff s ON r.StaffID = s.StaffID
-            WHERE r.DeletedAt IS NULL AND a.DeletedAt IS NULL
-            ORDER BY r.CheckupDate DESC
-        `);
+        const records = await pool.request().query(Q.healthReportRecords);
 
         res.json({
             stats: stats.recordset[0],
@@ -410,14 +317,7 @@ router.get('/report/:animalId', async (req, res) => {
         // Animal base info
         const animalResult = await pool.request()
             .input('id', sql.Int, animalId)
-            .query(`
-                SELECT a.*, h.HabitatType, h.Size AS HabitatSize, e.ExhibitName, ar.AreaName
-                FROM Animal a
-                LEFT JOIN Habitat h ON a.HabitatID = h.HabitatID
-                LEFT JOIN Exhibit e ON h.ExhibitID = e.ExhibitID
-                LEFT JOIN Area ar ON e.AreaID = ar.AreaID
-                WHERE a.AnimalID = @id AND a.DeletedAt IS NULL
-            `);
+            .query(Q.animalBase);
         if (animalResult.recordset.length === 0) {
             return res.status(404).json({ error: 'Animal not found.' });
         }
@@ -426,46 +326,24 @@ router.get('/report/:animalId', async (req, res) => {
         // Health records
         const healthRecords = await pool.request()
             .input('id2', sql.Int, animalId)
-            .query(`
-                SELECT r.*, s.FullName AS StaffName
-                FROM AnimalHealthRecord r
-                LEFT JOIN Staff s ON r.StaffID = s.StaffID
-                WHERE r.AnimalID = @id2 AND r.DeletedAt IS NULL
-                ORDER BY r.CheckupDate DESC
-            `);
+            .query(Q.animalHealthRecords);
 
         // Health metrics
         const healthMetrics = await pool.request()
             .input('id3', sql.Int, animalId)
-            .query(`
-                SELECT * FROM AnimalHealthMetrics
-                WHERE AnimalID = @id3 AND DeletedAt IS NULL
-                ORDER BY RecordDate DESC
-            `);
+            .query(Q.animalHealthMetrics);
 
         // Keeper assignments
         const keepers = await pool.request()
             .input('id4', sql.Int, animalId)
-            .query(`
-                SELECT ka.*, s.FullName AS KeeperName, s.Role
-                FROM AnimalKeeperAssignment ka
-                JOIN Staff s ON ka.StaffID = s.StaffID
-                WHERE ka.AnimalID = @id4 AND ka.DeletedAt IS NULL
-                ORDER BY ka.StartDate DESC
-            `);
+            .query(Q.animalKeepers);
 
         // Feeding schedules
         let feedings = [];
         try {
             const feedResult = await pool.request()
                 .input('id5', sql.Int, animalId)
-                .query(`
-                    SELECT fs.*, s.FullName AS StaffName
-                    FROM FeedingSchedule fs
-                    LEFT JOIN Staff s ON fs.StaffID = s.StaffID
-                    WHERE fs.AnimalID = @id5 AND fs.DeletedAt IS NULL
-                    ORDER BY fs.FeedTime
-                `);
+                .query(Q.animalFeedings);
             feedings = feedResult.recordset;
         } catch { /* table may not exist */ }
 
@@ -474,9 +352,7 @@ router.get('/report/:animalId', async (req, res) => {
         try {
             const alertResult = await pool.request()
                 .input('id6', sql.Int, animalId)
-                .query(`
-                    SELECT * FROM HealthAlert WHERE AnimalID = @id6 ORDER BY CreatedAt DESC
-                `);
+                .query(Q.animalAlerts);
             alerts = alertResult.recordset;
         } catch { /* table may not exist */ }
 
@@ -498,15 +374,7 @@ router.get('/report/:animalId', async (req, res) => {
 router.get('/animals-list', async (req, res) => {
     try {
         const pool = await connectToDb();
-        const result = await pool.request().query(`
-            SELECT a.AnimalID, a.Name, a.Species, a.AnimalCode, a.Age, a.Gender, a.HealthStatus,
-                   ex.ExhibitName
-            FROM Animal a
-            LEFT JOIN Habitat h ON a.HabitatID = h.HabitatID
-            LEFT JOIN Exhibit ex ON h.ExhibitID = ex.ExhibitID
-            WHERE a.DeletedAt IS NULL
-            ORDER BY a.Species, a.Name
-        `);
+        const result = await pool.request().query(Q.animalsList);
         res.json(result.recordset);
     } catch (error) {
         console.error('Error fetching animals list:', error);
@@ -518,9 +386,7 @@ router.get('/animals-list', async (req, res) => {
 router.get('/staff-list', async (req, res) => {
     try {
         const pool = await connectToDb();
-        const result = await pool.request().query(`
-            SELECT StaffID, FullName, Role FROM Staff WHERE DeletedAt IS NULL ORDER BY FullName
-        `);
+        const result = await pool.request().query(Q.staffList);
         res.json(result.recordset);
     } catch (error) {
         console.error('Error fetching staff list:', error);
@@ -532,31 +398,9 @@ router.get('/staff-list', async (req, res) => {
 router.get('/meal-times', async (req, res) => {
     try {
         const pool = await connectToDb();
-        await pool.request().query(`
-            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='MealTimeConfig' AND xtype='U')
-            CREATE TABLE MealTimeConfig (
-                MealID   NVARCHAR(20) PRIMARY KEY,
-                MealLabel NVARCHAR(50) NOT NULL,
-                MealEmoji NVARCHAR(10) NOT NULL,
-                MealTime  NVARCHAR(5)  NOT NULL,
-                UpdatedAt DATETIME2,
-                UpdatedBy NVARCHAR(100)
-            )
-        `);
-        await pool.request().query(`
-            IF NOT EXISTS (SELECT 1 FROM MealTimeConfig)
-            BEGIN
-                INSERT INTO MealTimeConfig (MealID, MealLabel, MealEmoji, MealTime) VALUES
-                    ('breakfast', 'Breakfast', N'🌅', '07:00'),
-                    ('lunch',     'Lunch',     N'☀️', '12:00'),
-                    ('dinner',    'Dinner',    N'🌙', '18:00')
-            END
-        `);
-        const result = await pool.request().query(`
-            SELECT MealID AS id, MealLabel AS label, MealEmoji AS emoji, MealTime AS time
-            FROM MealTimeConfig
-            ORDER BY MealTime
-        `);
+        await pool.request().query(Q.ensureMealTimeTable);
+        await pool.request().query(Q.seedMealTimes);
+        const result = await pool.request().query(Q.getMealTimes);
         res.json(result.recordset);
     } catch (error) {
         console.error('Error fetching meal times:', error);
@@ -578,17 +422,9 @@ router.put('/meal-times', verifyToken, async (req, res) => {
                 .input('id',        sql.NVarChar(20),  meal.id)
                 .input('time',      sql.NVarChar(5),   meal.time)
                 .input('updatedBy', sql.NVarChar(100), req.user?.email || 'system')
-                .query(`
-                    UPDATE MealTimeConfig
-                    SET MealTime = @time, UpdatedAt = SYSUTCDATETIME(), UpdatedBy = @updatedBy
-                    WHERE MealID = @id
-                `);
+                .query(Q.updateMealTime);
         }
-        const result = await pool.request().query(`
-            SELECT MealID AS id, MealLabel AS label, MealEmoji AS emoji, MealTime AS time
-            FROM MealTimeConfig
-            ORDER BY MealTime
-        `);
+        const result = await pool.request().query(Q.getMealTimes);
         res.json(result.recordset);
     } catch (error) {
         console.error('Error updating meal times:', error);

@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Edit2, Plus, Trash2, Users, ChevronUp, ChevronDown, ChevronsUpDown, Copy } from 'lucide-react';
+import { Edit2, Plus, Trash2, Users, ChevronUp, ChevronDown, ChevronsUpDown, Copy, Calendar, Search } from 'lucide-react';
 import AdminModalForm from '../AdminModalForm';
 import AdminSelect from '../AdminSelect';
 import BirthDatePickerInput from '../BirthDatePickerInput';
+import StaffScheduling from './StaffScheduling';
 import { API_BASE_URL } from '../../../services/apiClient';
 import '../AdminTable.css';
 
@@ -29,6 +30,9 @@ const ManageStaff = () => {
   const [sortCol, setSortCol] = useState(null);
   const [sortDir, setSortDir] = useState('asc');
   const [ssnError, setSsnError] = useState('');
+  const [filterRole, setFilterRole] = useState('');
+  const [searchStaff, setSearchStaff] = useState('');
+  const [activeTab, setActiveTab] = useState('staff');
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -189,11 +193,67 @@ const ManageStaff = () => {
           <p className="admin-page-subtitle">{staffList.length} staff member{staffList.length !== 1 ? 's' : ''}</p>
         </div>
         <div className="admin-page-actions">
-          <button className="admin-btn-primary" onClick={() => handleOpenModal()}>
-            <Plus size={16} /> Add Staff
-          </button>
+          {activeTab === 'staff' && (
+            <>
+              <div className="admin-search-container">
+                <Search size={16} className="admin-search-icon" />
+                <input
+                  type="text"
+                  placeholder="Search staff..."
+                  value={searchStaff}
+                  onChange={e => setSearchStaff(e.target.value)}
+                  className="admin-search-input"
+                />
+              </div>
+              <select
+                value={filterRole}
+                onChange={e => setFilterRole(e.target.value)}
+                style={{ padding: '7px 12px', borderRadius: 8, border: '1px solid var(--adm-border)', background: 'var(--adm-bg-surface)', color: 'var(--adm-text-primary)', fontSize: '0.82rem', cursor: 'pointer', minWidth: 140 }}
+              >
+                <option value="">All Roles</option>
+                {ROLES.map(r => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+              </select>
+              <button className="admin-btn-primary" onClick={() => handleOpenModal()}>
+                <Plus size={16} /> Add Staff
+              </button>
+            </>
+          )}
         </div>
       </div>
+
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 0, marginBottom: 18, borderBottom: '1.5px solid var(--adm-border)' }}>
+        {[
+          { id: 'staff', label: 'Staff', icon: <Users size={15} /> },
+          { id: 'scheduling', label: 'Scheduling', icon: <Calendar size={15} /> },
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '10px 22px',
+              border: 'none',
+              borderBottom: activeTab === tab.id ? '2.5px solid var(--adm-accent)' : '2.5px solid transparent',
+              background: 'none',
+              color: activeTab === tab.id ? 'var(--adm-accent)' : 'var(--adm-text-muted)',
+              fontWeight: activeTab === tab.id ? 700 : 500,
+              fontSize: '0.88rem',
+              cursor: 'pointer',
+              transition: 'all 0.15s',
+            }}
+          >
+            {tab.icon} {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'scheduling' ? (
+        <StaffScheduling />
+      ) : (
+      <>
 
       {/* Table */}
       <div className="admin-table-container">
@@ -205,7 +265,6 @@ const ManageStaff = () => {
           <table className="admin-table">
             <thead>
               <tr>
-                <th>Staff ID</th>
                 <th data-sorted={sortCol === 'name' ? sortDir : undefined} onClick={() => { setSortDir(sortCol === 'name' && sortDir === 'asc' ? 'desc' : 'asc'); setSortCol('name'); }}>
                   Name {sortCol === 'name' ? (sortDir === 'asc' ? <ChevronUp size={13} className="sort-icon" /> : <ChevronDown size={13} className="sort-icon" />) : <ChevronsUpDown size={13} className="sort-icon" />}
                 </th>
@@ -218,7 +277,15 @@ const ManageStaff = () => {
               </tr>
             </thead>
             <tbody>
-              {[...staffList].sort((a, b) => {
+              {[...staffList].filter(s => {
+                if (filterRole && s.Role !== filterRole) return false;
+                if (searchStaff) {
+                  const q = searchStaff.toLowerCase();
+                  const full = `${s.FirstName} ${s.LastName}`.toLowerCase();
+                  return full.includes(q) || (s.Email || '').toLowerCase().includes(q) || (s.Role || '').toLowerCase().includes(q);
+                }
+                return true;
+              }).sort((a, b) => {
                 const dir = sortDir === 'asc' ? 1 : -1;
                 if (sortCol === 'name') return dir * (`${a.FirstName} ${a.LastName}`).localeCompare(`${b.FirstName} ${b.LastName}`);
                 if (sortCol === 'role') return dir * (a.Role || '').localeCompare(b.Role || '');
@@ -227,7 +294,6 @@ const ManageStaff = () => {
                 const colors = roleColors[staff.Role] || { bg: 'var(--adm-accent-dim)', color: 'var(--adm-accent)' };
                 return (
                   <tr key={staff.StaffID}>
-                    <td style={{ fontWeight: 600, color: 'var(--adm-text-primary)' }}>{staff.StaffID}</td>
                     <td style={{ color: 'var(--adm-text-primary)' }}>{staff.FirstName} {staff.LastName}</td>
                     <td>
                       <span style={{
@@ -351,6 +417,8 @@ const ManageStaff = () => {
           </div>
         )}
       </AdminModalForm>
+      </>
+      )}
     </div>
   );
 };

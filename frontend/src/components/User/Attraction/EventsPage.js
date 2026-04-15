@@ -564,34 +564,7 @@ const EventsPage = () => {
         />
       )}
 
-      {/* Newsletter Section */}
-      <section className="mx-auto max-w-7xl px-4 py-10 lg:px-8 mb-4">
-        <div className="relative overflow-hidden rounded-3xl bg-[#285c34] p-8 md:p-10 lg:p-12">
-          <div className="relative z-10 max-w-[600px]">
-            <h2 className="text-2xl md:text-3xl font-bold text-white tracking-tight m-0">
-              Never Miss an Event
-            </h2>
-            <p className="mt-4 text-white/90 leading-relaxed text-sm md:text-base pr-4">
-              Subscribe to our newsletter and be the first to know about upcoming events,
-              exclusive member previews, and special offers.
-            </p>
-            <form className="mt-8 flex flex-col sm:flex-row gap-4 max-w-md" onSubmit={(e) => e.preventDefault()}>
-              <input 
-                type="email"
-                placeholder="Enter your email" 
-                className="flex-[2] rounded-md bg-white/10 border border-white/20 px-4 py-2.5 text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-white/30 h-10 md:h-11 text-sm md:text-base"
-                required
-              />
-              <button 
-                type="submit" 
-                className="shrink-0 rounded-md bg-[#f4ece1] text-[#2c2c2c] hover:bg-[#e3dcd1] px-5 py-2.5 font-semibold transition-colors h-10 md:h-11 border-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 text-sm md:text-base"
-              >
-                Subscribe
-              </button>
-            </form>
-          </div>
-        </div>
-      </section>
+
 
     </div>
   );

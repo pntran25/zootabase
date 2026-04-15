@@ -3,6 +3,7 @@ const router = express.Router();
 const sql = require('mssql');
 const { connectToDb } = require('../services/admin');
 const { optionalAuth, verifyToken } = require('../middleware/authMiddleware');
+const Q = require('../queries/productQueries');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -31,7 +32,7 @@ const upload = multer({
 router.get('/api/products', async (req, res) => {
     try {
         const pool = await connectToDb();
-        const result = await pool.request().query('SELECT * FROM Product WHERE DeletedAt IS NULL');
+        const result = await pool.request().query(Q.getAll);
         const mappedResult = result.recordset.map(row => ({
             id: row.ProductID.toString(),
             name: row.ProductName,
@@ -54,13 +55,7 @@ router.get('/api/products', async (req, res) => {
 router.get('/api/products/low-stock', async (req, res) => {
     try {
         const pool = await connectToDb();
-        const result = await pool.request().query(`
-            SELECT ProductID, ProductName, Category, StockQuantity, LowStockThreshold, ImageUrl
-            FROM Product
-            WHERE DeletedAt IS NULL
-              AND StockQuantity <= LowStockThreshold
-            ORDER BY StockQuantity ASC
-        `);
+        const result = await pool.request().query(Q.getLowStock);
         res.json(result.recordset.map(row => ({
             id: row.ProductID.toString(),
             name: row.ProductName,
@@ -88,13 +83,7 @@ router.post('/api/products', optionalAuth, async (req, res) => {
             .input('stockQuantity', sql.Int, parseInt(stockQuantity, 10))
             .input('lowStockThreshold', sql.Int, parseInt(lowStockThreshold ?? 10, 10))
             .input('createdBy', sql.NVarChar, adminName)
-            .query(`
-                DECLARE @Out TABLE (ProductID INT);
-                INSERT INTO Product (ProductName, Category, Price, StockQuantity, LowStockThreshold, CreatedBy)
-                OUTPUT INSERTED.ProductID INTO @Out
-                VALUES (@name, @category, @price, @stockQuantity, @lowStockThreshold, @createdBy);
-                SELECT ProductID FROM @Out;
-            `);
+            .query(Q.insert);
         res.status(201).json({ id: result.recordset[0].ProductID.toString(), ...req.body });
     } catch (error) {
         console.error('Error creating product:', error);
@@ -116,14 +105,7 @@ router.put('/api/products/:id', optionalAuth, async (req, res) => {
             .input('stockQuantity', sql.Int, parseInt(stockQuantity, 10))
             .input('lowStockThreshold', sql.Int, parseInt(lowStockThreshold ?? 10, 10))
             .input('updatedBy', sql.NVarChar, adminName)
-            .query(`
-                UPDATE Product
-                SET ProductName = @name, Category = @category,
-                    Price = @price, StockQuantity = @stockQuantity,
-                    LowStockThreshold = @lowStockThreshold, UpdatedAt = SYSUTCDATETIME(),
-                    UpdatedBy = @updatedBy
-                WHERE ProductID = @id
-            `);
+            .query(Q.update);
         res.json({ success: true });
     } catch (error) {
         console.error('Error updating product:', error);
@@ -140,7 +122,7 @@ router.post('/api/products/:id/image', verifyToken, upload.single('image'), asyn
         await pool.request()
             .input('id', sql.Int, parseInt(req.params.id, 10))
             .input('imageUrl', sql.NVarChar, imageUrl)
-            .query('UPDATE Product SET ImageUrl = @imageUrl, UpdatedAt = SYSUTCDATETIME() WHERE ProductID = @id');
+            .query(Q.updateImage);
         res.json({ message: 'Image uploaded successfully', imageUrl });
     } catch (error) {
         console.error('Error uploading product image:', error);
@@ -156,7 +138,7 @@ router.delete('/api/products/:id', optionalAuth, async (req, res) => {
         await pool.request()
             .input('id', sql.Int, parseInt(req.params.id, 10))
             .input('deletedBy', sql.NVarChar, adminName)
-            .query('UPDATE Product SET DeletedAt = SYSUTCDATETIME(), DeletedBy = @deletedBy WHERE ProductID = @id');
+            .query(Q.softDelete);
         res.json({ success: true });
     } catch (error) {
         console.error('Error deleting product:', error);

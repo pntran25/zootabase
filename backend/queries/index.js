@@ -1,0 +1,25 @@
+// ── Central barrel export for all query modules ────────────────────
+
+module.exports = {
+  analytics:          require('./analyticsQueries'),
+  animalHealth:       require('./animalHealthQueries'),
+  animals:            require('./animalQueries'),
+  attractions:        require('./attractionQueries'),
+  auth:               require('./authQueries'),
+  dashboard:          require('./dashboardQueries'),
+  events:             require('./eventQueries'),
+  exhibits:           require('./exhibitQueries'),
+  feedback:           require('./feedbackQueries'),
+  feeding:            require('./feedingQueries'),
+  keeperAssignments:  require('./keeperAssignmentQueries'),
+  maintenance:        require('./maintenanceQueries'),
+  membership:         require('./membershipQueries'),
+  orders:             require('./orderQueries'),
+  products:           require('./productQueries'),
+  profile:            require('./profileQueries'),
+  speciesCodes:       require('./speciesCodeQueries'),
+  staff:              require('./staffQueries'),
+  staffSchedules:     require('./staffScheduleQueries'),
+  tickets:            require('./ticketQueries'),
+  zooStats:           require('./zooStatsQueries'),
+};
