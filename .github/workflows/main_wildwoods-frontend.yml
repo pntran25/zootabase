@@ -72,6 +72,7 @@ jobs:
 
       - name: Stabilize app and deploy
         run: |
+          set +e  # disable exit-on-error for retry loops
           RG=$(az webapp list --query "[?name=='wildwoods-frontend'].resourceGroup | [0]" -o tsv)
           SCM="https://wildwoods-frontend-ewdsetbrhzf2bwac.scm.eastus2-01.azurewebsites.net"
 
@@ -83,12 +84,13 @@ jobs:
             --parent sites/wildwoods-frontend \
             --set properties.allow=true
 
-          echo "=== Clearing startup command to stop crash loop ==="
+          echo "=== Setting safe placeholder startup command ==="
           az webapp config set -n wildwoods-frontend -g "$RG" \
-            --startup-file ""
+            --startup-file "node -e \"require('http').createServer((q,s)=>{s.writeHead(200);s.end('deploying')}).listen(process.env.PORT||8080)\""
 
-          echo "=== Starting app ==="
-          az webapp start -n wildwoods-frontend -g "$RG" || true
+          echo "=== Restarting app with safe command ==="
+          az webapp restart -n wildwoods-frontend -g "$RG"
+          sleep 30
 
           echo "=== Waiting for Kudu ==="
           CREDS=$(az webapp deployment list-publishing-credentials \
@@ -96,13 +98,22 @@ jobs:
           USER=$(echo "$CREDS" | jq -r .publishingUserName)
           PASS=$(echo "$CREDS" | jq -r .publishingPassword)
 
-          for i in $(seq 1 12); do
+          KUDU_READY=false
+          for i in $(seq 1 20); do
             HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
-              -u "$USER:$PASS" "$SCM/api/settings" --max-time 10)
+              -u "$USER:$PASS" "$SCM/api/settings" --max-time 15)
             echo "  Kudu check $i: $HTTP"
-            [ "$HTTP" = "200" ] && break
+            if [ "$HTTP" = "200" ]; then
+              KUDU_READY=true
+              break
+            fi
             sleep 15
           done
+
+          if [ "$KUDU_READY" != "true" ]; then
+            echo "FATAL: Kudu never became ready"
+            exit 1
+          fi
 
           echo "=== Clearing deployment locks ==="
           curl -s -o /dev/null -w "locks: %{http_code}\n" \
@@ -116,6 +127,7 @@ jobs:
                 "$SCM/api/deployments/$id" || true
             done
 
+          set -e  # re-enable exit-on-error for deploy
           echo "=== Deploying via /api/zip ==="
           zip -r /tmp/app.zip .
           HTTP_CODE=$(curl -s -o /tmp/deploy_out.txt -w "%{http_code}" \
