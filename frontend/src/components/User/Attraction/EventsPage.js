@@ -151,9 +151,9 @@ function FeaturedEventCard({ event, onBookNow }) {
           <div className="flex items-center justify-between text-xs mb-1.5">
             <span className={cn(
               "font-medium",
-              isAlmostFull ? "text-destructive" : "text-muted-foreground"
+              event.spotsLeft === 0 ? "text-destructive" : isAlmostFull ? "text-destructive" : "text-muted-foreground"
             )}>
-              {isAlmostFull ? "Almost full!" : `${event.spotsLeft} spots left`}
+              {event.spotsLeft === 0 ? "Sold Out" : isAlmostFull ? `Almost full! ${event.spotsLeft} spots left` : `${event.spotsLeft} spots left`}
             </span>
             <span className="text-muted-foreground">{event.totalSpots} total</span>
           </div>
@@ -226,8 +226,8 @@ function EventGridCard({ event, onBookNow }) {
 
         <div className="mt-auto pt-4">
           <div className="flex items-center justify-between text-xs mb-1">
-            <span className={cn("font-medium", isAlmostFull ? "text-destructive" : "text-muted-foreground")}>
-              {isAlmostFull ? "Almost full!" : `${event.spotsLeft} spots left`}
+            <span className={cn("font-medium", event.spotsLeft === 0 ? "text-destructive" : isAlmostFull ? "text-destructive" : "text-muted-foreground")}>
+              {event.spotsLeft === 0 ? "Sold Out" : isAlmostFull ? `Almost full! ${event.spotsLeft} spots left` : `${event.spotsLeft} spots left`}
             </span>
             <span className="text-muted-foreground">{event.totalSpots} total</span>
           </div>
@@ -314,9 +314,9 @@ function EventListCard({ event, onBookNow }) {
         
         <div className="mt-5 pt-4 border-t border-border">
           <div className="flex items-center justify-between text-xs mb-1.5">
-            <span className={cn("font-medium flex items-center gap-1.5", isAlmostFull ? "text-destructive" : "text-muted-foreground")}>
+            <span className={cn("font-medium flex items-center gap-1.5", event.spotsLeft === 0 ? "text-destructive" : isAlmostFull ? "text-destructive" : "text-muted-foreground")}>
               <Users className="h-3.5 w-3.5" />
-              {isAlmostFull ? `Only ${event.spotsLeft} spots left!` : `${event.spotsLeft} spots available`}
+              {event.spotsLeft === 0 ? "Sold Out" : isAlmostFull ? `Almost full! ${event.spotsLeft} spots left` : `${event.spotsLeft} spots available`}
             </span>
             <span className="text-muted-foreground">{event.totalSpots} total</span>
           </div>
@@ -347,6 +347,7 @@ const EventsPage = () => {
   const [isLoading, setIsLoading]     = useState(true);
   const [checkoutEvent, setCheckoutEvent] = useState(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [sortBy, setSortBy] = useState('date-asc');
 
   const loadEvents = async () => {
     try {
@@ -371,13 +372,26 @@ const EventsPage = () => {
     return ["All Events", ...unique];
   }, [events]);
 
-  const filteredEvents = events.filter(event => {
-    const matchesCategory = selectedCategory === "All Events" || event.category === selectedCategory
-    const matchesSearch = (event.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (event.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (event.location || '').toLowerCase().includes(searchQuery.toLowerCase())
-    return matchesCategory && matchesSearch
-  })
+  const filteredEvents = (() => {
+    const filtered = events.filter(event => {
+      const matchesCategory = selectedCategory === "All Events" || event.category === selectedCategory;
+      const matchesSearch = (event.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (event.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (event.location || '').toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesCategory && matchesSearch;
+    });
+    return [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case 'date-asc':    return new Date(a.date) - new Date(b.date);
+        case 'date-desc':   return new Date(b.date) - new Date(a.date);
+        case 'name-az':     return (a.title || '').localeCompare(b.title || '');
+        case 'price-asc':   return Number(a.price || 0) - Number(b.price || 0);
+        case 'price-desc':  return Number(b.price || 0) - Number(a.price || 0);
+        case 'spots':       return b.spotsLeft - a.spotsLeft;
+        default: return 0;
+      }
+    });
+  })();
 
   // The original component showed Featured first, then Upcoming. 
   // Let's reproduce that mapping.
@@ -471,6 +485,21 @@ const EventsPage = () => {
                   value={selectedCategory}
                   onChange={setSelectedCategory}
                   options={categories.map(cat => ({ value: cat, label: cat }))}
+                />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', minWidth: 180 }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--muted-foreground)' }}>Sort By</label>
+                <CustomDropdown
+                  value={sortBy}
+                  onChange={setSortBy}
+                  options={[
+                    { value: 'date-asc',   label: 'Date: Soonest First' },
+                    { value: 'date-desc',  label: 'Date: Latest First' },
+                    { value: 'name-az',    label: 'Name A–Z' },
+                    { value: 'price-asc',  label: 'Price: Low → High' },
+                    { value: 'price-desc', label: 'Price: High → Low' },
+                    { value: 'spots',      label: 'Most Spots Available' },
+                  ]}
                 />
               </div>
             </div>

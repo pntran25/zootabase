@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Lock, X, Users, Minus, Plus } from 'lucide-react';
 import CheckoutDatePicker from './CheckoutDatePicker';
 import { toast } from 'sonner';
 import { apiPost } from '../../../services/apiClient';
+import { API_BASE_URL } from '../../../services/apiClient';
 import '../../User/Product/CheckoutModal.css';
 import './EventCheckoutModal.css';
 
@@ -58,6 +59,26 @@ const EventCheckoutModal = ({ isOpen, onClose, event, onOrderPlaced }) => {
   const [selectedDate, setSelectedDate] = useState('');
   const [quantity, setQuantity]         = useState(1);
   const [placing, setPlacing]           = useState(false);
+  const [dateSpots, setDateSpots]       = useState(null); // { capacity, booked, remaining }
+
+  // Fetch live spots for the selected date
+  useEffect(() => {
+    if (!event?.id || !selectedDate) { setDateSpots(null); return; }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/events/${event.id}/spots?date=${selectedDate}`);
+        const data = await res.json();
+        if (!cancelled) setDateSpots(data);
+      } catch {
+        if (!cancelled) setDateSpots(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [event?.id, selectedDate]);
+
+  // Reset quantity when date changes
+  useEffect(() => { setQuantity(1); }, [selectedDate]);
 
   const setC = (k, v) => setContact(p => ({ ...p, [k]: v }));
   const setK = (k, v) => setCard(p => ({ ...p, [k]: v }));
@@ -69,13 +90,16 @@ const EventCheckoutModal = ({ isOpen, onClose, event, onOrderPlaced }) => {
 
   const todayISO   = new Date().toISOString().split('T')[0];
   const minDateISO = event?.date > todayISO ? event.date : todayISO;
-  const maxQty     = Math.min(10, event?.spotsLeft || 10);
+  const spotsRemaining = dateSpots ? dateSpots.remaining : (event?.spotsLeft ?? 10);
+  const isSoldOut = dateSpots !== null && spotsRemaining <= 0;
+  const maxQty     = Math.min(10, spotsRemaining);
   const unitPrice  = Number(event?.price || 0);
   const subtotal   = unitPrice * quantity;
   const total      = subtotal;
 
   const handlePlace = async () => {
     if (!selectedDate) { toast.error('Please select a visit date.'); return; }
+    if (isSoldOut) { toast.error(`This event is sold out for ${fmtDate(selectedDate)}. Please select a different date.`); return; }
     if (!contact.email || !contact.firstName || !contact.lastName || !contact.address1 || !contact.city || !contact.state || !contact.zip) {
       toast.error('Please fill in all required contact fields.'); return;
     }
@@ -184,7 +208,7 @@ const EventCheckoutModal = ({ isOpen, onClose, event, onOrderPlaced }) => {
                   </button>
                   <span className="eco-qty-hint">
                     <Users size={12} style={{ marginRight: 3, verticalAlign: 'middle' }} />
-                    {event.spotsLeft} spots left
+                    {!selectedDate ? 'Select a date' : isSoldOut ? <span style={{ color: '#ef4444', fontWeight: 600 }}>Sold out for this date</span> : `${spotsRemaining} spots left`}
                   </span>
                 </div>
               </div>
@@ -358,7 +382,13 @@ const EventCheckoutModal = ({ isOpen, onClose, event, onOrderPlaced }) => {
               </div>
             </div>
 
-            <button className="co-place-btn" onClick={handlePlace} disabled={placing}>
+            {isSoldOut && selectedDate && (
+              <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '10px 14px', marginBottom: 12, textAlign: 'center' }}>
+                <p style={{ color: '#ef4444', fontWeight: 600, fontSize: '0.85rem', margin: 0 }}>⚠️ Sold out for {fmtDate(selectedDate)}</p>
+                <p style={{ color: '#999', fontSize: '0.78rem', margin: '4px 0 0' }}>Try selecting a different date above.</p>
+              </div>
+            )}
+            <button className="co-place-btn" onClick={handlePlace} disabled={placing || isSoldOut}>
               {placing ? 'PLACING BOOKING...' : 'CONFIRM BOOKING'}
             </button>
             <p className="co-secure-note">Transactions are secure and encrypted</p>

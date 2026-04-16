@@ -204,7 +204,7 @@ const animalAlerts = `
 // ── Animal List (for health pages) ──
 
 const animalsList = `
-  SELECT a.AnimalID, a.Name, a.Species, a.AnimalCode, a.Age, a.Gender, a.HealthStatus,
+  SELECT a.AnimalID, a.Name, a.Species, a.AnimalCode, a.Age, a.Gender, a.HealthStatus, a.DateArrived,
          ex.ExhibitName
   FROM Animal a
   LEFT JOIN Habitat h ON a.HabitatID = h.HabitatID

@@ -19,7 +19,7 @@ const Footer = () => {
           </p>
           <div className="ww-footer-social">
             <a href="#facebook" aria-label="Facebook"><Facebook size={18} /></a>
-            <a href="#instagram" aria-label="Instagram"><Instagram size={18} /></a>
+            <a href="https://www.instagram.com/zootabase.zoo?igsh=a2J1YnJmM3BicmJq&utm_source=qr" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><Instagram size={18} /></a>
             <a href="#twitter" aria-label="Twitter"><Twitter size={18} /></a>
             <a href="#youtube" aria-label="Youtube"><Youtube size={18} /></a>
           </div>

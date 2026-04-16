@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
-import { Clock, PawPrint, ChevronUp, ChevronDown, ChevronsUpDown, Users, ChevronRight, Calendar, MapPin, Download } from 'lucide-react';
+import { Clock, PawPrint, ChevronUp, ChevronDown, ChevronsUpDown, Users, ChevronRight, Calendar, MapPin, Download, X } from 'lucide-react';
 import AdminSelect from '../AdminSelect';
 import AdminDatePicker from '../AdminDatePicker';
 import { API_BASE_URL } from '../../../services/apiClient';
@@ -61,7 +61,7 @@ const StaffReport = () => {
   const [schedules, setSchedules] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filterRole, setFilterRole] = useState('');
+  const [filterRoles, setFilterRoles] = useState([]); // multi-select
   const [filterStaff, setFilterStaff] = useState('');
   const [sortCol, setSortCol] = useState('name');
   const [sortDir, setSortDir] = useState('asc');
@@ -69,6 +69,13 @@ const StaffReport = () => {
   const [dateFilter, setDateFilter] = useState('custom');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
+  // Extended filters
+  const [shiftMin, setShiftMin] = useState('');
+  const [shiftMax, setShiftMax] = useState('');
+  const [hoursMin, setHoursMin] = useState('');
+  const [hoursMax, setHoursMax] = useState('');
+  const [filterHasKeeper, setFilterHasKeeper] = useState(false);
+  const [filterStatus, setFilterStatus] = useState(''); // '' | 'active' | 'inactive'
 
   const getYMD = (d) => {
     const y = d.getFullYear();
@@ -183,7 +190,7 @@ const StaffReport = () => {
   const reportRows = useMemo(() => {
     return staffList
       .filter(s => {
-        if (filterRole && s.Role !== filterRole) return false;
+        if (filterRoles.length > 0 && !filterRoles.includes(s.Role)) return false;
         if (filterStaff && String(s.StaffID) !== filterStaff) return false;
         return true;
       })
@@ -192,7 +199,6 @@ const StaffReport = () => {
         const keeperAssigns = staffAssignmentsMap[s.StaffID] || [];
         const activeAssigns = keeperAssigns.filter(a => !a.EndDate);
         const staffShifts = staffSchedulesMap[s.StaffID] || [];
-        // Compute avg hours per shift
         const avgHours = hours.shiftCount > 0 ? Math.round(hours.totalHours / hours.shiftCount * 10) / 10 : 0;
         return {
           ...s,
@@ -206,6 +212,24 @@ const StaffReport = () => {
           shifts: staffShifts,
         };
       })
+      .filter(row => {
+        if (shiftMin !== '' && row.shiftCount < Number(shiftMin)) return false;
+        if (shiftMax !== '' && row.shiftCount > Number(shiftMax)) return false;
+        if (hoursMin !== '' && row.totalHours < Number(hoursMin)) return false;
+        if (hoursMax !== '' && row.totalHours > Number(hoursMax)) return false;
+        if (filterHasKeeper && row.activeAssignments.length === 0) return false;
+        if (filterStatus === 'active' && row.IsActive === false) return false;
+        if (filterStatus === 'inactive' && row.IsActive !== false) return false;
+        if (dateFrom && row.HireDate) {
+          const hd = row.HireDate.includes('T') ? row.HireDate.split('T')[0] : row.HireDate;
+          if (hd < dateFrom) return false;
+        }
+        if (dateTo && row.HireDate) {
+          const hd = row.HireDate.includes('T') ? row.HireDate.split('T')[0] : row.HireDate;
+          if (hd > dateTo) return false;
+        }
+        return true;
+      })
       .sort((a, b) => {
         const dir = sortDir === 'asc' ? 1 : -1;
         if (sortCol === 'name') return dir * a.name.localeCompare(b.name);
@@ -213,9 +237,17 @@ const StaffReport = () => {
         if (sortCol === 'hours') return dir * (a.totalHours - b.totalHours);
         if (sortCol === 'shifts') return dir * (a.shiftCount - b.shiftCount);
         if (sortCol === 'assignments') return dir * (a.activeAssignments.length - b.activeAssignments.length);
+        if (sortCol === 'hireDate') {
+          const tA = a.HireDate ? new Date(a.HireDate).getTime() : 0;
+          const tB = b.HireDate ? new Date(b.HireDate).getTime() : 0;
+          return dir * (tA - tB);
+        }
         return 0;
       });
-  }, [staffList, staffHoursMap, staffAssignmentsMap, staffSchedulesMap, filterRole, filterStaff, sortCol, sortDir]);
+  }, [staffList, staffHoursMap, staffAssignmentsMap, staffSchedulesMap, filterRoles, filterStaff, sortCol, sortDir, shiftMin, shiftMax, hoursMin, hoursMax, filterHasKeeper, filterStatus, dateFrom, dateTo]);
+
+  const activeStaffFilterCount = [filterRoles.length > 0, !!filterStaff, shiftMin !== '', shiftMax !== '', hoursMin !== '', hoursMax !== '', filterHasKeeper, !!filterStatus].filter(Boolean).length;
+  const resetStaffFilters = () => { setFilterRoles([]); setFilterStaff(''); setShiftMin(''); setShiftMax(''); setHoursMin(''); setHoursMax(''); setFilterHasKeeper(false); setFilterStatus(''); };
 
   const toggleSort = (col) => {
     if (sortCol === col) {
@@ -251,9 +283,9 @@ const StaffReport = () => {
   const totalAllAssignments = reportRows.reduce((sum, r) => sum + r.totalAssignments, 0);
 
   const filteredStaffList = useMemo(() => {
-    if (!filterRole) return staffList;
-    return staffList.filter(s => s.Role === filterRole);
-  }, [staffList, filterRole]);
+    if (filterRoles.length === 0) return staffList;
+    return staffList.filter(s => filterRoles.includes(s.Role));
+  }, [staffList, filterRoles]);
 
   if (loading) return <div className="admin-page"><div className="admin-table-loading">Loading report data...</div></div>;
 
@@ -304,15 +336,23 @@ const StaffReport = () => {
         </button>
       </div>
 
-      {/* Filters */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
-        <AdminSelect
-          value={filterRole}
-          onChange={val => { setFilterRole(val); setFilterStaff(''); }}
-          options={[{ value: '', label: 'All Roles' }, ...ROLES]}
-          placeholder="All Roles"
-          width={140}
-        />
+      {/* Filters Row 1: role chips + staff select + reset + date filters */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+        {/* Role chips */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: 2 }}>Role</span>
+          {ROLES.map(r => {
+            const rc = roleColors[r] || { bg: 'var(--adm-accent-dim)', color: 'var(--adm-accent)' };
+            const active = filterRoles.includes(r);
+            return (
+              <button key={r} onClick={() => setFilterRoles(prev => prev.includes(r) ? prev.filter(x => x !== r) : [...prev, r])}
+                style={{ padding: '3px 10px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', border: `1px solid ${active ? rc.color : 'var(--adm-border)'}`, background: active ? rc.bg : 'transparent', color: active ? rc.color : 'var(--adm-text-secondary)', transition: 'all 0.15s' }}>
+                {r}
+              </button>
+            );
+          })}
+        </div>
+        <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
         <AdminSelect
           value={filterStaff}
           onChange={val => setFilterStaff(val)}
@@ -321,23 +361,19 @@ const StaffReport = () => {
           searchable
           width={200}
         />
+        {activeStaffFilterCount > 0 && (
+          <button onClick={resetStaffFilters}
+            style={{ padding: '5px 12px', borderRadius: 6, border: '1px solid rgba(239,68,68,0.4)', background: 'rgba(239,68,68,0.08)', color: '#ef4444', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <X size={12} /> Reset
+            <span style={{ background: '#ef4444', color: '#fff', borderRadius: 10, padding: '0 6px', fontSize: '0.68rem', marginLeft: 2 }}>{activeStaffFilterCount}</span>
+          </button>
+        )}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
           {dateFilter === 'custom' && (
             <>
-              <AdminDatePicker
-                value={customStart}
-                onChange={setCustomStart}
-                placeholder="Start date"
-                maxDate={customEnd || TODAY}
-              />
+              <AdminDatePicker value={customStart} onChange={setCustomStart} placeholder="Start date" maxDate={customEnd || TODAY} />
               <span style={{ color: 'var(--adm-text-secondary)', fontSize: '0.82rem' }}>to</span>
-              <AdminDatePicker
-                value={customEnd}
-                onChange={setCustomEnd}
-                placeholder="End date"
-                minDate={customStart || undefined}
-                maxDate={TODAY}
-              />
+              <AdminDatePicker value={customEnd} onChange={setCustomEnd} placeholder="End date" minDate={customStart || undefined} maxDate={TODAY} />
             </>
           )}
           <AdminSelect
@@ -351,6 +387,53 @@ const StaffReport = () => {
               { value: 'custom', label: 'Custom Range' },
             ]}
           />
+        </div>
+      </div>
+
+      {/* Filters Row 2: advanced range filters */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap', padding: '10px 14px', background: 'var(--adm-bg-surface)', border: '1px solid var(--adm-border)', borderRadius: 8 }}>
+        {/* Shift Count Range */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Shifts</span>
+          <input type="number" min="0" placeholder="Min" value={shiftMin} onChange={e => setShiftMin(e.target.value)}
+            style={{ width: 52, padding: '4px 7px', borderRadius: 6, border: '1px solid var(--adm-border)', background: 'var(--adm-bg)', color: 'var(--adm-text-primary)', fontSize: '0.78rem' }} />
+          <span style={{ color: 'var(--adm-text-muted)', fontSize: '0.75rem' }}>–</span>
+          <input type="number" min="0" placeholder="Max" value={shiftMax} onChange={e => setShiftMax(e.target.value)}
+            style={{ width: 52, padding: '4px 7px', borderRadius: 6, border: '1px solid var(--adm-border)', background: 'var(--adm-bg)', color: 'var(--adm-text-primary)', fontSize: '0.78rem' }} />
+        </div>
+
+        <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+
+        {/* Hours Range */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Hours</span>
+          <input type="number" min="0" placeholder="Min" value={hoursMin} onChange={e => setHoursMin(e.target.value)}
+            style={{ width: 56, padding: '4px 7px', borderRadius: 6, border: '1px solid var(--adm-border)', background: 'var(--adm-bg)', color: 'var(--adm-text-primary)', fontSize: '0.78rem' }} />
+          <span style={{ color: 'var(--adm-text-muted)', fontSize: '0.75rem' }}>–</span>
+          <input type="number" min="0" placeholder="Max" value={hoursMax} onChange={e => setHoursMax(e.target.value)}
+            style={{ width: 56, padding: '4px 7px', borderRadius: 6, border: '1px solid var(--adm-border)', background: 'var(--adm-bg)', color: 'var(--adm-text-primary)', fontSize: '0.78rem' }} />
+          <span style={{ fontSize: '0.72rem', color: 'var(--adm-text-muted)' }}>hrs</span>
+        </div>
+
+        <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+
+        {/* Has Keeper Assignments */}
+        <button onClick={() => setFilterHasKeeper(p => !p)}
+          style={{ padding: '3px 12px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', border: `1px solid ${filterHasKeeper ? '#10b981' : 'var(--adm-border)'}`, background: filterHasKeeper ? 'rgba(16,185,129,0.15)' : 'transparent', color: filterHasKeeper ? '#10b981' : 'var(--adm-text-secondary)', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 5 }}>
+          🐾 Has Keeper Assignments
+        </button>
+
+        <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+
+        {/* Staff Status */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</span>
+          {[['','All'],['active','Active'],['inactive','Inactive']].map(([val, lbl]) => (
+            <button key={val} onClick={() => setFilterStatus(val)}
+              style={{ padding: '3px 10px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', border: `1px solid ${filterStatus === val ? 'var(--adm-accent)' : 'var(--adm-border)'}`, background: filterStatus === val ? 'var(--adm-accent-dim)' : 'transparent', color: filterStatus === val ? 'var(--adm-accent)' : 'var(--adm-text-secondary)', transition: 'all 0.15s' }}>
+              {lbl}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -387,6 +470,7 @@ const StaffReport = () => {
                 <th style={{ width: 36 }}></th>
                 <SortHeader col="name">Employee</SortHeader>
                 <SortHeader col="role">Role</SortHeader>
+                <SortHeader col="hireDate">Hire Date</SortHeader>
                 <th>Email</th>
                 <th>Phone</th>
                 <SortHeader col="shifts">Shifts</SortHeader>
@@ -398,7 +482,7 @@ const StaffReport = () => {
             <tbody>
               {reportRows.length === 0 ? (
                 <tr className="no-hover">
-                  <td colSpan={9} style={{ textAlign: 'center', padding: 32, color: 'var(--adm-text-muted)' }}>
+                  <td colSpan={10} style={{ textAlign: 'center', padding: 32, color: 'var(--adm-text-muted)' }}>
                     No staff members found matching your filters.
                   </td>
                 </tr>
@@ -428,6 +512,7 @@ const StaffReport = () => {
                           {row.Role}
                         </span>
                       </td>
+                      <td style={{ color: 'var(--adm-text-secondary)', fontSize: '0.82rem', fontWeight: 600 }}>{formatDate(row.HireDate)}</td>
                       <td style={{ color: 'var(--adm-text-secondary)', fontSize: '0.82rem' }}>{row.Email || '—'}</td>
                       <td style={{ color: 'var(--adm-text-secondary)', fontSize: '0.82rem' }}>{row.ContactNumber || '—'}</td>
                       <td style={{ textAlign: 'center', fontWeight: 600, fontSize: '0.88rem' }}>
@@ -462,7 +547,7 @@ const StaffReport = () => {
                     /* ── Expanded detail panel ── */
                     isExpanded && (
                       <tr key={`${row.StaffID}-detail`} className="no-hover">
-                        <td colSpan={9} style={{ padding: 0, background: 'var(--adm-bg-surface)' }}>
+                        <td colSpan={10} style={{ padding: 0, background: 'var(--adm-bg-surface)' }}>
                           <div style={{ padding: '14px 20px 18px 44px', display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'flex-start' }}>
 
                             {/* Shift Breakdown */}
@@ -583,7 +668,7 @@ const StaffReport = () => {
               <tfoot>
                 <tr style={{ background: 'var(--adm-bg-surface-2)', fontWeight: 700, fontSize: '0.82rem' }}>
                   <td></td>
-                  <td colSpan={4} style={{ textAlign: 'right', padding: '10px 12px', color: 'var(--adm-text-secondary)' }}>Totals</td>
+                  <td colSpan={5} style={{ textAlign: 'right', padding: '10px 12px', color: 'var(--adm-text-secondary)' }}>Totals</td>
                   <td style={{ textAlign: 'center', color: 'var(--adm-text-primary)' }}>{totalShifts}</td>
                   <td style={{ textAlign: 'center', color: 'var(--adm-text-primary)' }}>{totalHours.toFixed(1)} hrs</td>
                   <td></td>

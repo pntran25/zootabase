@@ -216,6 +216,27 @@ router.post('/api/events/:id/image', verifyToken, upload.single('image'), async 
     }
 });
 
+// GET spots remaining for a specific date (used by checkout modal)
+router.get('/api/events/:id/spots', async (req, res) => {
+    try {
+        const { date } = req.query;
+        if (!date) return res.status(400).json({ error: 'date query param required.' });
+        const pool = await connectToDb();
+        const result = await pool.request()
+            .input('evId', sql.Int, parseInt(req.params.id, 10))
+            .input('bookDate', sql.Date, date)
+            .query(Q.spotsForDate);
+        if (!result.recordset.length) return res.status(404).json({ error: 'Event not found.' });
+        const row = result.recordset[0];
+        const capacity = row.Capacity || 0;
+        const booked = Number(row.SpotsBooked) || 0;
+        res.json({ capacity, booked, remaining: Math.max(0, capacity - booked) });
+    } catch (error) {
+        console.error('Error fetching event spots:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // POST create event booking (public checkout)
 router.post('/api/event-bookings', async (req, res) => {
     try {
@@ -234,9 +255,10 @@ router.post('/api/event-bookings', async (req, res) => {
 
         const pool = await connectToDb();
 
-        // Fetch event to validate date range + get price + check capacity
+        // Fetch event to validate date range + get price + check capacity for this specific date
         const evRes = await pool.request()
             .input('evId', sql.Int, parseInt(eventId, 10))
+            .input('bookDate', sql.Date, bookingDate)
             .query(Q.validateEvent);
         if (!evRes.recordset.length) return res.status(404).json({ error: 'Event not found.' });
 
@@ -248,8 +270,11 @@ router.post('/api/event-bookings', async (req, res) => {
         }
 
         const remaining = (ev.Capacity || 0) - Number(ev.SpotsBooked);
+        if (remaining <= 0) {
+            return res.status(409).json({ error: `This event is sold out for ${bookingDate}. Please try a different date.` });
+        }
         if (quantity > remaining) {
-            return res.status(409).json({ error: `Only ${remaining} spot(s) remaining.` });
+            return res.status(409).json({ error: `Only ${remaining} spot(s) remaining for ${bookingDate}.` });
         }
 
         const unitPrice = Number(ev.Price) || 0;
