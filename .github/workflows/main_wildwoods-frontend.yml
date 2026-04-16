@@ -84,28 +84,38 @@ jobs:
             --parent "sites/$APP" \
             --set properties.allow=true
 
-          echo "=== Getting FTP credentials ==="
-          CREDS=$(az webapp deployment list-publishing-credentials \
-            -n "$APP" -g "$RG" -o json)
-          FTP_USER=$(echo "$CREDS" | jq -r '.publishingUserName')
-          FTP_PASS=$(echo "$CREDS" | jq -r '.publishingPassword')
-          FTP_URL=$(echo "$CREDS" | jq -r '.ftpString')
+          echo "=== Getting FTP credentials from publishing profile ==="
+          PROFILE=$(az webapp deployment list-publishing-profiles \
+            -n "$APP" -g "$RG" \
+            --query "[?publishMethod=='FTP']|[0]" -o json)
+          echo "Profile found: $(echo "$PROFILE" | jq -r '.publishMethod')"
+
+          FTP_USER=$(echo "$PROFILE" | jq -r '.userName')
+          FTP_PASS=$(echo "$PROFILE" | jq -r '.userPWD')
+          FTP_URL=$(echo "$PROFILE" | jq -r '.publishUrl')
           echo "FTP URL: $FTP_URL"
 
           FTP_HOST=$(echo "$FTP_URL" | sed 's|^ftps\?://||' | cut -d'/' -f1)
           echo "FTP Host: $FTP_HOST"
 
+          if [ "$FTP_HOST" = "null" ] || [ -z "$FTP_HOST" ]; then
+            echo "FATAL: Could not extract FTP host"
+            echo "Raw profile: $PROFILE"
+            exit 1
+          fi
+
           echo "=== Installing lftp ==="
           sudo apt-get update -qq && sudo apt-get install -y -qq lftp
 
           echo "=== Uploading files via FTPS ==="
-          lftp -u "$FTP_USER,$FTP_PASS" "ftps://$FTP_HOST" <<'LFTP_SCRIPT'
-          set ssl:verify-certificate false
-          set ftp:ssl-protect-data true
-          set mirror:parallel-transfer-count 5
-          mirror --reverse --delete --verbose . /site/wwwroot/
-          quit
-          LFTP_SCRIPT
+          lftp -u "$FTP_USER","$FTP_PASS" "ftps://$FTP_HOST" -e "
+            set ssl:verify-certificate false;
+            set ftp:ssl-protect-data true;
+            set net:max-retries 3;
+            set net:timeout 30;
+            mirror --reverse --delete --verbose --parallel=5 . /site/wwwroot/;
+            quit
+          "
 
           echo "=== Setting SPA startup command ==="
           az webapp config set -n "$APP" -g "$RG" \
