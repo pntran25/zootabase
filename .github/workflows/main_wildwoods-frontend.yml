@@ -70,41 +70,63 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_F91F72F7806846A48E6D86D5B7A74E5E }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_351EA28B835449ADB9F1C4F5847DFC83 }}
 
-      - name: Clear stale deployment lock
+      - name: Enable SCM basic auth and clear deployment lock
         run: |
           RG=$(az webapp list --query "[?name=='wildwoods-frontend'].resourceGroup | [0]" -o tsv)
-          SUB=$(az account show --query id -o tsv)
+
+          echo "=== Enabling basic auth on SCM site ==="
+          az resource update \
+            --resource-group "$RG" \
+            --name scm \
+            --namespace Microsoft.Web \
+            --resource-type basicPublishingCredentialsPolicies \
+            --parent sites/wildwoods-frontend \
+            --set properties.allow=true
+
+          echo "=== Enabling basic auth on FTP ==="
+          az resource update \
+            --resource-group "$RG" \
+            --name ftp \
+            --namespace Microsoft.Web \
+            --resource-type basicPublishingCredentialsPolicies \
+            --parent sites/wildwoods-frontend \
+            --set properties.allow=true
+
+          echo "=== Getting publish credentials ==="
+          CREDS=$(az webapp deployment list-publishing-credentials \
+            -n wildwoods-frontend -g "$RG" -o json)
+          USER=$(echo "$CREDS" | jq -r .publishingUserName)
+          PASS=$(echo "$CREDS" | jq -r .publishingPassword)
           SCM="https://wildwoods-frontend-ewdsetbrhzf2bwac.scm.eastus2-01.azurewebsites.net"
 
-          # Get bearer token for SCM site
-          TOKEN=$(az account get-access-token --resource "https://management.azure.com/" --query accessToken -o tsv)
+          echo "=== Deleting deployment lock files ==="
+          curl -s -o /dev/null -w "locks: %{http_code}\n" \
+            -X DELETE -u "$USER:$PASS" \
+            "$SCM/api/vfs/site/locks/?recursive=true" \
+            -H "If-Match: *" || true
 
-          # List and delete stale deployments via Kudu API using bearer token
-          echo "=== Listing deployments ==="
-          DEPS=$(curl -s -H "Authorization: Bearer $TOKEN" \
-            -H "x-ms-client-request-id: $(uuidgen)" \
-            "$SCM/api/deployments" 2>/dev/null || echo "[]")
-          echo "$DEPS" | jq '.[].id' 2>/dev/null || echo "No deployments to clear"
+          echo "=== Deleting stale deployment records ==="
+          curl -s -u "$USER:$PASS" "$SCM/api/deployments" | \
+            jq -r '.[].id' 2>/dev/null | while read -r id; do
+              [ -z "$id" ] && continue
+              echo "Deleting: $id"
+              curl -s -o /dev/null -w "  %{http_code}\n" \
+                -X DELETE -u "$USER:$PASS" \
+                "$SCM/api/deployments/$id" || true
+            done
 
-          echo "$DEPS" | jq -r '.[].id' 2>/dev/null | while read -r id; do
-            [ -z "$id" ] && continue
-            echo "Deleting deployment: $id"
-            curl -s -o /dev/null -w "  status: %{http_code}\n" \
-              -X DELETE \
-              -H "Authorization: Bearer $TOKEN" \
-              "$SCM/api/deployments/$id" || true
-          done
-
-          # Also try via ARM API to delete deployment history
-          echo "=== Resetting via ARM ==="
-          az rest --method POST \
-            --url "https://management.azure.com/subscriptions/$SUB/resourceGroups/$RG/providers/Microsoft.Web/sites/wildwoods-frontend/resetSlotConfig?api-version=2023-12-01" \
-            2>/dev/null || true
+          echo "=== Restarting Kudu ==="
+          az webapp restart -n wildwoods-frontend -g "$RG"
+          sleep 15
+          echo "=== Ready to deploy ==="
 
       - name: 'Deploy to Azure Web App'
-        id: deploy-to-webapp
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: 'wildwoods-frontend'
-          slot-name: 'Production'
-          package: .
+        run: |
+          RG=$(az webapp list --query "[?name=='wildwoods-frontend'].resourceGroup | [0]" -o tsv)
+          zip -r /tmp/app.zip .
+          az webapp deploy -n wildwoods-frontend -g "$RG" \
+            --src-path /tmp/app.zip \
+            --type zip \
+            --clean true \
+            --restart true \
+            --async false
