@@ -360,7 +360,16 @@ const AnimalHealth = () => {
         <span style={{ fontSize: '0.76rem', color: 'var(--adm-text-secondary)' }}>{row.original.Species}</span>
       </div>
     )},
-    { accessorKey: 'CheckupDate', header: 'Checkup Date', cell: info => fmtDate(info.getValue()) },
+    { accessorKey: 'CheckupDate', header: 'Checkup Date', cell: info => fmtDate(info.getValue()),
+      sortingFn: (rowA, rowB, columnId) => {
+        const a = rowA.original.CheckupDate || '';
+        const b = rowB.original.CheckupDate || '';
+        if (a < b) return -1;
+        if (a > b) return 1;
+        // Same date → sort by RecordID descending (newest first)
+        return (rowA.original.RecordID || 0) - (rowB.original.RecordID || 0);
+      },
+    },
     { accessorKey: 'HealthScore', header: 'Health Score', size: 130, cell: info => {
       const v = info.getValue();
       return (

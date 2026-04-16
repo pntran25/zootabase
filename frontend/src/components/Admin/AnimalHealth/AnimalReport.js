@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import '../AdminTable.css';
 import './AnimalReport.css';
 import {
   ClipboardList, ChevronDown, ChevronRight, PawPrint, HeartPulse,
-  UtensilsCrossed, Search, AlertTriangle, CheckCircle
+  UtensilsCrossed, Search, AlertTriangle, CheckCircle, Calendar
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Download } from 'lucide-react';
@@ -41,7 +41,10 @@ const healthColor = {
   Poor: '#ef4444',
 };
 
-/* ── Collapsible section ─────────────────────────────── */
+const subTh = { padding: '6px 10px', textAlign: 'left', color: 'var(--adm-text-secondary)', fontWeight: 600, whiteSpace: 'nowrap', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.06em' };
+const subTd = { padding: '5px 10px', color: 'var(--adm-text-primary)', whiteSpace: 'nowrap', fontSize: '0.76rem' };
+
+/* ── Collapsible section (used inside expanded row) ── */
 const Section = ({ icon, title, count, defaultOpen = true, children }) => {
   const [open, setOpen] = useState(defaultOpen);
   return (
@@ -57,18 +60,11 @@ const Section = ({ icon, title, count, defaultOpen = true, children }) => {
   );
 };
 
-const closeModal = (setModalOpen, setReport, setSelectedAnimalId) => {
-  setModalOpen(false);
-  setReport(null);
-  setSelectedAnimalId('');
-};
-
 const AnimalReport = () => {
   const [animals, setAnimals] = useState([]);
-  const [selectedAnimalId, setSelectedAnimalId] = useState('');
-  const [modalOpen, setModalOpen] = useState(false);
-  const [report, setReport] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [expandedRows, setExpandedRows] = useState({});
+  const [reports, setReports] = useState({});
+  const [loadingReports, setLoadingReports] = useState({});
   const [search, setSearch] = useState('');
   const [dateFilter, setDateFilter] = useState('custom');
   const [customStart, setCustomStart] = useState('');
@@ -83,7 +79,7 @@ const AnimalReport = () => {
 
   const TODAY = getYMD(new Date());
 
-  const { dateFrom, dateTo } = React.useMemo(() => {
+  const { dateFrom, dateTo } = useMemo(() => {
     const now = new Date();
     const todayStr = getYMD(now);
     
@@ -110,33 +106,26 @@ const AnimalReport = () => {
   }, []);
 
   const loadReport = useCallback(async (id) => {
-    if (!id) { setReport(null); return; }
-    setLoading(true);
+    if (reports[id] || loadingReports[id]) return;
+    setLoadingReports(prev => ({ ...prev, [id]: true }));
     try {
       const data = await getAnimalReport(id);
-      setReport(data);
+      setReports(prev => ({ ...prev, [id]: data }));
     } catch (err) {
       toast.error(err.message || 'Failed to load animal report.');
-      setReport(null);
     } finally {
-      setLoading(false);
+      setLoadingReports(prev => ({ ...prev, [id]: false }));
     }
-  }, []);
+  }, [reports, loadingReports]);
 
-  const handleViewReport = (animalId) => {
-    setSelectedAnimalId(String(animalId));
-    setModalOpen(true);
-    loadReport(String(animalId));
+  const toggleExpand = (animalId) => {
+    const id = String(animalId);
+    setExpandedRows(prev => {
+      const next = { ...prev, [id]: !prev[id] };
+      if (next[id]) loadReport(id);
+      return next;
+    });
   };
-
-  const handleCloseModal = () => {
-    setModalOpen(false);
-    setReport(null);
-    setSelectedAnimalId('');
-  };
-
-  const a = report?.animal;
-  const modalAnimal = animals.find(an => String(an.AnimalID) === selectedAnimalId);
 
   const inDateRange = (dateStr) => {
     if (!dateFrom && !dateTo) return true;
@@ -147,17 +136,26 @@ const AnimalReport = () => {
     return true;
   };
 
-  const filteredHealthRecords = (report?.healthRecords?.filter(r => inDateRange(r.CheckupDate)) || [])
-    .sort((a, b) => new Date(b.CheckupDate || 0) - new Date(a.CheckupDate || 0));
-  const filteredAlerts = (report?.alerts?.filter(a => inDateRange(a.CreatedAt)) || [])
-    .sort((a, b) => new Date(b.CreatedAt || 0) - new Date(a.CreatedAt || 0));
+  const filteredAnimals = useMemo(() => {
+    return [...animals]
+      .filter(an => {
+        if (!search) return true;
+        const q = search.toLowerCase();
+        return (
+          (an.AnimalCode || '').toLowerCase().includes(q) ||
+          (an.Name || '').toLowerCase().includes(q) ||
+          (an.Species || '').toLowerCase().includes(q)
+        );
+      })
+      .sort((a, b) => (healthPriority[a.HealthStatus] ?? 99) - (healthPriority[b.HealthStatus] ?? 99));
+  }, [animals, search]);
 
   return (
     <div className="admin-page">
       <div className="admin-page-header">
         <div>
           <h1 className="admin-page-title"><ClipboardList size={26} className="title-icon" /> Animal Data Report</h1>
-          <p className="admin-page-subtitle">Comprehensive report with all related data for a selected animal</p>
+          <p className="admin-page-subtitle">Comprehensive report with all related data for each animal</p>
         </div>
         <button
           className="dr-details-btn"
@@ -208,8 +206,8 @@ const AnimalReport = () => {
         </button>
       </div>
 
-      {/* ── Search bar ── */}
-      <div className="ar-toolbar">
+      {/* ── Filters ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
         <div className="admin-search-container" style={{ maxWidth: 340, flex: 1, margin: 0 }}>
           <Search size={15} className="search-icon" />
           <input
@@ -220,232 +218,282 @@ const AnimalReport = () => {
             onChange={e => setSearch(e.target.value)}
           />
         </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
+          {dateFilter === 'custom' && (
+            <>
+              <AdminDatePicker
+                value={customStart}
+                onChange={setCustomStart}
+                placeholder="Start date"
+                maxDate={customEnd || TODAY}
+              />
+              <span style={{ color: 'var(--adm-text-secondary)', fontSize: '0.82rem' }}>to</span>
+              <AdminDatePicker
+                value={customEnd}
+                onChange={setCustomEnd}
+                placeholder="End date"
+                minDate={customStart || undefined}
+                maxDate={TODAY}
+              />
+            </>
+          )}
+          <AdminSelect
+            value={dateFilter}
+            onChange={v => { setDateFilter(v); setCustomStart(''); setCustomEnd(''); }}
+            width="148px"
+            options={[
+              { value: 'today', label: 'Today' },
+              { value: 'week', label: 'This Week' },
+              { value: 'month', label: 'This Month' },
+              { value: 'custom', label: 'Custom Range' },
+            ]}
+          />
+        </div>
       </div>
+
+      <p style={{ fontSize: '0.75rem', color: 'var(--adm-text-muted)', margin: '0 0 10px 2px' }}>
+        Click any row to expand and see the full animal report including health records, alerts, and feeding schedules.
+      </p>
 
       {/* ── Animal table ── */}
       <div className="admin-table-container">
-        {animals.length === 0 ? (
-          <div className="admin-table-empty">Loading animals...</div>
-        ) : (
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Animal ID</th>
-                <th>Name</th>
-                <th>Animal Group</th>
-                <th>Exhibit</th>
-                <th>Age / Sex</th>
-                <th>Health</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {[...animals]
-                .filter(an => {
-                  if (!search) return true;
-                  const q = search.toLowerCase();
-                  return (
-                    (an.AnimalCode || '').toLowerCase().includes(q) ||
-                    (an.Name || '').toLowerCase().includes(q) ||
-                    (an.Species || '').toLowerCase().includes(q)
-                  );
-                })
-                .sort((a, b) => (healthPriority[a.HealthStatus] ?? 99) - (healthPriority[b.HealthStatus] ?? 99))
-                .map(an => {
-                const hc = healthColor[an.HealthStatus] || '#6b7280';
-                return (
-                  <tr key={an.AnimalID}>
-                    <td>
-                      <span style={{ fontFamily: 'monospace', color: 'var(--adm-accent)', fontSize: '0.82rem' }}>
-                        {an.AnimalCode || '—'}
-                      </span>
-                    </td>
-                    <td style={{ fontWeight: 600 }}>
-                      {an.Name || <span style={{ color: 'var(--adm-text-muted)', fontStyle: 'italic' }}>Unnamed</span>}
-                    </td>
-                    <td>{an.Species}</td>
-                    <td style={{ color: 'var(--adm-text-secondary)' }}>
-                      {an.ExhibitName || <span style={{ color: 'var(--adm-text-muted)', fontStyle: 'italic' }}>Unassigned</span>}
-                    </td>
-                    <td style={{ color: 'var(--adm-text-secondary)' }}>
-                      {an.Age ? `${an.Age} yrs` : '—'}{an.Gender ? ` · ${an.Gender}` : ''}
-                    </td>
-                    <td>
-                      {an.HealthStatus && (
-                        <span style={{
-                          display: 'inline-block', padding: '2px 10px', borderRadius: 20,
-                          fontSize: '0.75rem', fontWeight: 600,
-                          background: hc + '22', color: hc
-                        }}>
-                          {an.HealthStatus}
-                        </span>
-                      )}
-                    </td>
-                    <td>
-                      <button className="dr-details-btn" onClick={() => handleViewReport(an.AnimalID)}>
-                        View Report
-                      </button>
+        <div className="admin-table-scroll-inner" style={{ maxHeight: 700 }}>
+          {animals.length === 0 ? (
+            <div className="admin-table-empty">Loading animals...</div>
+          ) : (
+            <table className="admin-table">
+              <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                <tr>
+                  <th style={{ width: 36 }}></th>
+                  <th>Animal ID</th>
+                  <th>Name</th>
+                  <th>Animal Group</th>
+                  <th>Exhibit</th>
+                  <th>Age / Sex</th>
+                  <th>Health</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredAnimals.length === 0 ? (
+                  <tr className="no-hover">
+                    <td colSpan={7} style={{ textAlign: 'center', padding: 32, color: 'var(--adm-text-muted)' }}>
+                      No animals found matching your search.
                     </td>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
-      </div>
+                ) : (
+                  filteredAnimals.map(an => {
+                    const hc = healthColor[an.HealthStatus] || '#6b7280';
+                    const id = String(an.AnimalID);
+                    const isExpanded = !!expandedRows[id];
+                    const report = reports[id];
+                    const isLoading = !!loadingReports[id];
+                    const a = report?.animal;
 
-      {/* ── Report modal ── */}
-      {modalOpen && (
-        <div className="ar-modal-overlay" onClick={handleCloseModal}>
-          <div className="ar-modal" onClick={e => e.stopPropagation()}>
-            <div className="ar-modal-header">
-              <div>
-                <span className="ar-modal-title">
-                  {a?.Name || modalAnimal?.Name || modalAnimal?.Species || 'Animal Report'}
-                </span>
-                <span className="ar-modal-sub">
-                  {a?.AnimalCode || modalAnimal?.AnimalCode || ''}
-                  {modalAnimal?.Species && a?.Name ? ` · ${modalAnimal.Species}` : ''}
-                </span>
-              </div>
-              <button className="ar-modal-close" onClick={handleCloseModal}>✕</button>
-            </div>
-            <div className="ar-modal-body">
-              {loading && <div className="admin-table-empty">Loading report...</div>}
+                    const filteredHealthRecords = (report?.healthRecords?.filter(r => inDateRange(r.CheckupDate)) || [])
+                      .sort((a, b) => new Date(b.CheckupDate || 0) - new Date(a.CheckupDate || 0));
+                    const filteredAlerts = (report?.alerts?.filter(al => inDateRange(al.CreatedAt)) || [])
+                      .sort((a, b) => new Date(b.CreatedAt || 0) - new Date(a.CreatedAt || 0));
 
-              {!loading && !report && (
-                <div className="admin-table-empty">No data found for this animal.</div>
-              )}
+                    return [
+                      <tr
+                        key={an.AnimalID}
+                        onClick={() => toggleExpand(an.AnimalID)}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <td style={{ textAlign: 'center', padding: '0 4px' }}>
+                          <ChevronRight
+                            size={14}
+                            style={{
+                              transition: 'transform 0.2s',
+                              transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                              color: 'var(--adm-text-muted)',
+                            }}
+                          />
+                        </td>
+                        <td>
+                          <span style={{ fontFamily: 'monospace', color: 'var(--adm-accent)', fontSize: '0.82rem' }}>
+                            {an.AnimalCode || '—'}
+                          </span>
+                        </td>
+                        <td style={{ fontWeight: 600 }}>
+                          {an.Name || <span style={{ color: 'var(--adm-text-muted)', fontStyle: 'italic' }}>Unnamed</span>}
+                        </td>
+                        <td>{an.Species}</td>
+                        <td style={{ color: 'var(--adm-text-secondary)' }}>
+                          {an.ExhibitName || <span style={{ color: 'var(--adm-text-muted)', fontStyle: 'italic' }}>Unassigned</span>}
+                        </td>
+                        <td style={{ color: 'var(--adm-text-secondary)' }}>
+                          {an.Age ? `${an.Age} yrs` : '—'}{an.Gender ? ` · ${an.Gender}` : ''}
+                        </td>
+                        <td>
+                          {an.HealthStatus && (
+                            <span style={{
+                              display: 'inline-block', padding: '2px 10px', borderRadius: 20,
+                              fontSize: '0.75rem', fontWeight: 600,
+                              background: hc + '22', color: hc
+                            }}>
+                              {an.HealthStatus}
+                            </span>
+                          )}
+                        </td>
+                      </tr>,
 
-              {!loading && report && a && (
-                <>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, marginBottom: 16 }}>
-                    {dateFilter === 'custom' && (
-                      <>
-                        <AdminDatePicker
-                          value={customStart}
-                          onChange={setCustomStart}
-                          placeholder="Start date"
-                          maxDate={customEnd || TODAY}
-                        />
-                        <span style={{ color: 'var(--adm-text-secondary)', fontSize: '0.82rem' }}>to</span>
-                        <AdminDatePicker
-                          value={customEnd}
-                          onChange={setCustomEnd}
-                          placeholder="End date"
-                          minDate={customStart || undefined}
-                          maxDate={TODAY}
-                        />
-                      </>
-                    )}
-                    <AdminSelect
-                      value={dateFilter}
-                      onChange={v => { setDateFilter(v); setCustomStart(''); setCustomEnd(''); }}
-                      width="148px"
-                      options={[
-                        { value: 'today', label: 'Today' },
-                        { value: 'week', label: 'This Week' },
-                        { value: 'month', label: 'This Month' },
-                        { value: 'custom', label: 'Custom Range' },
-                      ]}
-                    />
-                  </div>
-                  <div className="ar-sections">
-                  {/* ── Animal Profile ── */}
-                  <Section icon={<PawPrint size={16} color="var(--adm-accent)" />} title="Animal Profile" defaultOpen={true}>
-                    <div className="ar-profile">
-                      <div className="ar-profile-item"><span className="ar-profile-label">Name</span><span className="ar-profile-value">{a.Name || '—'}</span></div>
-                      <div className="ar-profile-item"><span className="ar-profile-label">Animal Group</span><span className="ar-profile-value">{a.Species}</span></div>
-                      <div className="ar-profile-item"><span className="ar-profile-label">Age</span><span className="ar-profile-value">{a.Age} years</span></div>
-                      <div className="ar-profile-item"><span className="ar-profile-label">Gender</span><span className="ar-profile-value">{a.Gender || '—'}</span></div>
-                      <div className="ar-profile-item"><span className="ar-profile-label">Date Arrived</span><span className="ar-profile-value">{fmtDate(a.DateArrived)}</span></div>
-                      <div className="ar-profile-item"><span className="ar-profile-label">Habitat</span><span className="ar-profile-value">{a.HabitatType || '—'}</span></div>
-                      <div className="ar-profile-item"><span className="ar-profile-label">Exhibit</span><span className="ar-profile-value">{a.ExhibitName || '—'}</span></div>
-                      <div className="ar-profile-item"><span className="ar-profile-label">Area</span><span className="ar-profile-value">{a.AreaName || '—'}</span></div>
-                      {a.HealthStatus && <div className="ar-profile-item"><span className="ar-profile-label">Health Status</span><span className="ar-profile-value">{a.HealthStatus}</span></div>}
-                      {a.Diet && <div className="ar-profile-item"><span className="ar-profile-label">Diet</span><span className="ar-profile-value">{a.Diet}</span></div>}
-                      {a.Weight && <div className="ar-profile-item"><span className="ar-profile-label">Weight</span><span className="ar-profile-value">{a.Weight}</span></div>}
-                      {a.Region && <div className="ar-profile-item"><span className="ar-profile-label">Region</span><span className="ar-profile-value">{a.Region}</span></div>}
-                      {a.Lifespan && <div className="ar-profile-item"><span className="ar-profile-label">Lifespan</span><span className="ar-profile-value">{a.Lifespan}</span></div>}
-                      {a.FunFact && <div className="ar-profile-item"><span className="ar-profile-label">Fun Fact</span><span className="ar-profile-value">{a.FunFact}</span></div>}
-                      {a.IsEndangered != null && <div className="ar-profile-item"><span className="ar-profile-label">Endangered</span><span className="ar-profile-value">{a.IsEndangered ? 'Yes' : 'No'}</span></div>}
-                    </div>
-                  </Section>
+                      /* ── Expanded detail panel ── */
+                      isExpanded && (
+                        <tr key={`${an.AnimalID}-detail`} className="no-hover">
+                          <td colSpan={7} style={{ padding: 0, background: 'var(--adm-bg-surface)' }}>
+                            <div style={{ padding: '14px 20px 18px 44px' }}>
+                              {isLoading && (
+                                <div className="admin-table-empty" style={{ padding: 24 }}>Loading report...</div>
+                              )}
 
-                  {/* ── Health Records ── */}
-                  <Section icon={<HeartPulse size={16} color="#ef4444" />} title="Health Records" count={filteredHealthRecords.length}>
-                    {filteredHealthRecords.length === 0 ? (
-                      <div className="ar-empty-section">No health records {dateFrom || dateTo ? 'in the selected date range.' : 'on file.'}</div>
-                    ) : (
-                      <table className="ar-mini-table">
-                        <thead><tr><th>Date</th><th>Score</th><th>Weight</th><th>Activity</th><th>Appetite</th><th>Staff</th><th>Notes</th></tr></thead>
-                        <tbody>
-                          {filteredHealthRecords.map(r => (
-                            <tr key={r.RecordID}>
-                              <td>{fmtDate(r.CheckupDate)}</td>
-                              <td><span className={`ah-score ${scoreClass(r.HealthScore)}`}><span className="ah-score-dot" />{r.HealthScore} — {scoreLabel(r.HealthScore)}</span></td>
-                              <td>{r.Weight != null ? `${Number(r.Weight).toFixed(1)} kg` : '—'}</td>
-                              <td>{r.ActivityLevel || '—'}</td>
-                              <td>{r.AppetiteStatus || '—'}</td>
-                              <td>{r.StaffName || '—'}</td>
-                              <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.Notes || '—'}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    )}
-                  </Section>
+                              {!isLoading && !report && (
+                                <div className="admin-table-empty" style={{ padding: 24 }}>No data found for this animal.</div>
+                              )}
 
-                  {/* ── Health Alerts ── */}
-                  <Section icon={<AlertTriangle size={16} color="#f59e0b" />} title="Health Alerts" count={filteredAlerts.length} defaultOpen={filteredAlerts.some(a => !a.IsResolved)}>
-                    {filteredAlerts.length === 0 ? (
-                      <div className="ar-empty-section">No health alerts {dateFrom || dateTo ? 'in the selected date range.' : '.'}</div>
-                    ) : (
-                      <table className="ar-mini-table">
-                        <thead><tr><th>Date</th><th>Type</th><th>Message</th><th>Status</th></tr></thead>
-                        <tbody>
-                          {filteredAlerts.map(a => (
-                            <tr key={a.AlertID}>
-                              <td>{fmtDate(a.CreatedAt)}</td>
-                              <td>{a.AlertType}</td>
-                              <td style={{ maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.AlertMessage}</td>
-                              <td>{a.IsResolved
-                                ? <span style={{ color: '#10b981', fontWeight: 600, fontSize: '0.8rem' }}><CheckCircle size={13} style={{ verticalAlign: 'middle' }} /> Resolved</span>
-                                : <span style={{ color: '#ef4444', fontWeight: 600, fontSize: '0.8rem' }}><AlertTriangle size={13} style={{ verticalAlign: 'middle' }} /> Active</span>
-                              }</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    )}
-                  </Section>
+                              {!isLoading && report && a && (
+                                <>
+                                  {/* ── Animal Profile ── */}
+                                  <Section icon={<PawPrint size={16} color="var(--adm-accent)" />} title="Animal Profile" defaultOpen={true}>
+                                    <div className="ar-profile">
+                                      <div className="ar-profile-item"><span className="ar-profile-label">Name</span><span className="ar-profile-value">{a.Name || '—'}</span></div>
+                                      <div className="ar-profile-item"><span className="ar-profile-label">Animal Group</span><span className="ar-profile-value">{a.Species}</span></div>
+                                      <div className="ar-profile-item"><span className="ar-profile-label">Age</span><span className="ar-profile-value">{a.Age} years</span></div>
+                                      <div className="ar-profile-item"><span className="ar-profile-label">Gender</span><span className="ar-profile-value">{a.Gender || '—'}</span></div>
+                                      <div className="ar-profile-item"><span className="ar-profile-label">Date Arrived</span><span className="ar-profile-value">{fmtDate(a.DateArrived)}</span></div>
+                                      <div className="ar-profile-item"><span className="ar-profile-label">Habitat</span><span className="ar-profile-value">{a.HabitatType || '—'}</span></div>
+                                      <div className="ar-profile-item"><span className="ar-profile-label">Exhibit</span><span className="ar-profile-value">{a.ExhibitName || '—'}</span></div>
+                                      <div className="ar-profile-item"><span className="ar-profile-label">Area</span><span className="ar-profile-value">{a.AreaName || '—'}</span></div>
+                                      {a.HealthStatus && <div className="ar-profile-item"><span className="ar-profile-label">Health Status</span><span className="ar-profile-value">{a.HealthStatus}</span></div>}
+                                      {a.Diet && <div className="ar-profile-item"><span className="ar-profile-label">Diet</span><span className="ar-profile-value">{a.Diet}</span></div>}
+                                      {a.Weight && <div className="ar-profile-item"><span className="ar-profile-label">Weight</span><span className="ar-profile-value">{a.Weight}</span></div>}
+                                      {a.Region && <div className="ar-profile-item"><span className="ar-profile-label">Region</span><span className="ar-profile-value">{a.Region}</span></div>}
+                                      {a.Lifespan && <div className="ar-profile-item"><span className="ar-profile-label">Lifespan</span><span className="ar-profile-value">{a.Lifespan}</span></div>}
+                                      {a.FunFact && <div className="ar-profile-item"><span className="ar-profile-label">Fun Fact</span><span className="ar-profile-value">{a.FunFact}</span></div>}
+                                      {a.IsEndangered != null && <div className="ar-profile-item"><span className="ar-profile-label">Endangered</span><span className="ar-profile-value">{a.IsEndangered ? 'Yes' : 'No'}</span></div>}
+                                    </div>
+                                  </Section>
 
-                  {/* ── Feeding Schedules ── */}
-                  <Section icon={<UtensilsCrossed size={16} color="#f59e0b" />} title="Feeding Schedules" count={report.feedings.length} defaultOpen={report.feedings.length > 0}>
-                    {report.feedings.length === 0 ? (
-                      <div className="ar-empty-section">No feeding schedules found.</div>
-                    ) : (
-                      <table className="ar-mini-table">
-                        <thead><tr><th>Feed Time</th><th>Food Type</th><th>Assigned Staff</th></tr></thead>
-                        <tbody>
-                          {report.feedings.map(f => (
-                            <tr key={f.ScheduleID}>
-                              <td>{f.FeedTime ? new Date(f.FeedTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '—'}</td>
-                              <td>{f.FoodType || '—'}</td>
-                              <td>{f.StaffName || '—'}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    )}
-                  </Section>
-                </div>
-                </>
-              )}
-            </div>
-          </div>
+                                  {/* ── Health Records + Feeding Schedules (side by side) ── */}
+                                  <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'flex-start', marginTop: 8 }}>
+
+                                    {/* Health Records (left) */}
+                                    <div style={{ flex: '1 1 480px', minWidth: 360 }}>
+                                      <h4 style={{ margin: '0 0 8px', fontSize: '0.82rem', color: 'var(--adm-text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                        <HeartPulse size={14} color="#ef4444" /> Health Records
+                                        <span style={{ fontWeight: 400, color: 'var(--adm-text-muted)', fontSize: '0.75rem', marginLeft: 4 }}>
+                                          ({filteredHealthRecords.length} record{filteredHealthRecords.length !== 1 ? 's' : ''})
+                                        </span>
+                                      </h4>
+                                      {filteredHealthRecords.length === 0 ? (
+                                        <p style={{ color: 'var(--adm-text-muted)', fontSize: '0.78rem', margin: 0 }}>No health records {dateFrom || dateTo ? 'in the selected date range.' : 'on file.'}</p>
+                                      ) : (
+                                        <div style={{ border: '1px solid var(--adm-border)', borderRadius: 6, overflow: 'hidden', maxHeight: 260, overflowY: 'auto' }}>
+                                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.76rem' }}>
+                                            <thead>
+                                              <tr style={{ background: 'var(--adm-bg-surface-2)' }}>
+                                                <th style={subTh}>Date</th><th style={subTh}>Score</th><th style={subTh}>Weight</th>
+                                                <th style={subTh}>Activity</th><th style={subTh}>Staff</th>
+                                              </tr>
+                                            </thead>
+                                            <tbody>
+                                              {filteredHealthRecords.map(r => (
+                                                <tr key={r.RecordID} style={{ borderTop: '1px solid var(--adm-border)' }}>
+                                                  <td style={subTd}>{fmtDate(r.CheckupDate)}</td>
+                                                  <td style={subTd}><span className={`ah-score ${scoreClass(r.HealthScore)}`}><span className="ah-score-dot" />{r.HealthScore} — {scoreLabel(r.HealthScore)}</span></td>
+                                                  <td style={subTd}>{r.Weight != null ? `${Number(r.Weight).toFixed(1)} kg` : '—'}</td>
+                                                  <td style={subTd}>{r.ActivityLevel || '—'}</td>
+                                                  <td style={subTd}>{r.StaffName || '—'}</td>
+                                                </tr>
+                                              ))}
+                                            </tbody>
+                                          </table>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {/* Feeding Schedules (right) */}
+                                    <div style={{ flex: '1 1 320px', minWidth: 280 }}>
+                                      <h4 style={{ margin: '0 0 8px', fontSize: '0.82rem', color: 'var(--adm-text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                        <UtensilsCrossed size={14} color="#f59e0b" /> Feeding Schedules
+                                        <span style={{ fontWeight: 400, color: 'var(--adm-text-muted)', fontSize: '0.75rem', marginLeft: 4 }}>
+                                          ({report.feedings.length} schedule{report.feedings.length !== 1 ? 's' : ''})
+                                        </span>
+                                      </h4>
+                                      {report.feedings.length === 0 ? (
+                                        <p style={{ color: 'var(--adm-text-muted)', fontSize: '0.78rem', margin: 0 }}>No feeding schedules found.</p>
+                                      ) : (
+                                        <div style={{ border: '1px solid var(--adm-border)', borderRadius: 6, overflow: 'hidden', maxHeight: 260, overflowY: 'auto' }}>
+                                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.76rem' }}>
+                                            <thead>
+                                              <tr style={{ background: 'var(--adm-bg-surface-2)' }}>
+                                                <th style={subTh}>Feed Time</th><th style={subTh}>Food Type</th><th style={subTh}>Staff</th>
+                                              </tr>
+                                            </thead>
+                                            <tbody>
+                                              {report.feedings.map(f => (
+                                                <tr key={f.ScheduleID} style={{ borderTop: '1px solid var(--adm-border)' }}>
+                                                  <td style={subTd}>{f.FeedTime ? new Date(f.FeedTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '—'}</td>
+                                                  <td style={subTd}>{f.FoodType || '—'}</td>
+                                                  <td style={subTd}>{f.StaffName || '—'}</td>
+                                                </tr>
+                                              ))}
+                                            </tbody>
+                                          </table>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* ── Health Alerts (full width, below) ── */}
+                                  <div style={{ marginTop: 12 }}>
+                                    <h4 style={{ margin: '0 0 8px', fontSize: '0.82rem', color: 'var(--adm-text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                      <AlertTriangle size={14} color="#f59e0b" /> Health Alerts
+                                      <span style={{ fontWeight: 400, color: 'var(--adm-text-muted)', fontSize: '0.75rem', marginLeft: 4 }}>
+                                        ({filteredAlerts.length} alert{filteredAlerts.length !== 1 ? 's' : ''})
+                                      </span>
+                                    </h4>
+                                    {filteredAlerts.length === 0 ? (
+                                      <p style={{ color: 'var(--adm-text-muted)', fontSize: '0.78rem', margin: 0 }}>No health alerts {dateFrom || dateTo ? 'in the selected date range.' : '.'}</p>
+                                    ) : (
+                                      <div style={{ border: '1px solid var(--adm-border)', borderRadius: 6, overflow: 'hidden', maxHeight: 260, overflowY: 'auto' }}>
+                                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.76rem' }}>
+                                          <thead>
+                                            <tr style={{ background: 'var(--adm-bg-surface-2)' }}>
+                                              <th style={subTh}>Date</th><th style={subTh}>Type</th><th style={subTh}>Message</th><th style={subTh}>Status</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {filteredAlerts.map(al => (
+                                              <tr key={al.AlertID} style={{ borderTop: '1px solid var(--adm-border)' }}>
+                                                <td style={subTd}>{fmtDate(al.CreatedAt)}</td>
+                                                <td style={subTd}>{al.AlertType}</td>
+                                                <td style={{ ...subTd, maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{al.AlertMessage}</td>
+                                                <td style={subTd}>{al.IsResolved
+                                                  ? <span style={{ color: '#10b981', fontWeight: 600, fontSize: '0.8rem' }}><CheckCircle size={13} style={{ verticalAlign: 'middle' }} /> Resolved</span>
+                                                  : <span style={{ color: '#ef4444', fontWeight: 600, fontSize: '0.8rem' }}><AlertTriangle size={13} style={{ verticalAlign: 'middle' }} /> Active</span>
+                                                }</td>
+                                              </tr>
+                                            ))}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    )}
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ),
+                    ];
+                  }).flat().filter(Boolean)
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 };

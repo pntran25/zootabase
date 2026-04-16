@@ -3,7 +3,7 @@ import './AttractionPage.css';
 import { Search, MapPin, Users, Clock, ChevronDown, SlidersHorizontal } from 'lucide-react';
 import { getAllAttractions } from '../../../services/attractionService';
 import { API_BASE_URL } from '../../../services/apiClient';
-import attractionsHero from '../../../assets/images/attractions-hero.png';
+import attractionsHero from '../../../assets/images/Attractionhero.jpg';
 import CustomDropdown from '../CustomDropdown';
 
 const TYPE_META = {

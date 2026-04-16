@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { FileText, Search, X, ShoppingBag, Ticket, CreditCard, ChevronUp, ChevronDown, ChevronsUpDown, LayoutDashboard, CalendarCheck, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import OverviewTab from './OverviewTab';
 import { useReactTable, getCoreRowModel, getSortedRowModel, flexRender } from '@tanstack/react-table';
@@ -9,6 +9,23 @@ import AdminDatePicker from '../AdminDatePicker';
 import '../AdminTable.css';
 import './DataReports.css';
 import { exportSectionsToSingleSheet } from '../../../utils/exportExcel';
+
+// Stable pseudo-random display ID from a real ID (deterministic hash)
+const randomDisplayId = (() => {
+  const cache = {};
+  return (realId) => {
+    if (cache[realId] != null) return cache[realId];
+    let h = 0;
+    const s = String(realId);
+    for (let i = 0; i < s.length; i++) {
+      h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+    }
+    // Produce a 5-digit positive number (10000–99999)
+    const display = 10000 + (Math.abs(h) % 90000);
+    cache[realId] = display;
+    return display;
+  };
+})();
 
 const SortIcon = ({ column }) => {
   if (!column.getCanSort()) return null;
@@ -60,7 +77,7 @@ const OrderDetailModal = ({ orderId, onClose }) => {
           <div className="dr-modal-title-group">
             <ShoppingBag size={18} />
             <div>
-              <h2 className="dr-modal-title">Order #{order.OrderID}</h2>
+              <h2 className="dr-modal-title">Order #{randomDisplayId(order.OrderID)}</h2>
               <p className="dr-modal-subtitle">{date} at {time}</p>
             </div>
           </div>
@@ -140,7 +157,7 @@ const TicketDetailModal = ({ ticketOrderId, onClose }) => {
           <div className="dr-modal-title-group">
             <Ticket size={18} />
             <div>
-              <h2 className="dr-modal-title">Ticket Order #{order.TicketOrderID}</h2>
+              <h2 className="dr-modal-title">Ticket Order #{randomDisplayId(order.TicketOrderID)}</h2>
               <p className="dr-modal-subtitle">{date} at {time}</p>
             </div>
           </div>
@@ -243,7 +260,7 @@ const MembershipDetailModal = ({ subId, onClose }) => {
           <div className="dr-modal-title-group">
             <CreditCard size={18} />
             <div>
-              <h2 className="dr-modal-title">Membership #{sub.SubID}</h2>
+              <h2 className="dr-modal-title">Membership #{randomDisplayId(sub.SubID)}</h2>
               <p className="dr-modal-subtitle">{date} at {time}</p>
             </div>
           </div>
@@ -319,7 +336,7 @@ const EventDetailModal = ({ bookingId, onClose }) => {
           <div className="dr-modal-title-group">
             <CalendarCheck size={18} />
             <div>
-              <h2 className="dr-modal-title">Event Booking #{booking.EventBookingID}</h2>
+              <h2 className="dr-modal-title">Event Booking #{randomDisplayId(booking.EventBookingID)}</h2>
               <p className="dr-modal-subtitle">{date} at {time}</p>
             </div>
           </div>
@@ -589,7 +606,7 @@ const DataReports = () => {
   // All tabs are filtered server-side — no client filtering needed
 
   const shopColumns = useMemo(() => [
-    { accessorKey: 'OrderID', header: 'Order #', size: 80, cell: info => <span className="dr-order-id">#{info.getValue()}</span> },
+    { accessorKey: 'OrderID', header: 'Order #', size: 80, cell: info => <span className="dr-order-id">#{randomDisplayId(info.getValue())}</span> },
     { accessorKey: 'FullName', header: 'Customer', cell: info => <span style={{ fontWeight: 600 }}>{info.getValue()}</span> },
     { accessorKey: 'Email', header: 'Email', cell: info => <span style={{ color: 'var(--adm-text-secondary)', fontSize: '0.82rem' }}>{info.getValue()}</span> },
     { accessorKey: 'PlacedAt', header: 'Date', cell: info => <span>{fmtPlaced(info.getValue()).date}</span> },
@@ -599,7 +616,7 @@ const DataReports = () => {
   ], []);
 
   const ticketColumns = useMemo(() => [
-    { accessorKey: 'TicketOrderID', header: 'Order #', size: 80, cell: info => <span className="dr-order-id">#{info.getValue()}</span> },
+    { accessorKey: 'TicketOrderID', header: 'Order #', size: 80, cell: info => <span className="dr-order-id">#{randomDisplayId(info.getValue())}</span> },
     { accessorKey: 'FullName', header: 'Customer', cell: info => <span style={{ fontWeight: 600 }}>{info.getValue()}</span> },
     { accessorKey: 'Email', header: 'Email', cell: info => <span style={{ color: 'var(--adm-text-secondary)', fontSize: '0.82rem' }}>{info.getValue()}</span> },
     { accessorKey: 'TicketType', header: 'Ticket Type', cell: info => <span style={{ fontSize: '0.82rem' }}>{info.getValue()}</span> },
@@ -614,7 +631,7 @@ const DataReports = () => {
   ], []);
 
   const membershipColumns = useMemo(() => [
-    { accessorKey: 'SubID', header: 'Sub #', size: 80, cell: info => <span className="dr-order-id">#{info.getValue()}</span> },
+    { accessorKey: 'SubID', header: 'Sub #', size: 80, cell: info => <span className="dr-order-id">#{randomDisplayId(info.getValue())}</span> },
     { accessorKey: 'FullName', header: 'Member', cell: info => <span style={{ fontWeight: 600 }}>{info.getValue()}</span> },
     { accessorKey: 'Email', header: 'Email', cell: info => <span style={{ color: 'var(--adm-text-secondary)', fontSize: '0.82rem' }}>{info.getValue()}</span> },
     { accessorKey: 'PlanName', header: 'Plan', cell: info => <span style={{ fontWeight: 600, color: 'var(--adm-accent)' }}>{info.getValue()}</span> },
@@ -634,7 +651,7 @@ const DataReports = () => {
   ], []);
 
   const eventColumns = useMemo(() => [
-    { accessorKey: 'EventBookingID', header: 'Booking #', size: 90, cell: info => <span className="dr-order-id">#{info.getValue()}</span> },
+    { accessorKey: 'EventBookingID', header: 'Booking #', size: 90, cell: info => <span className="dr-order-id">#{randomDisplayId(info.getValue())}</span> },
     { accessorKey: 'FullName', header: 'Customer', cell: info => <span style={{ fontWeight: 600 }}>{info.getValue()}</span> },
     { accessorKey: 'Email', header: 'Email', cell: info => <span style={{ color: 'var(--adm-text-secondary)', fontSize: '0.82rem' }}>{info.getValue()}</span> },
     { accessorKey: 'EventName', header: 'Event', cell: info => <span style={{ fontSize: '0.82rem' }}>{info.getValue()}</span> },
@@ -687,7 +704,7 @@ const DataReports = () => {
                 apiGet(`/api/membership-subscriptions?${buildParams()}`),
               ]);
               const shopData = (shopAll.rows || []).map(r => ({
-                'Order #': r.OrderID, 'Customer': r.FullName || '', 'Email': r.Email || '',
+                'Order #': randomDisplayId(r.OrderID), 'Customer': r.FullName || '', 'Email': r.Email || '',
                 'Phone': r.Phone || '', 'City': r.City || '', 'State': r.StateProvince || '',
                 'Zip': r.ZipCode || '', 'Card Last Four': r.CardLastFour || '',
                 'Subtotal': r.Subtotal != null ? Number(r.Subtotal).toFixed(2) : '',
@@ -698,7 +715,7 @@ const DataReports = () => {
                 'Time': r.PlacedAt ? new Date(r.PlacedAt).toLocaleTimeString() : '',
               }));
               const ticketData = (ticketAll.rows || []).map(r => ({
-                'Order #': r.TicketOrderID, 'Customer': r.FullName || '', 'Email': r.Email || '',
+                'Order #': randomDisplayId(r.TicketOrderID), 'Customer': r.FullName || '', 'Email': r.Email || '',
                 'Ticket Type': r.TicketType || '',
                 'Adult Qty': r.AdultQty ?? '', 'Child Qty': r.ChildQty ?? '', 'Senior Qty': r.SeniorQty ?? '',
                 'Visit Date': r.VisitDate ? new Date(r.VisitDate).toLocaleDateString() : '',
@@ -708,7 +725,7 @@ const DataReports = () => {
                 'Time': r.PlacedAt ? new Date(r.PlacedAt).toLocaleTimeString() : '',
               }));
               const eventData = (eventAll.rows || []).map(r => ({
-                'Booking #': r.EventBookingID, 'Customer': `${r.FirstName || ''} ${r.LastName || ''}`.trim(),
+                'Booking #': randomDisplayId(r.EventBookingID), 'Customer': `${r.FirstName || ''} ${r.LastName || ''}`.trim(),
                 'Email': r.Email || '', 'Event': r.EventName || '', 'Category': r.Category || '',
                 'Visit Date': r.BookingDate ? new Date(r.BookingDate).toLocaleDateString() : '',
                 'Guests': r.Quantity || '',
@@ -717,7 +734,7 @@ const DataReports = () => {
                 'Time': r.PlacedAt ? new Date(r.PlacedAt).toLocaleTimeString() : '',
               }));
               const memberData = (memberAll.rows || []).map(r => ({
-                'Sub #': r.SubID, 'Member': r.FullName || '', 'Email': r.Email || '',
+                'Sub #': randomDisplayId(r.SubID), 'Member': r.FullName || '', 'Email': r.Email || '',
                 'Plan': r.PlanName || '', 'Billing': r.BillingPeriod || '',
                 'Start Date': r.StartDate ? new Date(r.StartDate).toLocaleDateString() : '',
                 'End Date': r.EndDate ? new Date(r.EndDate).toLocaleDateString() : '',
