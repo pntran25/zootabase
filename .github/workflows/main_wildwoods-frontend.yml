@@ -70,16 +70,17 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_F91F72F7806846A48E6D86D5B7A74E5E }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_351EA28B835449ADB9F1C4F5847DFC83 }}
 
-      - name: Stop app to release file locks
-        run: az webapp stop --name wildwoods-frontend --resource-group $(az webapp list --query "[?name=='wildwoods-frontend'].resourceGroup | [0]" -o tsv)
-
       - name: 'Deploy to Azure Web App'
-        id: deploy-to-webapp
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: 'wildwoods-frontend'
-          slot-name: 'Production'
-          package: .
-
-      - name: Start app after deploy
-        run: az webapp start --name wildwoods-frontend --resource-group $(az webapp list --query "[?name=='wildwoods-frontend'].resourceGroup | [0]" -o tsv)
+        run: |
+          RG=$(az webapp list --query "[?name=='wildwoods-frontend'].resourceGroup | [0]" -o tsv)
+          az webapp stop -n wildwoods-frontend -g "$RG" || true
+          sleep 10
+          az webapp config appsettings set -n wildwoods-frontend -g "$RG" \
+            --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false
+          zip -r /tmp/app.zip .
+          az webapp deploy -n wildwoods-frontend -g "$RG" \
+            --src-path /tmp/app.zip \
+            --type zip \
+            --clean true \
+            --async false
+          az webapp start -n wildwoods-frontend -g "$RG"
