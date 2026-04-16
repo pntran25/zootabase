@@ -267,6 +267,30 @@
   animation: none;
 }
 
+/* Alert badge on nav link */
+.nav-alert-badge {
+  margin-left: auto;
+  min-width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #fff;
+  background: #ef4444;
+  padding: 0 5px;
+  line-height: 1;
+  box-shadow: 0 0 0 2px var(--adm-bg-sidebar);
+  animation: alertPulse 2s ease-in-out infinite;
+}
+
+@keyframes alertPulse {
+  0%, 100% { box-shadow: 0 0 0 2px var(--adm-bg-sidebar); }
+  50% { box-shadow: 0 0 0 2px var(--adm-bg-sidebar), 0 0 6px rgba(239, 68, 68, 0.5); }
+}
+
 /* Sidebar Footer */
 .admin-sidebar-footer {
   padding: 16px 10px;

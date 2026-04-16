@@ -5,7 +5,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { auth } from '../../../services/firebase';
 import giftShopHeroImg from '../../../assets/images/zoo-giftshop.jpg';
 import './ProductPage.css';
-import { Search, ShoppingCart, Plus, Minus, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, ShoppingCart, Plus, Minus, X, ChevronDown, SlidersHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
 import CheckoutModal from './CheckoutModal';
 
@@ -68,11 +68,8 @@ const ProductPage = () => {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [categoryPage, setCategoryPage] = useState(0);
-  const [catAnimKey, setCatAnimKey] = useState(0);
-  const [catAnimDir, setCatAnimDir] = useState('right');
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [membershipDiscount, setMembershipDiscount] = useState(0);
-  const CAT_PAGE_SIZE = 3;
 
   // Fetch the logged-in user's active membership discount
   useEffect(() => {
@@ -204,50 +201,20 @@ const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0
               </div>
             </div>
 
-            {/* RIGHT: Category Carousel + Cart (always visible) */}
+            {/* RIGHT: Filter Button + Cart */}
             <div className="flex items-center gap-3 shrink-0">
-              {/* Prev arrow */}
               <button
-                onClick={() => { setCategoryPage(p => p - 1); setCatAnimDir('left'); setCatAnimKey(k => k + 1); }}
-                disabled={categoryPage === 0}
-                className="inline-flex items-center justify-center rounded-lg border border-border bg-background text-foreground cursor-pointer hover:bg-secondary transition-colors disabled:opacity-30 disabled:cursor-default shrink-0"
-                style={{ height: '2.25rem', width: '2.25rem' }}
+                className={`ww-filter-toggle-btn${filtersOpen ? ' open' : ''}`}
+                onClick={() => setFiltersOpen(f => !f)}
+                style={{ height: '2.75rem', padding: '0 1rem', borderRadius: '0.75rem', border: '1px solid var(--border)', backgroundColor: filtersOpen ? 'color-mix(in srgb, var(--primary) 8%, var(--background))' : 'var(--background)', color: 'var(--foreground)', fontSize: '0.875rem', fontWeight: 500, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0, boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.06)' }}
               >
-                <ChevronLeft style={{ width: '1rem', height: '1rem' }} />
+                <SlidersHorizontal size={16} />
+                Filters
+                {selectedCategory !== 'All Products' && <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: '1.25rem', height: '1.25rem', borderRadius: '9999px', backgroundColor: 'var(--primary)', color: 'var(--primary-foreground)', fontSize: '0.7rem', fontWeight: 700 }}>1</span>}
+                <ChevronDown size={14} style={{ transition: 'transform 0.2s', transform: filtersOpen ? 'rotate(180deg)' : 'none' }} />
               </button>
 
-              {/* 3 visible categories */}
-              <div key={catAnimKey} className={`ps-cat-filters ps-slide-${catAnimDir}`}>
-                {categories
-                  .slice(categoryPage * CAT_PAGE_SIZE, categoryPage * CAT_PAGE_SIZE + CAT_PAGE_SIZE)
-                  .map((category) => (
-                    <button
-                      key={category.id}
-                      className={cn(
-                        "inline-flex whitespace-nowrap items-center shrink-0 rounded-lg border cursor-pointer transition-all text-sm font-medium",
-                        selectedCategory === category.id
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-background text-foreground border-border hover:bg-secondary"
-                      )}
-                      style={{ height: '2.25rem', padding: '0 0.875rem' }}
-                      onClick={() => setSelectedCategory(category.id)}
-                    >
-                      {category.label}
-                    </button>
-                  ))}
-              </div>
-
-              {/* Next arrow */}
-              <button
-                onClick={() => { setCategoryPage(p => p + 1); setCatAnimDir('right'); setCatAnimKey(k => k + 1); }}
-                disabled={categoryPage >= Math.ceil(categories.length / CAT_PAGE_SIZE) - 1}
-                className="inline-flex items-center justify-center rounded-lg border border-border bg-background text-foreground cursor-pointer hover:bg-secondary transition-colors disabled:opacity-30 disabled:cursor-default shrink-0"
-                style={{ height: '2.25rem', width: '2.25rem' }}
-              >
-                <ChevronRight style={{ width: '1rem', height: '1rem' }} />
-              </button>
-
-              {/* Cart — always visible, outside carousel */}
+              {/* Cart — always visible */}
               <button
                 className="relative inline-flex items-center justify-center rounded-xl border border-border bg-background text-foreground cursor-pointer hover:bg-secondary transition-colors shrink-0"
                 style={{ height: '2.75rem', width: '2.75rem' }}
@@ -262,6 +229,24 @@ const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0
               </button>
             </div>
           </div>
+
+          {/* Expandable Filter Panel */}
+          {filtersOpen && (
+            <div style={{ paddingTop: '1rem', borderTop: '1px solid var(--border)', marginTop: '1rem', display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', minWidth: 180 }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--muted-foreground)' }}>Category</label>
+                <select
+                  style={{ height: '2.5rem', padding: '0 2rem 0 0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--foreground)', fontSize: '0.875rem', cursor: 'pointer' }}
+                  value={selectedCategory}
+                  onChange={e => setSelectedCategory(e.target.value)}
+                >
+                  {categories.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
@@ -292,13 +277,13 @@ const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0
                 key={product.id}
                 className="group bg-card rounded-2xl border border-border overflow-hidden hover:shadow-xl hover:border-primary/20 transition-all duration-300 flex flex-col"
               >
-                <div className="relative aspect-square overflow-hidden bg-muted border-b border-border">
+                <div className="relative aspect-square overflow-hidden bg-white border-b border-border">
                   {product.image && !product.image.includes('undefined') ? (
                     <img
                       src={product.image}
                       alt={product.name}
-                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      style={!product.inStock ? { filter: 'blur(3px) brightness(0.45)' } : {}}
+                      className="absolute inset-0 w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
+                      style={{ padding: '0.75rem', ...(! product.inStock ? { filter: 'blur(3px) brightness(0.45)' } : {}) }}
                     />
                   ) : (
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-secondary/30"
@@ -354,12 +339,13 @@ const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0
                 key={product.id}
                 className="flex flex-col sm:flex-row gap-5 bg-card rounded-2xl border border-border p-4 hover:shadow-xl hover:border-primary/20 transition-all duration-300"
               >
-                <div className="relative w-full sm:w-40 h-40 flex-shrink-0 rounded-xl overflow-hidden bg-muted border border-border/50">
+                <div className="relative w-full sm:w-40 h-40 flex-shrink-0 rounded-xl overflow-hidden bg-white border border-border/50">
                   {product.image && !product.image.includes('undefined') ? (
                     <img
                       src={product.image}
                       alt={product.name}
-                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      className="absolute inset-0 w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
+                      style={{ padding: '0.5rem' }}
                     />
                   ) : (
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-secondary/30">

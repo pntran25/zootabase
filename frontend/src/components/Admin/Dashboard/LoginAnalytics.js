@@ -87,7 +87,7 @@ const DonutCenterLabel = ({ viewBox, total }) => {
 const LoginAnalytics = () => {
   const [stats, setStats] = useState({ staffLogins: [], customerLogins: [] });
   const [loading, setLoading] = useState(true);
-  const [range, setRange] = useState('custom');
+  const [range, setRange] = useState('month');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
   const today = new Date().toISOString().split('T')[0];

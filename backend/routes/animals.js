@@ -8,8 +8,9 @@ const path = require('path');
 const fs = require('fs');
 const Q = require('../queries/animalQueries');
 
-// Ensure image directory exists
-const imageDir = path.join(__dirname, '../uploads/Animals_Images');
+// Ensure image directory exists – use UPLOADS_DIR env var on Azure
+const uploadsRoot = process.env.UPLOADS_DIR || path.join(__dirname, '../uploads');
+const imageDir = path.join(uploadsRoot, 'Animals_Images');
 if (!fs.existsSync(imageDir)) {
     fs.mkdirSync(imageDir, { recursive: true });
 }

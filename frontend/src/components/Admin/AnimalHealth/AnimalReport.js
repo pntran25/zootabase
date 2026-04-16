@@ -3,7 +3,7 @@ import '../AdminTable.css';
 import './AnimalReport.css';
 import {
   ClipboardList, ChevronDown, ChevronRight, PawPrint, HeartPulse,
-  UtensilsCrossed, Search, AlertTriangle, CheckCircle, Users
+  UtensilsCrossed, Search, AlertTriangle, CheckCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Download } from 'lucide-react';
@@ -68,6 +68,8 @@ const AnimalReport = () => {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   useEffect(() => {
     getAnimalsForDropdown()
@@ -104,6 +106,18 @@ const AnimalReport = () => {
   const a = report?.animal;
   const modalAnimal = animals.find(an => String(an.AnimalID) === selectedAnimalId);
 
+  const inDateRange = (dateStr) => {
+    if (!dateFrom && !dateTo) return true;
+    if (!dateStr) return false;
+    const d = new Date(dateStr).toISOString().split('T')[0];
+    if (dateFrom && d < dateFrom) return false;
+    if (dateTo && d > dateTo) return false;
+    return true;
+  };
+
+  const filteredHealthRecords = report?.healthRecords?.filter(r => inDateRange(r.CheckupDate)) || [];
+  const filteredAlerts = report?.alerts?.filter(a => inDateRange(a.CreatedAt)) || [];
+
   return (
     <div className="admin-page">
       <div className="admin-page-header">
@@ -124,7 +138,7 @@ const AnimalReport = () => {
                 'Exhibit': a.ExhibitName || '', 'Age': a.Age || '', 'Gender': a.Gender || '',
                 'Health Status': a.HealthStatus || '',
               }));
-              const recordRows = (healthData.records || []).map(r => ({
+              const recordRows = (healthData.records || []).filter(r => inDateRange(r.CheckupDate)).map(r => ({
                 'Animal': r.AnimalName || '', 'Code': r.AnimalCode || '', 'Species': r.Species || '',
                 'Checkup Date': r.CheckupDate ? new Date(r.CheckupDate).toLocaleDateString() : '',
                 'Health Score': r.HealthScore ?? '', 'Staff': r.StaffName || '',
@@ -138,26 +152,18 @@ const AnimalReport = () => {
                 'Unit': f.Unit || '', 'Frequency': f.Frequency || '',
                 'Time': f.FeedingTime || '', 'Instructions': f.SpecialInstructions || '',
               }));
-              const alertRows = (healthData.alerts || []).map(a => ({
+              const alertRows = (healthData.alerts || []).filter(a => inDateRange(a.CreatedAt)).map(a => ({
                 'Animal': a.AnimalName || '', 'Code': a.AnimalCode || '', 'Species': a.Species || '',
                 'Alert Type': a.AlertType || '', 'Message': a.AlertMessage || '',
                 'Date': a.CreatedAt ? new Date(a.CreatedAt).toLocaleDateString() : '',
                 'Status': a.IsResolved ? 'Resolved' : 'Active',
-              }));
-              const keeperRows = (healthData.keepers || []).map(k => ({
-                'Animal': k.AnimalName || '', 'Code': k.AnimalCode || '', 'Species': k.Species || '',
-                'Keeper': k.KeeperName || '', 'Role': k.AssignmentRole || '',
-                'Start Date': k.StartDate ? new Date(k.StartDate).toLocaleDateString() : '',
-                'End Date': k.EndDate ? new Date(k.EndDate).toLocaleDateString() : '',
-                'Is Primary': k.IsPrimary ? 'Yes' : 'No',
               }));
               exportSectionsToSingleSheet([
                 { name: 'Animals Summary', data: summaryRows },
                 { name: 'Health Records', data: recordRows },
                 { name: 'Feeding Schedules', data: feedingRows },
                 { name: 'Health Alerts', data: alertRows },
-                { name: 'Keeper Assignments', data: keeperRows },
-              ], 'Animal_Report');
+              ], 'Animal_Report', { reportName: 'Animal Data Report', dateFrom, dateTo });
               toast.success('Animal report downloaded.');
             } catch (err) {
               toast.error('Failed to generate report.');
@@ -168,26 +174,37 @@ const AnimalReport = () => {
         </button>
       </div>
 
-      {/* ── Search bar ── */}
-      <div style={{ marginBottom: 14, position: 'relative', maxWidth: 340 }}>
-        <Search size={15} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--adm-text-muted)', pointerEvents: 'none' }} />
-        <input
-          type="text"
-          placeholder="Search by name, ID, or species..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '8px 12px 8px 34px',
-            background: 'var(--adm-bg-surface)',
-            border: '1px solid var(--adm-border)',
-            borderRadius: 8,
-            color: 'var(--adm-text-primary)',
-            fontSize: '0.85rem',
-            outline: 'none',
-            boxSizing: 'border-box',
-          }}
-        />
+      {/* ── Search bar + Date filter ── */}
+      <div className="ar-toolbar">
+        <div style={{ position: 'relative', maxWidth: 340, flex: 1 }}>
+          <Search size={15} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--adm-text-muted)', pointerEvents: 'none' }} />
+          <input
+            type="text"
+            placeholder="Search by name, ID, or species..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '8px 12px 8px 34px',
+              background: 'var(--adm-bg-surface)',
+              border: '1px solid var(--adm-border)',
+              borderRadius: 8,
+              color: 'var(--adm-text-primary)',
+              fontSize: '0.85rem',
+              outline: 'none',
+              boxSizing: 'border-box',
+            }}
+          />
+        </div>
+        <div className="ar-date-filter">
+          <label className="ar-date-label">From</label>
+          <input type="date" className="ar-date-input" value={dateFrom} max={new Date().toISOString().split('T')[0]} onChange={e => setDateFrom(e.target.value)} />
+          <label className="ar-date-label">To</label>
+          <input type="date" className="ar-date-input" value={dateTo} max={new Date().toISOString().split('T')[0]} onChange={e => setDateTo(e.target.value)} />
+          {(dateFrom || dateTo) && (
+            <button className="ar-date-clear" onClick={() => { setDateFrom(''); setDateTo(''); }}>Clear</button>
+          )}
+        </div>
       </div>
 
       {/* ── Animal table ── */}
@@ -309,14 +326,14 @@ const AnimalReport = () => {
                   </Section>
 
                   {/* ── Health Records ── */}
-                  <Section icon={<HeartPulse size={16} color="#ef4444" />} title="Health Records" count={report.healthRecords.length}>
-                    {report.healthRecords.length === 0 ? (
-                      <div className="ar-empty-section">No health records on file.</div>
+                  <Section icon={<HeartPulse size={16} color="#ef4444" />} title="Health Records" count={filteredHealthRecords.length}>
+                    {filteredHealthRecords.length === 0 ? (
+                      <div className="ar-empty-section">No health records {dateFrom || dateTo ? 'in the selected date range.' : 'on file.'}</div>
                     ) : (
                       <table className="ar-mini-table">
                         <thead><tr><th>Date</th><th>Score</th><th>Weight</th><th>Activity</th><th>Appetite</th><th>Staff</th><th>Notes</th></tr></thead>
                         <tbody>
-                          {report.healthRecords.map(r => (
+                          {filteredHealthRecords.map(r => (
                             <tr key={r.RecordID}>
                               <td>{fmtDate(r.CheckupDate)}</td>
                               <td><span className={`ah-score ${scoreClass(r.HealthScore)}`}><span className="ah-score-dot" />{r.HealthScore} — {scoreLabel(r.HealthScore)}</span></td>
@@ -333,14 +350,14 @@ const AnimalReport = () => {
                   </Section>
 
                   {/* ── Health Alerts ── */}
-                  <Section icon={<AlertTriangle size={16} color="#f59e0b" />} title="Health Alerts" count={report.alerts.length} defaultOpen={report.alerts.some(a => !a.IsResolved)}>
-                    {report.alerts.length === 0 ? (
-                      <div className="ar-empty-section">No health alerts.</div>
+                  <Section icon={<AlertTriangle size={16} color="#f59e0b" />} title="Health Alerts" count={filteredAlerts.length} defaultOpen={filteredAlerts.some(a => !a.IsResolved)}>
+                    {filteredAlerts.length === 0 ? (
+                      <div className="ar-empty-section">No health alerts {dateFrom || dateTo ? 'in the selected date range.' : '.'}</div>
                     ) : (
                       <table className="ar-mini-table">
                         <thead><tr><th>Date</th><th>Type</th><th>Message</th><th>Status</th></tr></thead>
                         <tbody>
-                          {report.alerts.map(a => (
+                          {filteredAlerts.map(a => (
                             <tr key={a.AlertID}>
                               <td>{fmtDate(a.CreatedAt)}</td>
                               <td>{a.AlertType}</td>
@@ -349,27 +366,6 @@ const AnimalReport = () => {
                                 ? <span style={{ color: '#10b981', fontWeight: 600, fontSize: '0.8rem' }}><CheckCircle size={13} style={{ verticalAlign: 'middle' }} /> Resolved</span>
                                 : <span style={{ color: '#ef4444', fontWeight: 600, fontSize: '0.8rem' }}><AlertTriangle size={13} style={{ verticalAlign: 'middle' }} /> Active</span>
                               }</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    )}
-                  </Section>
-
-                  {/* ── Keeper Assignments ── */}
-                  <Section icon={<Users size={16} color="#6366f1" />} title="Keeper Assignments" count={report.keepers.length} defaultOpen={report.keepers.length > 0}>
-                    {report.keepers.length === 0 ? (
-                      <div className="ar-empty-section">No keeper assignments.</div>
-                    ) : (
-                      <table className="ar-mini-table">
-                        <thead><tr><th>Keeper</th><th>Role</th><th>Start</th><th>End</th></tr></thead>
-                        <tbody>
-                          {report.keepers.map(k => (
-                            <tr key={k.AssignmentID}>
-                              <td style={{ fontWeight: 600 }}>{k.KeeperName}</td>
-                              <td>{k.Role || '—'}</td>
-                              <td>{fmtDate(k.StartDate)}</td>
-                              <td>{k.EndDate ? fmtDate(k.EndDate) : <span style={{ color: '#10b981', fontWeight: 600 }}>Active</span>}</td>
                             </tr>
                           ))}
                         </tbody>

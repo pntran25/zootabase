@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { auth } from '../../../services/firebase';
-import { apiGet } from '../../../services/apiClient';
+import { apiGet, apiPost } from '../../../services/apiClient';
 import {
   Calendar, ChevronRight, CreditCard, LogOut, Mail,
-  Package, Shield, Ticket, User, Bell, Star,
+  Package, Ticket, User, Star, Eye, QrCode,
 } from 'lucide-react';
 
 const cn = (...classes) => classes.filter(Boolean).join(' ');
@@ -14,8 +14,6 @@ const NAV_ITEMS = [
   { id: 'account', label: 'Account', icon: User },
   { id: 'orders', label: 'Order History', icon: Package },
   { id: 'membership', label: 'Membership', icon: Star },
-  { id: 'notifications', label: 'Notifications', icon: Bell },
-  { id: 'security', label: 'Security', icon: Shield },
 ];
 
 const ProfilePage = () => {
@@ -28,13 +26,7 @@ const ProfilePage = () => {
   const [ordersLoading, setOrdersLoading] = useState(true);
   const [membershipLoading, setMembershipLoading] = useState(true);
 
-  // Notification preferences (local state only — no backend persistence)
-  const [notifPrefs, setNotifPrefs] = useState({
-    email_promotions: true,
-    email_orders: true,
-    email_events: false,
-    email_membership: true,
-  });
+
 
   useEffect(() => {
     if (!currentUser) return;
@@ -71,7 +63,7 @@ const ProfilePage = () => {
     );
   }
 
-  const toggleNotif = (key) => setNotifPrefs(p => ({ ...p, [key]: !p[key] }));
+
 
   /* ────────────────── SECTION RENDERERS ────────────────── */
 
@@ -156,6 +148,25 @@ const ProfilePage = () => {
                 <span className="font-semibold text-foreground text-sm">${Number(order.Total).toFixed(2)}</span>
               </div>
               <p className="text-xs text-muted-foreground/60 mt-2 m-0">Ordered {fmtDate(order.PlacedAt)}</p>
+              <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border">
+                <button
+                  onClick={() => alert(`Receipt for Ticket Order #${order.TicketOrderID}\n\nType: ${order.TicketType}\nVisit Date: ${fmtDate(order.VisitDate)}\nAdult: ${order.AdultQty || 0}  Child: ${order.ChildQty || 0}  Senior: ${order.SeniorQty || 0}\n\nTotal: $${Number(order.Total).toFixed(2)}\nOrdered: ${fmtDate(order.PlacedAt)}`)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors cursor-pointer border-none"
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                  View Receipt
+                </button>
+                <button
+                  onClick={() => {
+                    const w = window.open('', '_blank', 'width=340,height=400');
+                    w.document.write(`<html><head><title>QR Code</title></head><body style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0;font-family:system-ui,sans-serif;background:#f9fafb"><p style="font-weight:600;margin-bottom:1rem">Ticket #${order.TicketOrderID}</p><img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=ZOOTABASE-TICKET-${order.TicketOrderID}" alt="QR Code" /><p style="margin-top:1rem;font-size:0.75rem;color:#666">Present this at the gate</p></body></html>`);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-muted text-foreground hover:bg-muted/80 transition-colors cursor-pointer border-none"
+                >
+                  <QrCode className="h-3.5 w-3.5" />
+                  View QR Code
+                </button>
+              </div>
             </div>
           ))}
 
@@ -178,6 +189,16 @@ const ProfilePage = () => {
                 <span className="font-semibold text-foreground text-sm">${Number(order.Total).toFixed(2)}</span>
               </div>
               <p className="text-xs text-muted-foreground/60 mt-2 m-0">Ordered {fmtDate(order.PlacedAt)}</p>
+              <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border">
+                <button
+                  onClick={() => alert(`Receipt for Gift Shop Order #${order.OrderID}\n\nItems: ${order.items.map(i => `${i.name} x${i.qty}`).join(', ')}\n\nTotal: $${Number(order.Total).toFixed(2)}\nOrdered: ${fmtDate(order.PlacedAt)}`)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors cursor-pointer border-none"
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                  View Receipt
+                </button>
+
+              </div>
             </div>
           ))}
         </div>
@@ -218,6 +239,20 @@ const ProfilePage = () => {
               <p className="font-medium text-foreground m-0 mt-0.5">{fmtDate(membership.EndDate)}</p>
             </div>
           </div>
+          <button
+            onClick={async () => {
+              if (!window.confirm('Are you sure you want to cancel your membership? This action cannot be undone.')) return;
+              try {
+                await apiPost('/api/membership-subscriptions/cancel');
+                setMembership(null);
+              } catch (err) {
+                alert('Failed to cancel membership. Please try again.');
+              }
+            }}
+            className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium bg-red-600 text-white hover:bg-red-700 transition-colors cursor-pointer border-none"
+          >
+            Cancel Membership
+          </button>
         </div>
       ) : (
         <div className="text-center py-12 bg-card rounded-xl border border-border">
@@ -234,94 +269,10 @@ const ProfilePage = () => {
     </div>
   );
 
-  const renderNotifications = () => (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold text-foreground m-0">Notification Preferences</h2>
-        <p className="text-sm text-muted-foreground mt-1 m-0">Choose what emails you'd like to receive</p>
-      </div>
-
-      <div className="bg-card rounded-xl border border-border divide-y divide-border">
-        {[
-          { key: 'email_orders', label: 'Order Confirmations', desc: 'Receipts and booking confirmations' },
-          { key: 'email_events', label: 'Event Updates', desc: 'New events and schedule changes' },
-          { key: 'email_promotions', label: 'Promotions & Offers', desc: 'Discounts, seasonal deals, and special offers' },
-          { key: 'email_membership', label: 'Membership Reminders', desc: 'Renewal reminders and member perks' },
-        ].map(item => (
-          <div key={item.key} className="flex items-center justify-between px-5 py-4">
-            <div>
-              <p className="font-medium text-foreground m-0 text-sm">{item.label}</p>
-              <p className="text-xs text-muted-foreground m-0 mt-0.5">{item.desc}</p>
-            </div>
-            <button
-              onClick={() => toggleNotif(item.key)}
-              className={cn(
-                "relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer border-none",
-                notifPrefs[item.key] ? "bg-primary" : "bg-muted"
-              )}
-              role="switch"
-              aria-checked={notifPrefs[item.key]}
-            >
-              <span className={cn(
-                "inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform",
-                notifPrefs[item.key] ? "translate-x-6" : "translate-x-1"
-              )} />
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-
-  const renderSecurity = () => (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold text-foreground m-0">Security</h2>
-        <p className="text-sm text-muted-foreground mt-1 m-0">Manage your account security</p>
-      </div>
-
-      <div className="bg-card rounded-xl border border-border divide-y divide-border">
-        <div className="flex items-center justify-between px-5 py-4">
-          <div>
-            <p className="font-medium text-foreground m-0 text-sm">Password</p>
-            <p className="text-xs text-muted-foreground m-0 mt-0.5">
-              {currentUser?.providerData?.[0]?.providerId === 'password'
-                ? 'Last changed: Unknown'
-                : `Signed in via ${currentUser?.providerData?.[0]?.providerId || 'third-party'}`
-              }
-            </p>
-          </div>
-          <Shield className="h-4 w-4 text-muted-foreground" />
-        </div>
-        <div className="flex items-center justify-between px-5 py-4">
-          <div>
-            <p className="font-medium text-foreground m-0 text-sm">Login Provider</p>
-            <p className="text-xs text-muted-foreground m-0 mt-0.5 capitalize">
-              {currentUser?.providerData?.[0]?.providerId === 'password' ? 'Email & Password' : (currentUser?.providerData?.[0]?.providerId || 'Unknown')}
-            </p>
-          </div>
-          <CreditCard className="h-4 w-4 text-muted-foreground" />
-        </div>
-      </div>
-
-      <div className="pt-2">
-        <button
-          onClick={handleLogout}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-destructive bg-destructive/10 hover:bg-destructive/20 transition-colors cursor-pointer border-none"
-        >
-          <LogOut className="h-4 w-4" />
-          Sign Out of All Devices
-        </button>
-      </div>
-    </div>
-  );
-
   const SECTIONS = {
     account: renderAccount,
     orders: renderOrders,
     membership: renderMembership,
-    notifications: renderNotifications,
-    security: renderSecurity,
   };
 
   return (

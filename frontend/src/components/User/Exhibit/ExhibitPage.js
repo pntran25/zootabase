@@ -1,21 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import './ExhibitPage.css';
-import { Search, MapPin, Clock, Leaf, Users, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, MapPin, Clock, Leaf, Users, ArrowRight, ChevronDown, SlidersHorizontal } from 'lucide-react';
 import { getExhibits } from '../../../services/exhibitService';
 import { API_BASE_URL } from '../../../services/apiClient';
 import placeholderImg from '../../../assets/images/Exhibits_Images/ExhibitsComingSoon.png';
 import heroWildlife from '../../../assets/images/giraffe-habitat.jpg';
-
-const REGION_PAGE_SIZE = 3;
 
 const ExhibitPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('All Regions');
   const [exhibits, setExhibits] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [regionPage, setRegionPage] = useState(0);
-  const [animKey, setAnimKey]     = useState(0);
-  const [animDir, setAnimDir]     = useState('right');
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   useEffect(() => {
     const fetchExhibits = async () => {
@@ -81,39 +77,35 @@ const ExhibitPage = () => {
               </div>
             </div>
 
-            {/* RIGHT: Region Filters — paginated (3 at a time) */}
-            <div className="ww-region-scroll-wrapper">
-              <button
-                className={`ww-scroll-arrow${regionPage === 0 ? ' ww-scroll-hidden' : ''}`}
-                onClick={() => { setRegionPage(p => p - 1); setAnimDir('left');  setAnimKey(k => k + 1); }}
-                aria-label="Previous regions"
-              >
-                <ChevronLeft size={16} />
-              </button>
-
-              <div key={animKey} className={`ww-region-filters ww-slide-${animDir}`}>
-                {dynamicRegions
-                  .slice(regionPage * REGION_PAGE_SIZE, regionPage * REGION_PAGE_SIZE + REGION_PAGE_SIZE)
-                  .map(region => (
-                    <button
-                      key={region}
-                      className={`ww-region-btn ${activeCategory === region ? 'active' : ''}`}
-                      onClick={() => setActiveCategory(region)}
-                    >
-                      {region}
-                    </button>
-                  ))}
-              </div>
-
-              <button
-                className={`ww-scroll-arrow${regionPage >= Math.ceil(dynamicRegions.length / REGION_PAGE_SIZE) - 1 ? ' ww-scroll-hidden' : ''}`}
-                onClick={() => { setRegionPage(p => p + 1); setAnimDir('right'); setAnimKey(k => k + 1); }}
-                aria-label="Next regions"
-              >
-                <ChevronRight size={16} />
-              </button>
-            </div>
+            {/* RIGHT: Filter Button */}
+            <button
+              className={`ww-filter-toggle-btn${filtersOpen ? ' open' : ''}`}
+              onClick={() => setFiltersOpen(f => !f)}
+            >
+              <SlidersHorizontal size={16} />
+              Filters
+              {activeCategory !== 'All Regions' && <span className="ww-filter-badge">1</span>}
+              <ChevronDown size={14} className={`ww-filter-chevron${filtersOpen ? ' rotated' : ''}`} />
+            </button>
           </div>
+
+          {/* Expandable Filter Panel */}
+          {filtersOpen && (
+            <div className="ww-filter-panel">
+              <div className="ww-filter-panel-group">
+                <label className="ww-filter-panel-label">Region</label>
+                <select
+                  className="ww-filter-select"
+                  value={activeCategory}
+                  onChange={e => setActiveCategory(e.target.value)}
+                >
+                  {dynamicRegions.map(region => (
+                    <option key={region} value={region}>{region}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
@@ -157,7 +149,7 @@ const ExhibitPage = () => {
                   
                   <h2 className="ww-card-title">{exhibit.ExhibitName}</h2>
                   
-                  <p className="ww-card-desc">
+                  <p className="ww-card-desc ww-card-desc-hover">
                     {exhibit.Description
                       ? exhibit.Description
                       : exhibit.HabitatType
@@ -190,8 +182,9 @@ const ExhibitPage = () => {
                     <div className="ww-card-stats">
                       <span>
                         <Users /> 
-                        {exhibit.Capacity ? Math.floor(exhibit.Capacity / 2) : ((exhibit.ExhibitID * 7) % 50 + 10)} animals 
-                        <span className="acres">{((exhibit.ExhibitID * 3) % 20 + 5)} acres</span>
+                        {exhibit.AnimalNames
+                          ? exhibit.AnimalNames.split(',').filter(n => n.trim()).length
+                          : 0} animals
                       </span>
                     </div>
                   </div>

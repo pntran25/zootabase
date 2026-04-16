@@ -199,7 +199,7 @@ const TicketCheckoutModal = ({
                 </div>
                 <div className="co-field" style={{ flex: 1 }}>
                   <label>ZIP Code <span style={{ color: '#ef4444' }}>*</span></label>
-                  <input type="text" placeholder="00000" value={contact.zip} onChange={e => setC('zip', e.target.value)} />
+                  <input type="text" placeholder="00000" maxLength={5} value={contact.zip} onChange={e => setC('zip', e.target.value.replace(/\D/g, '').slice(0, 5))} />
                 </div>
               </div>
 
@@ -232,6 +232,7 @@ const TicketCheckoutModal = ({
                   <label>CVV <span style={{ color: '#ef4444' }}>*</span></label>
                   <input type="text" placeholder="123" maxLength={4}
                     value={card.cvv} onChange={e => setK('cvv', e.target.value.replace(/\D/g, '').slice(0, 4))}
+                    inputMode="numeric"
                     style={{ fontFamily: 'monospace' }} />
                 </div>
               </div>
@@ -279,7 +280,7 @@ const TicketCheckoutModal = ({
                     </div>
                     <div className="co-field" style={{ flex: 1 }}>
                       <label>ZIP Code <span style={{ color: '#ef4444' }}>*</span></label>
-                      <input type="text" placeholder="00000" value={bill.zip} onChange={e => setB('zip', e.target.value)} />
+                      <input type="text" placeholder="00000" maxLength={5} value={bill.zip} onChange={e => setB('zip', e.target.value.replace(/\D/g, '').slice(0, 5))} />
                     </div>
                   </div>
                 </div>

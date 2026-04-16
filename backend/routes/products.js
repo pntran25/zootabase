@@ -8,8 +8,9 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-// Ensure image directory exists
-const imageDir = path.join(__dirname, '../uploads/Product_Images');
+// Ensure image directory exists – use UPLOADS_DIR env var on Azure
+const uploadsRoot = process.env.UPLOADS_DIR || path.join(__dirname, '../uploads');
+const imageDir = path.join(uploadsRoot, 'Product_Images');
 if (!fs.existsSync(imageDir)) fs.mkdirSync(imageDir, { recursive: true });
 
 const storage = multer.diskStorage({

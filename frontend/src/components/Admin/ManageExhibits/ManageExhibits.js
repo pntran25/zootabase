@@ -66,6 +66,8 @@ const ManageExhibits = () => {
         description: item.Description || '',
         isFeatured: item.IsFeatured === true || item.IsFeatured === 1,
         imageUrl: item.ImageUrl || null,
+        createdBy: item.CreatedBy || null,
+        updatedBy: item.UpdatedBy || null,
       }));
       setExhibits(mapped);
     } catch (err) {
@@ -236,10 +238,11 @@ const ManageExhibits = () => {
       id: 'modifiedBy',
       header: 'Modified By',
       enableSorting: false,
+      size: 160,
       cell: ({ row }) => {
         const { createdBy, updatedBy } = row.original;
-        if (updatedBy) return <span className="text-secondary" style={{ fontSize: '0.78rem' }}>Updated by <strong>{updatedBy}</strong></span>;
-        if (createdBy) return <span className="text-secondary" style={{ fontSize: '0.78rem' }}>Created by <strong>{createdBy}</strong></span>;
+        if (updatedBy) return <span className="text-secondary" style={{ fontSize: '0.78rem', display: 'block', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Updated by <strong>{updatedBy}</strong></span>;
+        if (createdBy) return <span className="text-secondary" style={{ fontSize: '0.78rem', display: 'block', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Created by <strong>{createdBy}</strong></span>;
         return <span className="text-secondary">—</span>;
       },
     },
@@ -248,7 +251,7 @@ const ManageExhibits = () => {
       header: 'Actions',
       enableSorting: false,
       cell: ({ row }) => (
-        <div className="action-buttons">
+        <div className="action-buttons" style={{ whiteSpace: 'nowrap' }}>
           <button className="action-btn edit" onClick={() => handleOpenModal(row.original)}><Edit2 size={16} /></button>
           <button className="action-btn delete" onClick={() => handleDelete(row.original.id)}><Trash2 size={16} /></button>
         </div>

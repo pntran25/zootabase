@@ -17,21 +17,26 @@ const Signup = () => {
   const navigate = useNavigate();
 
   const handleSyncTokens = async (userCredential, fullName) => {
-    const token = await userCredential.user.getIdToken(true);
-    const response = await fetch(`${API_BASE_URL}/api/auth/sync`, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ fullName }),
-    });
+    try {
+      const token = await userCredential.user.getIdToken(true);
+      const response = await fetch(`${API_BASE_URL}/api/auth/sync`, {
+          method: 'POST',
+          headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ fullName }),
+      });
 
-    const data = await response.json();
-    if (data.isStaff) {
-        navigate('/admin');
-    } else {
-        navigate('/');
+      const data = await response.json();
+      if (data.isStaff) {
+          navigate('/admin');
+      } else {
+          navigate('/');
+      }
+    } catch (err) {
+      console.error('Sync failed, redirecting to home:', err);
+      navigate('/');
     }
   };
 

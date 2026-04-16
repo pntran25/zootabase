@@ -391,6 +391,13 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
   min-height: 3rem;
+  transition: all 0.3s ease;
+}
+
+.ww-exhibit-page .ww-card:hover .ww-card-desc-hover {
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  display: block;
 }
 
 .ww-exhibit-page .ww-card-chips {
@@ -479,7 +486,87 @@
     max-width: unset;
     flex: 1;
   }
-  .ww-region-scroll-wrapper {
-    justify-content: flex-start;
-  }
+}
+
+/* ── Filter Toggle Button ── */
+.ww-filter-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2.75rem;
+  padding: 0 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  background-color: var(--background);
+  color: var(--foreground);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.06);
+  flex-shrink: 0;
+}
+.ww-filter-toggle-btn:hover {
+  background-color: var(--secondary);
+}
+.ww-filter-toggle-btn.open {
+  border-color: var(--primary);
+  background-color: color-mix(in srgb, var(--primary) 8%, var(--background));
+}
+.ww-filter-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 9999px;
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+.ww-filter-chevron {
+  transition: transform 0.2s;
+}
+.ww-filter-chevron.rotated {
+  transform: rotate(180deg);
+}
+
+/* ── Expandable Filter Panel ── */
+.ww-filter-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  margin-top: 1rem;
+}
+.ww-filter-panel-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 180px;
+}
+.ww-filter-panel-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+}
+.ww-filter-select {
+  height: 2.5rem;
+  padding: 0 2rem 0 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  background-color: var(--background);
+  color: var(--foreground);
+  font-size: 0.875rem;
+  cursor: pointer;
+  appearance: auto;
+  transition: border-color 0.2s;
+}
+.ww-filter-select:focus {
+  outline: none;
+  border-color: var(--primary);
 }

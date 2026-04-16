@@ -8,7 +8,7 @@ import {
 import {
   PawPrint, Ticket, Wrench, TrendingUp, TrendingDown,
   CalendarDays, ArrowUpRight, ArrowDownRight,
-  Zap, ShoppingBag, CreditCard
+  Zap, ShoppingBag, CreditCard, AlertTriangle, HeartPulse
 } from 'lucide-react';
 import './Dashboard.css';
 import { getLowStockProducts } from '../../../services/productService';
@@ -107,11 +107,13 @@ const Dashboard = () => {
     membersThisMonth: 0,
     membersLastMonth: 0,
     weeklyVisitors: [],
+    healthAlerts: [],
+    unresolvedAlertCount: 0,
   });
 
   useEffect(() => {
-    getLowStockProducts().then(setLowStockProducts).catch(() => {});
-    apiGet('/api/dashboard').then(setDashStats).catch(() => {});
+    getLowStockProducts().then(d => setLowStockProducts(Array.isArray(d) ? d : [])).catch(() => {});
+    apiGet('/api/dashboard').then(d => setDashStats(prev => ({ ...prev, ...d }))).catch(() => {});
   }, []);
 
   const animalsAnim     = useCountAnimation(dashStats.totalAnimals);
@@ -307,6 +309,48 @@ const Dashboard = () => {
         </motion.div>
       )}
 
+      {/* Health Alerts */}
+      {dashStats.healthAlerts?.length > 0 && (
+        <motion.div
+          className="dashboard-panel"
+          style={{ borderLeft: '4px solid #ef4444', marginBottom: 20 }}
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.34, type: 'spring', stiffness: 260, damping: 22 }}
+        >
+          <div className="panel-header-flex" style={{ marginBottom: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <HeartPulse size={18} style={{ color: '#ef4444' }} />
+              <div>
+                <h3 className="panel-title" style={{ color: '#ef4444', marginBottom: 2 }}>Health Alerts</h3>
+                <p className="panel-subtitle">{dashStats.unresolvedAlertCount} unresolved alert{dashStats.unresolvedAlertCount !== 1 ? 's' : ''} requiring attention</p>
+              </div>
+            </div>
+            <button className="panel-view-all" onClick={() => navigate('/admin/animal-health')}>View All →</button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {dashStats.healthAlerts.map(alert => (
+              <div key={alert.AlertID} style={{
+                display: 'flex', alignItems: 'flex-start', gap: 10,
+                background: 'rgba(239,68,68,0.08)',
+                border: '1px solid rgba(239,68,68,0.2)',
+                borderRadius: 8, padding: '10px 14px',
+              }}>
+                <AlertTriangle size={16} style={{ color: '#ef4444', flexShrink: 0, marginTop: 2 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--adm-text-primary)' }}>{alert.AnimalName || alert.Species}</span>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 500, padding: '1px 6px', borderRadius: 4, background: 'rgba(239,68,68,0.15)', color: '#dc2626' }}>{alert.AlertType}</span>
+                  </div>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--adm-text-secondary)', margin: '3px 0 0', lineHeight: 1.4 }}>{alert.AlertMessage}</p>
+                </div>
+                <span style={{ fontSize: '0.72rem', color: 'var(--adm-text-muted)', whiteSpace: 'nowrap', flexShrink: 0 }}>{timeAgo(alert.CreatedAt)}</span>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
       {/* Content Grid */}
       <div className="dashboard-content-grid">
         {/* Visitor Chart */}
@@ -366,11 +410,11 @@ const Dashboard = () => {
           >
             <h3 className="panel-title" style={{ marginBottom: 16 }}>Recent Activity</h3>
             <div className="activity-list">
-              {dashStats.recentActivity.length === 0 ? (
+              {dashStats.recentActivity?.length === 0 ? (
                 <p style={{ color: 'var(--adm-text-muted)', fontSize: '0.875rem', textAlign: 'center', padding: '16px 0' }}>
                   No recent activity
                 </p>
-              ) : dashStats.recentActivity.map((item, i) => (
+              ) : (dashStats.recentActivity || []).map((item, i) => (
                 <div key={i} className="activity-item">
                   <div className={`activity-icon activity-icon--${item.type}`}>
                     {activityIcons[item.type] || activityIcons.animal}

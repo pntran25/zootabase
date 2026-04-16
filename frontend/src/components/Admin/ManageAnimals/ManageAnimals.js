@@ -22,22 +22,10 @@ const SortIcon = ({ column }) => {
   );
 };
 
-const healthStyle = (health) => {
-  switch (health) {
-    case 'Excellent': return { bg: '#dcfce7', text: '#166534', dot: '#22c55e' };
-    case 'Good':      return { bg: 'var(--adm-bg-surface-2)', text: 'var(--adm-text-secondary)', dot: '#94a3b8' };
-    case 'Fair':
-    case 'Needs Checkup': return { bg: '#fef3c7', text: '#92400e', dot: '#f59e0b' };
-    case 'Critical':  return { bg: '#fee2e2', text: '#991b1b', dot: '#ef4444' };
-    default:          return { bg: 'var(--adm-bg-surface-2)', text: 'var(--adm-text-secondary)', dot: '#94a3b8' };
-  }
-};
-
 const DEPARTURE_OPTIONS = [
   { value: 'Deceased',    label: 'Deceased — animal has passed away' },
   { value: 'Transferred', label: 'Transferred — moved to another zoo' },
   { value: 'Released',    label: 'Released — returned to the wild' },
-  { value: 'Other',       label: 'Other' },
 ];
 
 const ManageAnimals = () => {
@@ -77,6 +65,7 @@ const ManageAnimals = () => {
   // Departure dialog
   const [departureTarget, setDepartureTarget] = useState(null);
   const [departureReason, setDepartureReason] = useState('Deceased');
+  const [customDepartureReason, setCustomDepartureReason] = useState('');
 
   const loadData = async () => {
     try {
@@ -239,6 +228,7 @@ const ManageAnimals = () => {
   const handleDelete = (animal) => {
     setDepartureTarget({ id: animal.id, name: animal.name });
     setDepartureReason('Deceased');
+    setCustomDepartureReason('');
   };
 
   const handleSetDisplay = (animal) => {
@@ -266,10 +256,15 @@ const ManageAnimals = () => {
   };
 
   const confirmDeparture = async () => {
+    const reason = departureReason === 'Other' ? customDepartureReason.trim() : departureReason;
+    if (!reason) {
+      toast.error('Please enter a reason.');
+      return;
+    }
     try {
-      await animalService.deleteAnimal(departureTarget.id, departureReason);
+      await animalService.deleteAnimal(departureTarget.id, reason);
       setAnimals(prev => prev.filter(a => a.id !== departureTarget.id));
-      toast.success(`${departureTarget.name} marked as ${departureReason.toLowerCase()}.`);
+      toast.success(`${departureTarget.name} marked as ${reason.toLowerCase()}.`);
       setDepartureTarget(null);
     } catch (err) {
       toast.error(err.message || 'Failed to remove animal.');
@@ -372,19 +367,6 @@ const ManageAnimals = () => {
           <span className="text-secondary">Age: <span className="font-medium text-dark">{row.original.age} yrs</span> ({row.original.gender})</span>
         </div>
       ),
-    },
-    {
-      accessorKey: 'health',
-      header: 'Health',
-      cell: info => {
-        const s = healthStyle(info.getValue());
-        return (
-          <span className="pill-badge outline" style={{ background: s.bg, color: s.text, border: `1px solid ${s.dot}33` }}>
-            <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: s.dot, marginRight: 5 }} />
-            {info.getValue()}
-          </span>
-        );
-      },
     },
     {
       accessorKey: 'isEndangered',
@@ -823,14 +805,6 @@ const ManageAnimals = () => {
               options={[{ value: '', label: 'Select diet type...' }, 'Herbivore', 'Carnivore', 'Omnivore']}
             />
           </div>
-          <div className="form-group">
-            <label>Health Status</label>
-            <AdminSelect
-              value={formData.health}
-              onChange={val => setFormData({ ...formData, health: val })}
-              options={['Excellent', 'Good', 'Fair', 'Needs Checkup', 'Critical']}
-            />
-          </div>
         </div>
         <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 }}>
           <input
@@ -966,6 +940,20 @@ const ManageAnimals = () => {
                   <span style={{ fontSize: '0.875rem', color: 'var(--adm-text-primary)' }}>{opt.label}</span>
                 </label>
               ))}
+              <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '10px 14px', borderRadius: 8, border: `1.5px solid ${departureReason === 'Other' ? 'var(--adm-accent)' : 'var(--adm-border)'}`, background: departureReason === 'Other' ? 'var(--adm-accent-subtle, rgba(34,107,64,0.07))' : 'transparent', transition: 'all 0.15s' }}>
+                <input type="radio" name="departureReason" value="Other" checked={departureReason === 'Other'} onChange={() => setDepartureReason('Other')} style={{ accentColor: 'var(--adm-accent)', flexShrink: 0 }} />
+                <span style={{ fontSize: '0.875rem', color: 'var(--adm-text-primary)' }}>Other</span>
+              </label>
+              {departureReason === 'Other' && (
+                <input
+                  type="text"
+                  placeholder="Enter reason..."
+                  value={customDepartureReason}
+                  onChange={e => setCustomDepartureReason(e.target.value)}
+                  autoFocus
+                  style={{ padding: '10px 14px', borderRadius: 8, border: '1.5px solid var(--adm-border)', background: 'var(--adm-bg-surface)', color: 'var(--adm-text-primary)', fontSize: '0.875rem', outline: 'none', marginLeft: 0 }}
+                />
+              )}
             </div>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               <button onClick={() => setDepartureTarget(null)} style={{ padding: '8px 18px', borderRadius: 8, border: '1px solid var(--adm-border)', background: 'var(--adm-bg-surface)', color: 'var(--adm-text-secondary)', fontWeight: 600, cursor: 'pointer', fontSize: '0.875rem' }}>

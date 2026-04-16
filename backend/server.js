@@ -79,8 +79,9 @@ app.use('/api/feeding-schedules', feedingSchedulesRouter);
 app.use('/api/keeper-assignments', keeperAssignmentsRouter);
 app.use('/api/staff-schedules', staffSchedulesRouter);
 
-// Serve uploaded images from local uploads directory
-app.use('/images', express.static(path.join(__dirname, 'uploads')));
+// Serve uploaded images – use UPLOADS_DIR env var on Azure (/home/uploads)
+const uploadsRoot = process.env.UPLOADS_DIR || path.join(__dirname, 'uploads');
+app.use('/images', express.static(uploadsRoot));
 
 async function runMigrations(pool) {
 	const steps = [

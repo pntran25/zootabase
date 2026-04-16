@@ -8,8 +8,9 @@ const path = require('path');
 const fs = require('fs');
 const Q = require('../queries/attractionQueries');
 
-// Ensure image directory exists
-const imageDir = path.join(__dirname, '../uploads/Attractions_Images');
+// Ensure image directory exists – use UPLOADS_DIR env var on Azure
+const uploadsRoot = process.env.UPLOADS_DIR || path.join(__dirname, '../uploads');
+const imageDir = path.join(uploadsRoot, 'Attractions_Images');
 if (!fs.existsSync(imageDir)) {
     fs.mkdirSync(imageDir, { recursive: true });
 }
@@ -39,7 +40,8 @@ router.get('/api/attractions', async (req, res) => {
             id: row.AttractionID.toString(),
             name: row.AttractionName,
             type: row.AttractionType,
-            location: row.LocationDesc,
+            location: row.ExhibitName || row.LocationDesc || '',
+            exhibitId: row.ExhibitID || null,
             capacity: row.CapacityVisitors,
             status: row.ActiveFlag ? 'Open' : 'Closed',
             description: row.Description || '',
@@ -61,14 +63,15 @@ router.get('/api/attractions', async (req, res) => {
 // POST new attraction
 router.post('/api/attractions', optionalAuth, async (req, res) => {
     try {
-        const { name, type, location, capacity, status, description, hours, duration, ageGroup, price } = req.body;
+        const { name, type, location, exhibitId, capacity, status, description, hours, duration, ageGroup, price } = req.body;
         const activeFlag = status === 'Open' ? 1 : 0;
         const adminName = req.userProfile ? `${req.userProfile.FirstName} ${req.userProfile.LastName}`.trim() : null;
         const pool = await connectToDb();
         const result = await pool.request()
             .input('name', sql.NVarChar, name)
             .input('type', sql.NVarChar, type)
-            .input('location', sql.NVarChar, location)
+            .input('location', sql.NVarChar, location || '')
+            .input('exhibitId', sql.Int, exhibitId ? parseInt(exhibitId, 10) : null)
             .input('capacity', sql.Int, parseInt(capacity || 0, 10))
             .input('activeFlag', sql.Bit, activeFlag)
             .input('description', sql.NVarChar, description || '')
@@ -88,7 +91,7 @@ router.post('/api/attractions', optionalAuth, async (req, res) => {
 // PUT update attraction
 router.put('/api/attractions/:id', optionalAuth, async (req, res) => {
     try {
-        const { name, type, location, capacity, status, description, hours, duration, ageGroup, price } = req.body;
+        const { name, type, location, exhibitId, capacity, status, description, hours, duration, ageGroup, price } = req.body;
         const activeFlag = status === 'Open' ? 1 : 0;
         const adminName = req.userProfile ? `${req.userProfile.FirstName} ${req.userProfile.LastName}`.trim() : null;
         const pool = await connectToDb();
@@ -96,7 +99,8 @@ router.put('/api/attractions/:id', optionalAuth, async (req, res) => {
             .input('id', sql.Int, parseInt(req.params.id, 10))
             .input('name', sql.NVarChar, name)
             .input('type', sql.NVarChar, type)
-            .input('location', sql.NVarChar, location)
+            .input('location', sql.NVarChar, location || '')
+            .input('exhibitId', sql.Int, exhibitId ? parseInt(exhibitId, 10) : null)
             .input('capacity', sql.Int, parseInt(capacity || 0, 10))
             .input('activeFlag', sql.Bit, activeFlag)
             .input('description', sql.NVarChar, description || '')

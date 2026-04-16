@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import eventService from '../../../services/eventService';
 import './EventsPage.css';
 import { API_BASE_URL } from '../../../services/apiClient';
-import { Calendar, Clock, ChevronLeft, ChevronRight, MapPin, Search, Star, Ticket, Users } from 'lucide-react';
+import { Calendar, Clock, ChevronDown, SlidersHorizontal, MapPin, Search, Star, Ticket, Users } from 'lucide-react';
 import EventCheckoutModal from './EventCheckoutModal';
 import eventsHeroImg from '../../../assets/images/events-hero1.jpg';
 
@@ -345,10 +345,7 @@ const EventsPage = () => {
   const [viewMode] = useState("grid");
   const [isLoading, setIsLoading]     = useState(true);
   const [checkoutEvent, setCheckoutEvent] = useState(null);
-  const [categoryPage, setCategoryPage] = useState(0);
-  const [animKey, setAnimKey]   = useState(0);
-  const [animDir, setAnimDir]   = useState('right');
-  const CAT_PAGE_SIZE = 3;
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const loadEvents = async () => {
     try {
@@ -452,45 +449,35 @@ const EventsPage = () => {
               </div>
             </div>
 
-            {/* RIGHT: Category Filters — paginated 3 at a time */}
-            <div className="ev-cat-scroll-wrapper">
-              <button
-                className={`ev-scroll-arrow${categoryPage === 0 ? ' ev-scroll-hidden' : ''}`}
-                onClick={() => { setCategoryPage(p => p - 1); setAnimDir('left'); setAnimKey(k => k + 1); }}
-                aria-label="Previous categories"
-              >
-                <ChevronLeft style={{ width: '1rem', height: '1rem' }} />
-              </button>
-
-              <div key={animKey} className={`ev-cat-filters ev-slide-${animDir}`}>
-                {categories
-                  .slice(categoryPage * CAT_PAGE_SIZE, categoryPage * CAT_PAGE_SIZE + CAT_PAGE_SIZE)
-                  .map((category) => (
-                    <button
-                      key={category}
-                      className={cn(
-                        "inline-flex whitespace-nowrap items-center shrink-0 rounded-lg border cursor-pointer transition-all text-sm font-medium",
-                        selectedCategory === category
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-background text-foreground border-border hover:bg-secondary"
-                      )}
-                      style={{ height: '2.25rem', padding: '0 0.875rem' }}
-                      onClick={() => setSelectedCategory(category)}
-                    >
-                      {category}
-                    </button>
-                  ))}
-              </div>
-
-              <button
-                className={`ev-scroll-arrow${categoryPage >= Math.ceil(categories.length / CAT_PAGE_SIZE) - 1 ? ' ev-scroll-hidden' : ''}`}
-                onClick={() => { setCategoryPage(p => p + 1); setAnimDir('right'); setAnimKey(k => k + 1); }}
-                aria-label="Next categories"
-              >
-                <ChevronRight style={{ width: '1rem', height: '1rem' }} />
-              </button>
-            </div>
+            {/* RIGHT: Filter Button */}
+            <button
+              className={`ww-filter-toggle-btn${filtersOpen ? ' open' : ''}`}
+              onClick={() => setFiltersOpen(f => !f)}
+            >
+              <SlidersHorizontal size={16} />
+              Filters
+              {selectedCategory !== 'All Events' && <span className="ww-filter-badge">1</span>}
+              <ChevronDown size={14} className={`ww-filter-chevron${filtersOpen ? ' rotated' : ''}`} />
+            </button>
           </div>
+
+          {/* Expandable Filter Panel */}
+          {filtersOpen && (
+            <div className="ww-filter-panel" style={{ paddingTop: '1rem', borderTop: '1px solid var(--border)', marginTop: '1rem', display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', minWidth: 180 }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--muted-foreground)' }}>Category</label>
+                <select
+                  style={{ height: '2.5rem', padding: '0 2rem 0 0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--foreground)', fontSize: '0.875rem', cursor: 'pointer' }}
+                  value={selectedCategory}
+                  onChange={e => setSelectedCategory(e.target.value)}
+                >
+                  {categories.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 

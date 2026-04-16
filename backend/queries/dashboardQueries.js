@@ -78,6 +78,27 @@ const visitorsPreviousWeek = `
   GROUP BY CAST(VisitDate AS DATE)
 `;
 
+const unresolvedHealthAlerts = `
+  SELECT TOP 5
+      ha.AlertID,
+      ha.AlertType,
+      ha.AlertMessage,
+      ha.CreatedAt,
+      a.Name AS AnimalName,
+      a.Species
+  FROM HealthAlert ha
+  JOIN Animal a ON ha.AnimalID = a.AnimalID
+  WHERE ha.IsResolved = 0 AND a.DeletedAt IS NULL
+  ORDER BY ha.CreatedAt DESC
+`;
+
+const unresolvedHealthAlertCount = `
+  SELECT COUNT(*) AS cnt
+  FROM HealthAlert ha
+  JOIN Animal a ON ha.AnimalID = a.AnimalID
+  WHERE ha.IsResolved = 0 AND a.DeletedAt IS NULL
+`;
+
 module.exports = {
   animalStats,
   openMaintenance,
@@ -89,4 +110,6 @@ module.exports = {
   membershipsLastMonth,
   visitorsCurrentWeek,
   visitorsPreviousWeek,
+  unresolvedHealthAlerts,
+  unresolvedHealthAlertCount,
 };

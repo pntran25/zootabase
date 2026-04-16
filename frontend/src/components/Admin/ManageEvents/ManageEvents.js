@@ -8,6 +8,7 @@ import AdminSelect from '../AdminSelect';
 import TimePickerInput from '../TimePickerInput';
 import DatePickerInput from '../DatePickerInput';
 import eventService from '../../../services/eventService';
+import { getExhibits } from '../../../services/exhibitService';
 import { API_BASE_URL } from '../../../services/apiClient';
 
 const EVENT_CATEGORY_COLORS = {
@@ -53,12 +54,14 @@ const ManageEvents = () => {
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [imageFile, setImageFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [exhibitsList, setExhibitsList] = useState([]);
 
   const loadData = async () => {
     try {
       setIsLoading(true);
-      const data = await eventService.getAllEvents();
+      const [data, exhData] = await Promise.all([eventService.getAllEvents(), getExhibits()]);
       setEvents(data);
+      setExhibitsList(exhData.map(e => ({ value: e.ExhibitName, label: e.ExhibitName })));
     } catch (err) {
       console.error('Failed to load events:', err);
       toast.error(err.message || 'Failed to load events.');
@@ -370,7 +373,13 @@ const ManageEvents = () => {
         {/* Location */}
         <div className="form-group">
           <label>Location (Exhibit)</label>
-          <input type="text" placeholder="e.g. African Savanna" value={formData.exhibit} onChange={e => setFormData({ ...formData, exhibit: e.target.value })} required />
+          <AdminSelect
+            value={formData.exhibit}
+            onChange={val => setFormData({ ...formData, exhibit: val })}
+            options={exhibitsList}
+            placeholder="Select exhibit..."
+            searchable
+          />
         </div>
 
         {/* Start + End Time */}

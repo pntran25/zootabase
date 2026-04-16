@@ -60,54 +60,11 @@ const syncAnimalHealth = `
   UPDATE Animal SET HealthStatus = @status WHERE AnimalID = @aid
 `;
 
-// ── Health Metrics ──
-
-const getAllMetrics = `
-  SELECT m.MetricID, m.AnimalID, m.RecordDate, m.ActivityLevel, m.Weight,
-         m.WeightRangeLow, m.WeightRangeHigh, m.MedicalConditions,
-         m.RecentTreatments, m.AppetiteStatus, m.Notes,
-         a.Name AS AnimalName, a.Species
-  FROM AnimalHealthMetrics m
-  JOIN Animal a ON m.AnimalID = a.AnimalID
-  WHERE m.DeletedAt IS NULL AND a.DeletedAt IS NULL
-  ORDER BY m.RecordDate DESC
-`;
-
-const getMetricsByAnimal = `
-  SELECT m.* FROM AnimalHealthMetrics m
-  WHERE m.AnimalID = @animalId AND m.DeletedAt IS NULL
-  ORDER BY m.RecordDate DESC
-`;
-
-const insertMetric = `
-  DECLARE @newId TABLE (MetricID INT);
-  INSERT INTO AnimalHealthMetrics
-      (AnimalID, RecordDate, ActivityLevel, Weight, WeightRangeLow, WeightRangeHigh,
-       MedicalConditions, RecentTreatments, AppetiteStatus, Notes, CreatedAt, CreatedBy)
-  OUTPUT INSERTED.MetricID INTO @newId
-  VALUES (@animalId, @recordDate, @activityLevel, @weight, @weightRangeLow, @weightRangeHigh,
-          @medicalConditions, @recentTreatments, @appetiteStatus, @notes, SYSUTCDATETIME(), @createdBy);
-  SELECT MetricID FROM @newId;
-`;
-
-const updateMetric = `
-  UPDATE AnimalHealthMetrics
-  SET AnimalID = @animalId, RecordDate = @recordDate, ActivityLevel = @activityLevel,
-      Weight = @weight, WeightRangeLow = @weightRangeLow, WeightRangeHigh = @weightRangeHigh,
-      MedicalConditions = @medicalConditions, RecentTreatments = @recentTreatments,
-      AppetiteStatus = @appetiteStatus, Notes = @notes,
-      UpdatedAt = SYSUTCDATETIME(), UpdatedBy = @updatedBy
-  WHERE MetricID = @id AND DeletedAt IS NULL
-`;
-
-const deleteMetric = `
-  UPDATE AnimalHealthMetrics SET DeletedAt = SYSUTCDATETIME(), DeletedBy = @deletedBy WHERE MetricID = @id
-`;
-
 // ── Health Alerts ──
 
 const getAllAlerts = `
   SELECT ha.AlertID, ha.AnimalID, ha.AlertType, ha.AlertMessage, ha.CreatedAt, ha.IsResolved,
+         ha.ResolvedAt, ha.ResolutionNotes,
          a.Name AS AnimalName, a.Species
   FROM HealthAlert ha
   JOIN Animal a ON ha.AnimalID = a.AnimalID
@@ -116,7 +73,12 @@ const getAllAlerts = `
 `;
 
 const resolveAlert = `
-  UPDATE HealthAlert SET IsResolved = 1, ResolvedAt = SYSUTCDATETIME() WHERE AlertID = @id
+  UPDATE HealthAlert SET IsResolved = 1, ResolvedAt = SYSUTCDATETIME(), ResolutionNotes = @notes WHERE AlertID = @id
+`;
+
+const insertAlert = `
+  INSERT INTO HealthAlert (AnimalID, AlertType, AlertMessage, CreatedAt, IsResolved)
+  VALUES (@animalId, @alertType, @alertMessage, SYSUTCDATETIME(), 0)
 `;
 
 // ── Health Report (aggregate) ──
@@ -132,7 +94,7 @@ const healthReportStats = `
 
 const healthReportAlerts = `
   SELECT ha.AlertID, ha.AnimalID, ha.AlertType, ha.AlertMessage,
-         ha.CreatedAt, ha.IsResolved, ha.ResolvedAt,
+         ha.CreatedAt, ha.IsResolved, ha.ResolvedAt, ha.ResolutionNotes,
          a.Name AS AnimalName, a.Species, a.AnimalCode
   FROM HealthAlert ha
   JOIN Animal a ON ha.AnimalID = a.AnimalID
@@ -163,14 +125,15 @@ const healthReportFeedings = `
 `;
 
 const healthReportMetrics = `
-  SELECT m.MetricID, m.AnimalID, m.RecordDate, m.ActivityLevel,
-         m.Weight, m.WeightRangeLow, m.WeightRangeHigh,
-         m.MedicalConditions, m.RecentTreatments, m.AppetiteStatus, m.Notes,
+  SELECT r.RecordID AS MetricID, r.AnimalID, r.CheckupDate AS RecordDate,
+         r.ActivityLevel, r.Weight, r.WeightRangeLow, r.WeightRangeHigh,
+         r.MedicalConditions, r.RecentTreatments, r.AppetiteStatus, r.Notes,
          a.Name AS AnimalName, a.Species, a.AnimalCode
-  FROM AnimalHealthMetrics m
-  JOIN Animal a ON m.AnimalID = a.AnimalID
-  WHERE m.DeletedAt IS NULL AND a.DeletedAt IS NULL
-  ORDER BY m.RecordDate DESC
+  FROM AnimalHealthRecord r
+  JOIN Animal a ON r.AnimalID = a.AnimalID
+  WHERE r.DeletedAt IS NULL AND a.DeletedAt IS NULL
+    AND (r.Weight IS NOT NULL OR r.ActivityLevel IS NOT NULL OR r.AppetiteStatus IS NOT NULL)
+  ORDER BY r.CheckupDate DESC
 `;
 
 const healthReportRecords = `
@@ -209,9 +172,13 @@ const animalHealthRecords = `
 `;
 
 const animalHealthMetrics = `
-  SELECT * FROM AnimalHealthMetrics
+  SELECT RecordID AS MetricID, AnimalID, CheckupDate AS RecordDate,
+         ActivityLevel, Weight, WeightRangeLow, WeightRangeHigh,
+         MedicalConditions, RecentTreatments, AppetiteStatus, Notes
+  FROM AnimalHealthRecord
   WHERE AnimalID = @id3 AND DeletedAt IS NULL
-  ORDER BY RecordDate DESC
+    AND (Weight IS NOT NULL OR ActivityLevel IS NOT NULL OR AppetiteStatus IS NOT NULL)
+  ORDER BY CheckupDate DESC
 `;
 
 const animalKeepers = `
@@ -292,13 +259,9 @@ module.exports = {
   updateRecord,
   deleteRecord,
   syncAnimalHealth,
-  getAllMetrics,
-  getMetricsByAnimal,
-  insertMetric,
-  updateMetric,
-  deleteMetric,
   getAllAlerts,
   resolveAlert,
+  insertAlert,
   healthReportStats,
   healthReportAlerts,
   healthReportKeepers,

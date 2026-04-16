@@ -65,6 +65,19 @@ const StaffReport = () => {
   const [sortCol, setSortCol] = useState('name');
   const [sortDir, setSortDir] = useState('asc');
   const [expandedRows, setExpandedRows] = useState({});
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+
+  const today = new Date().toISOString().split('T')[0];
+
+  const inDateRange = (dateStr) => {
+    if (!dateFrom && !dateTo) return true;
+    if (!dateStr) return false;
+    const d = (dateStr.includes('T') ? dateStr.split('T')[0] : dateStr);
+    if (dateFrom && d < dateFrom) return false;
+    if (dateTo && d > dateTo) return false;
+    return true;
+  };
 
   const getToken = async () => {
     const { auth } = await import('../../../services/firebase');
@@ -95,11 +108,12 @@ const StaffReport = () => {
     fetchAll();
   }, []);
 
-  // Group schedules by staff
+  // Group schedules by staff (filtered by date range)
   const staffSchedulesMap = useMemo(() => {
     const map = {};
     for (const s of schedules) {
       if (!s.StaffID) continue;
+      if (!inDateRange(s.WorkDate)) continue;
       if (!map[s.StaffID]) map[s.StaffID] = [];
       map[s.StaffID].push(s);
     }
@@ -108,7 +122,8 @@ const StaffReport = () => {
       map[id].sort((a, b) => (b.WorkDate || '').localeCompare(a.WorkDate || ''));
     }
     return map;
-  }, [schedules]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [schedules, dateFrom, dateTo]);
 
   // Compute hours per staff from schedules
   const staffHoursMap = useMemo(() => {
@@ -252,7 +267,7 @@ const StaffReport = () => {
               { name: 'Employee Summary', data: staffData },
               { name: 'Shift Details', data: shiftData },
               { name: 'Keeper Assignments', data: assignData },
-            ], 'Employee_Report');
+            ], 'Employee_Report', { reportName: 'Employee Report', dateFrom, dateTo });
             toast.success('Employee report downloaded.');
           }}
         >
@@ -278,6 +293,18 @@ const StaffReport = () => {
           searchable
           width={200}
         />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
+          <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--adm-text-secondary)' }}>From</label>
+          <input type="date" value={dateFrom} max={today} onChange={e => setDateFrom(e.target.value)}
+            style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid var(--adm-border)', background: 'var(--adm-bg-surface)', color: 'var(--adm-text-primary)', fontSize: '0.78rem', outline: 'none' }} />
+          <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--adm-text-secondary)' }}>To</label>
+          <input type="date" value={dateTo} max={today} onChange={e => setDateTo(e.target.value)}
+            style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid var(--adm-border)', background: 'var(--adm-bg-surface)', color: 'var(--adm-text-primary)', fontSize: '0.78rem', outline: 'none' }} />
+          {(dateFrom || dateTo) && (
+            <button onClick={() => { setDateFrom(''); setDateTo(''); }}
+              style={{ padding: '3px 10px', borderRadius: 5, border: '1px solid var(--adm-border)', background: 'transparent', color: 'var(--adm-text-secondary)', fontSize: '0.72rem', cursor: 'pointer' }}>Clear</button>
+          )}
+        </div>
       </div>
 
       {/* Summary bar */}

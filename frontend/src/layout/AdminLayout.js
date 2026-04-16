@@ -11,7 +11,7 @@ import { Toaster } from 'sonner';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { auth } from '../services/firebase';
-import { API_BASE_URL } from '../services/apiClient';
+import { API_BASE_URL, apiGet } from '../services/apiClient';
 import './AdminLayout.css';
 
 const rolePermissions = {
@@ -36,6 +36,7 @@ const AdminLayout = () => {
     () => localStorage.getItem('admin-theme') || 'light'
   );
   const [isConnected, setIsConnected] = useState(false);
+  const [unresolvedAlertCount, setUnresolvedAlertCount] = useState(0);
 
   const closeSidebarOnMobile = () => { if (window.innerWidth < 1024) setSidebarOpen(false); };
 
@@ -48,6 +49,17 @@ const AdminLayout = () => {
     };
     check();
     const id = setInterval(check, 15000);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    const fetchAlerts = () => {
+      apiGet('/api/dashboard')
+        .then(data => setUnresolvedAlertCount(data.unresolvedAlertCount || 0))
+        .catch(() => {});
+    };
+    fetchAlerts();
+    const id = setInterval(fetchAlerts, 30000);
     return () => clearInterval(id);
   }, []);
 
@@ -68,7 +80,7 @@ const AdminLayout = () => {
 
   const hasAny = (...ids) => ids.some(id => myPerms.includes(id));
 
-  const renderLink = (to, icon, label, id) => {
+  const renderLink = (to, icon, label, id, badge) => {
     if (!myPerms.includes(id)) return null;
     return (
       <NavLink
@@ -79,6 +91,9 @@ const AdminLayout = () => {
       >
         {icon}
         <span>{label}</span>
+        {badge > 0 && (
+          <span className="nav-alert-badge">{badge}</span>
+        )}
       </NavLink>
     );
   };
@@ -128,7 +143,7 @@ const AdminLayout = () => {
           {renderLink('/admin/memberships', <CreditCard size={18} className="nav-icon" />, 'Manage Plans', 'memberships')}
 
           {hasAny('animal-health', 'animal-care') && <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Animal Care</p>}
-          {renderLink('/admin/animal-health', <HeartPulse size={18} className="nav-icon" />, 'Health Tracking', 'animal-health')}
+          {renderLink('/admin/animal-health', <HeartPulse size={18} className="nav-icon" />, 'Health Tracking', 'animal-health', unresolvedAlertCount)}
           {renderLink('/admin/animal-care', <UtensilsCrossed size={18} className="nav-icon" />, 'Feeding & Keepers', 'animal-care')}
 
           {hasAny('animal-report', 'reports', 'analytics', 'employee-report') && <p className="admin-nav-section-label mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Reports & Analytics</p>}

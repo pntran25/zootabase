@@ -73,6 +73,38 @@ router.post('/records', verifyToken, async (req, res) => {
             .input('aid', sql.Int, parseInt(AnimalID, 10))
             .input('status', sql.NVarChar(50), healthStatusFromScore(score))
             .query(Q.syncAnimalHealth);
+
+        // Auto-create alert if weight is out of range (skip if unresolved alert already exists)
+        const w = Weight != null ? parseFloat(Weight) : NaN;
+        const lo = WeightRangeLow != null ? parseFloat(WeightRangeLow) : NaN;
+        const hi = WeightRangeHigh != null ? parseFloat(WeightRangeHigh) : NaN;
+        if (!isNaN(w) && ((!isNaN(lo) && w < lo) || (!isNaN(hi) && w > hi))) {
+            try {
+                const existing = await pool.request()
+                    .input('chkAnimalId', sql.Int, parseInt(AnimalID, 10))
+                    .input('chkType', sql.NVarChar(50), 'Weight Out of Range')
+                    .query('SELECT 1 FROM HealthAlert WHERE AnimalID = @chkAnimalId AND AlertType = @chkType AND IsResolved = 0');
+                if (existing.recordset.length === 0) {
+                    const animalResult = await pool.request()
+                        .input('lookupId', sql.Int, parseInt(AnimalID, 10))
+                        .query('SELECT Name, Species FROM Animal WHERE AnimalID = @lookupId');
+                    const animal = animalResult.recordset[0];
+                    const animalLabel = animal ? `${animal.Name} (${animal.Species})` : `Animal #${AnimalID}`;
+                    const direction = (!isNaN(lo) && w < lo) ? 'below' : 'above';
+                    const rangeStr = direction === 'below'
+                        ? `${w.toFixed(1)} kg is below the minimum of ${lo.toFixed(1)} kg`
+                        : `${w.toFixed(1)} kg exceeds the maximum of ${hi.toFixed(1)} kg`;
+                    await pool.request()
+                        .input('alertAnimalId', sql.Int, parseInt(AnimalID, 10))
+                        .input('alertType', sql.NVarChar(50), 'Weight Out of Range')
+                        .input('alertMessage', sql.NVarChar(1000), `${animalLabel} weight is ${direction} expected range — ${rangeStr}. Review diet and activity.`)
+                        .query(Q.insertAlert);
+                }
+            } catch (alertErr) {
+                console.error('Failed to create weight alert:', alertErr);
+            }
+        }
+
         res.status(201).json({ RecordID: result.recordset[0].RecordID, ...req.body });
     } catch (error) {
         console.error('Error creating health record:', error);
@@ -112,6 +144,38 @@ router.put('/records/:id', verifyToken, async (req, res) => {
             .input('aid', sql.Int, parseInt(AnimalID, 10))
             .input('status', sql.NVarChar(50), healthStatusFromScore(score))
             .query(Q.syncAnimalHealth);
+
+        // Auto-create alert if weight is out of range (skip if unresolved alert already exists)
+        const w = Weight != null ? parseFloat(Weight) : NaN;
+        const lo = WeightRangeLow != null ? parseFloat(WeightRangeLow) : NaN;
+        const hi = WeightRangeHigh != null ? parseFloat(WeightRangeHigh) : NaN;
+        if (!isNaN(w) && ((!isNaN(lo) && w < lo) || (!isNaN(hi) && w > hi))) {
+            try {
+                const existing = await pool.request()
+                    .input('chkAnimalId', sql.Int, parseInt(AnimalID, 10))
+                    .input('chkType', sql.NVarChar(50), 'Weight Out of Range')
+                    .query('SELECT 1 FROM HealthAlert WHERE AnimalID = @chkAnimalId AND AlertType = @chkType AND IsResolved = 0');
+                if (existing.recordset.length === 0) {
+                    const animalResult = await pool.request()
+                        .input('lookupId', sql.Int, parseInt(AnimalID, 10))
+                        .query('SELECT Name, Species FROM Animal WHERE AnimalID = @lookupId');
+                    const animal = animalResult.recordset[0];
+                    const animalLabel = animal ? `${animal.Name} (${animal.Species})` : `Animal #${AnimalID}`;
+                    const direction = (!isNaN(lo) && w < lo) ? 'below' : 'above';
+                    const rangeStr = direction === 'below'
+                        ? `${w.toFixed(1)} kg is below the minimum of ${lo.toFixed(1)} kg`
+                        : `${w.toFixed(1)} kg exceeds the maximum of ${hi.toFixed(1)} kg`;
+                    await pool.request()
+                        .input('alertAnimalId', sql.Int, parseInt(AnimalID, 10))
+                        .input('alertType', sql.NVarChar(50), 'Weight Out of Range')
+                        .input('alertMessage', sql.NVarChar(1000), `${animalLabel} weight is ${direction} expected range — ${rangeStr}. Review diet and activity.`)
+                        .query(Q.insertAlert);
+                }
+            } catch (alertErr) {
+                console.error('Failed to create weight alert:', alertErr);
+            }
+        }
+
         res.json({ success: true });
     } catch (error) {
         console.error('Error updating health record:', error);
@@ -130,107 +194,6 @@ router.delete('/records/:id', verifyToken, async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         console.error('Error deleting health record:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// ═══════════════════════════════════════════════════════════════════
-// HEALTH METRICS
-// ═══════════════════════════════════════════════════════════════════
-
-// ── GET all health metrics ──────────────────────────────────────────
-router.get('/metrics', async (req, res) => {
-    try {
-        const pool = await connectToDb();
-        const result = await pool.request().query(Q.getAllMetrics);
-        res.json(result.recordset);
-    } catch (error) {
-        console.error('Error fetching health metrics:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// ── GET metrics for a specific animal ───────────────────────────────
-router.get('/metrics/animal/:animalId', async (req, res) => {
-    try {
-        const pool = await connectToDb();
-        const result = await pool.request()
-            .input('animalId', sql.Int, parseInt(req.params.animalId, 10))
-            .query(Q.getMetricsByAnimal);
-        res.json(result.recordset);
-    } catch (error) {
-        console.error('Error fetching metrics for animal:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// ── POST create health metric ───────────────────────────────────────
-router.post('/metrics', verifyToken, async (req, res) => {
-    try {
-        const { AnimalID, RecordDate, ActivityLevel, Weight, WeightRangeLow, WeightRangeHigh,
-                MedicalConditions, RecentTreatments, AppetiteStatus, Notes } = req.body;
-        if (!AnimalID || !RecordDate) {
-            return res.status(400).json({ error: 'AnimalID and RecordDate are required.' });
-        }
-        const pool = await connectToDb();
-        const result = await pool.request()
-            .input('animalId', sql.Int, parseInt(AnimalID, 10))
-            .input('recordDate', sql.DateTime2, new Date(RecordDate))
-            .input('activityLevel', sql.NVarChar(50), ActivityLevel || null)
-            .input('weight', sql.Decimal(8, 2), Weight || null)
-            .input('weightRangeLow', sql.Decimal(8, 2), WeightRangeLow || null)
-            .input('weightRangeHigh', sql.Decimal(8, 2), WeightRangeHigh || null)
-            .input('medicalConditions', sql.NVarChar(255), MedicalConditions || null)
-            .input('recentTreatments', sql.NVarChar(255), RecentTreatments || null)
-            .input('appetiteStatus', sql.NVarChar(50), AppetiteStatus || null)
-            .input('notes', sql.NVarChar(1000), Notes || null)
-            .input('createdBy', sql.NVarChar(100), req.user?.email || 'system')
-            .query(Q.insertMetric);
-        res.status(201).json({ MetricID: result.recordset[0].MetricID, ...req.body });
-    } catch (error) {
-        console.error('Error creating health metric:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// ── PUT update health metric ────────────────────────────────────────
-router.put('/metrics/:id', verifyToken, async (req, res) => {
-    try {
-        const { AnimalID, RecordDate, ActivityLevel, Weight, WeightRangeLow, WeightRangeHigh,
-                MedicalConditions, RecentTreatments, AppetiteStatus, Notes } = req.body;
-        const pool = await connectToDb();
-        await pool.request()
-            .input('id', sql.Int, parseInt(req.params.id, 10))
-            .input('animalId', sql.Int, parseInt(AnimalID, 10))
-            .input('recordDate', sql.DateTime2, new Date(RecordDate))
-            .input('activityLevel', sql.NVarChar(50), ActivityLevel || null)
-            .input('weight', sql.Decimal(8, 2), Weight || null)
-            .input('weightRangeLow', sql.Decimal(8, 2), WeightRangeLow || null)
-            .input('weightRangeHigh', sql.Decimal(8, 2), WeightRangeHigh || null)
-            .input('medicalConditions', sql.NVarChar(255), MedicalConditions || null)
-            .input('recentTreatments', sql.NVarChar(255), RecentTreatments || null)
-            .input('appetiteStatus', sql.NVarChar(50), AppetiteStatus || null)
-            .input('notes', sql.NVarChar(1000), Notes || null)
-            .input('updatedBy', sql.NVarChar(100), req.user?.email || 'system')
-            .query(Q.updateMetric);
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Error updating health metric:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// ── DELETE (soft) health metric ─────────────────────────────────────
-router.delete('/metrics/:id', verifyToken, async (req, res) => {
-    try {
-        const pool = await connectToDb();
-        await pool.request()
-            .input('id', sql.Int, parseInt(req.params.id, 10))
-            .input('deletedBy', sql.NVarChar(100), req.user?.email || 'system')
-            .query(Q.deleteMetric);
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Error deleting health metric:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -256,9 +219,11 @@ router.get('/alerts', async (req, res) => {
 // ── Resolve an alert ────────────────────────────────────────────────
 router.put('/alerts/:id/resolve', verifyToken, async (req, res) => {
     try {
+        const { ResolutionNotes } = req.body;
         const pool = await connectToDb();
         await pool.request()
             .input('id', sql.Int, parseInt(req.params.id, 10))
+            .input('notes', sql.NVarChar(1000), ResolutionNotes || null)
             .query(Q.resolveAlert);
         res.json({ success: true });
     } catch (error) {

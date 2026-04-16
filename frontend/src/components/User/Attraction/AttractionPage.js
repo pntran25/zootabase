@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './AttractionPage.css';
-import { Search, MapPin, Users, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, MapPin, Users, Clock, ChevronDown, SlidersHorizontal } from 'lucide-react';
 import { getAllAttractions } from '../../../services/attractionService';
 import { API_BASE_URL } from '../../../services/apiClient';
 import attractionsHero from '../../../assets/images/attractions-hero.png';
@@ -79,7 +79,7 @@ const AttractionCard = ({ attraction }) => {
         <p className="ww-attr-card-desc">{attraction.description || fallbackDesc}</p>
         <div className="ww-attr-card-meta">
           <span><MapPin size={13} /> {attraction.location || 'Zoo Grounds'}</span>
-          {attraction.duration && <span><Clock size={13} /> {attraction.duration} min</span>}
+          {attraction.duration && <span><Clock size={13} /> {String(attraction.duration).replace(/\s*(minutes?|mins?)\s*/gi, '')} min</span>}
           {attraction.ageGroup && <span><Users size={13} /> {attraction.ageGroup}</span>}
         </div>
       </div>
@@ -95,16 +95,14 @@ const AttractionCard = ({ attraction }) => {
   );
 };
 
-const TYPE_PAGE_SIZE = 3;
-
 const AttractionPage = () => {
   const [attractions, setAttractions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeType, setActiveType] = useState('All');
-  const [typePage, setTypePage] = useState(0);
-  const [animKey, setAnimKey]   = useState(0);
-  const [animDir, setAnimDir]   = useState('right');
+  const [activeAgeGroup, setActiveAgeGroup] = useState('All');
+  const [activeDuration, setActiveDuration] = useState('All');
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   useEffect(() => {
     const fetchAttractions = async () => {
@@ -121,13 +119,19 @@ const AttractionPage = () => {
   }, []);
 
   const types = ['All', ...Array.from(new Set(attractions.map(a => a.type).filter(Boolean)))];
+  const ageGroups = ['All', ...Array.from(new Set(attractions.map(a => a.ageGroup).filter(Boolean)))];
+  const durations = ['All', ...Array.from(new Set(attractions.map(a => a.duration).filter(Boolean))).sort((a, b) => parseInt(a) - parseInt(b))];
+
+  const activeFilterCount = [activeType !== 'All', activeAgeGroup !== 'All', activeDuration !== 'All'].filter(Boolean).length;
 
   const filtered = attractions.filter(a => {
     const matchSearch =
       a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (a.location || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchType = activeType === 'All' || a.type === activeType;
-    return matchSearch && matchType;
+    const matchAge = activeAgeGroup === 'All' || a.ageGroup === activeAgeGroup;
+    const matchDuration = activeDuration === 'All' || a.duration === activeDuration;
+    return matchSearch && matchType && matchAge && matchDuration;
   });
 
   return (
@@ -169,36 +173,59 @@ const AttractionPage = () => {
               </div>
             </div>
 
-            <div className="ww-region-scroll-wrapper">
-              <button
-                className={`ww-scroll-arrow${typePage === 0 ? ' ww-scroll-hidden' : ''}`}
-                onClick={() => { setTypePage(p => p - 1); setAnimDir('left');  setAnimKey(k => k + 1); }}
-                aria-label="Previous types"
-              >
-                <ChevronLeft size={16} />
-              </button>
-              <div key={animKey} className={`ww-region-filters ww-slide-${animDir}`}>
-                {types
-                  .slice(typePage * TYPE_PAGE_SIZE, typePage * TYPE_PAGE_SIZE + TYPE_PAGE_SIZE)
-                  .map(type => (
-                    <button
-                      key={type}
-                      className={`ww-region-btn ${activeType === type ? 'active' : ''}`}
-                      onClick={() => setActiveType(type)}
-                    >
-                      {type}
-                    </button>
-                  ))}
-              </div>
-              <button
-                className={`ww-scroll-arrow${typePage >= Math.ceil(types.length / TYPE_PAGE_SIZE) - 1 ? ' ww-scroll-hidden' : ''}`}
-                onClick={() => { setTypePage(p => p + 1); setAnimDir('right'); setAnimKey(k => k + 1); }}
-                aria-label="Next types"
-              >
-                <ChevronRight size={16} />
-              </button>
-            </div>
+            {/* Filter Button */}
+            <button
+              className={`ww-filter-toggle-btn${filtersOpen ? ' open' : ''}`}
+              onClick={() => setFiltersOpen(f => !f)}
+            >
+              <SlidersHorizontal size={16} />
+              Filters
+              {activeFilterCount > 0 && <span className="ww-filter-badge">{activeFilterCount}</span>}
+              <ChevronDown size={14} className={`ww-filter-chevron${filtersOpen ? ' rotated' : ''}`} />
+            </button>
           </div>
+
+          {/* Expandable Filter Panel */}
+          {filtersOpen && (
+            <div className="ww-filter-panel">
+              <div className="ww-filter-panel-group">
+                <label className="ww-filter-panel-label">Type</label>
+                <select
+                  className="ww-filter-select"
+                  value={activeType}
+                  onChange={e => setActiveType(e.target.value)}
+                >
+                  {types.map(type => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="ww-filter-panel-group">
+                <label className="ww-filter-panel-label">Age Group</label>
+                <select
+                  className="ww-filter-select"
+                  value={activeAgeGroup}
+                  onChange={e => setActiveAgeGroup(e.target.value)}
+                >
+                  {ageGroups.map(ag => (
+                    <option key={ag} value={ag}>{ag}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="ww-filter-panel-group">
+                <label className="ww-filter-panel-label">Duration</label>
+                <select
+                  className="ww-filter-select"
+                  value={activeDuration}
+                  onChange={e => setActiveDuration(e.target.value)}
+                >
+                  {durations.map(d => (
+                    <option key={d} value={d}>{d === 'All' ? 'All' : `${d}`}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 

@@ -206,7 +206,7 @@ const CheckoutModal = ({ isOpen, onClose, cart, cartTotal, membershipDiscount = 
                 </div>
                 <div className="co-field" style={{ flex: 1 }}>
                   <label>ZIP Code <span style={{ color: '#ef4444' }}>*</span></label>
-                  <input type="text" placeholder="00000" value={ship.zip} onChange={e => setS('zip', e.target.value)} />
+                  <input type="text" placeholder="00000" maxLength={5} value={ship.zip} onChange={e => setS('zip', e.target.value.replace(/\D/g, '').slice(0, 5))} />
                 </div>
               </div>
 
@@ -254,6 +254,7 @@ const CheckoutModal = ({ isOpen, onClose, cart, cartTotal, membershipDiscount = 
                     maxLength={4}
                     value={card.cvv}
                     onChange={e => setC('cvv', e.target.value.replace(/\D/g, '').slice(0, 4))}
+                    inputMode="numeric"
                     style={{ fontFamily: 'monospace' }}
                   />
                 </div>
@@ -304,7 +305,7 @@ const CheckoutModal = ({ isOpen, onClose, cart, cartTotal, membershipDiscount = 
                     </div>
                     <div className="co-field" style={{ flex: 1 }}>
                       <label>ZIP Code <span style={{ color: '#ef4444' }}>*</span></label>
-                      <input type="text" placeholder="00000" value={bill.zip} onChange={e => setB('zip', e.target.value)} />
+                      <input type="text" placeholder="00000" maxLength={5} value={bill.zip} onChange={e => setB('zip', e.target.value.replace(/\D/g, '').slice(0, 5))} />
                     </div>
                   </div>
                 </div>

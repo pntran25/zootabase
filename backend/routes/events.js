@@ -8,7 +8,8 @@ const path = require('path');
 const fs = require('fs');
 const Q = require('../queries/eventQueries');
 
-const imageDir = path.join(__dirname, '../uploads/Event_Images');
+const uploadsRoot = process.env.UPLOADS_DIR || path.join(__dirname, '../uploads');
+const imageDir = path.join(uploadsRoot, 'Event_Images');
 if (!fs.existsSync(imageDir)) fs.mkdirSync(imageDir, { recursive: true });
 
 const storage = multer.diskStorage({

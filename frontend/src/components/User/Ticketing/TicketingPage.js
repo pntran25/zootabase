@@ -43,8 +43,8 @@ const TicketingPage = () => {
 
   useEffect(() => {
     setIsMounted(true);
-    Promise.all([apiGet('/api/ticket-packages'), apiGet('/api/ticket-addons')])
-      .then(([pkgs, ads]) => {
+    Promise.all([apiGet('/api/ticket-packages'), apiGet('/api/ticket-addons'), apiGet('/api/attractions')])
+      .then(([pkgs, ads, attrs]) => {
         const mapped = pkgs.map(p => ({
           id: String(p.packageId),
           name: p.name,
@@ -57,7 +57,11 @@ const TicketingPage = () => {
         // Default to "most popular" or first
         const popular = mapped.find(t => t.popular) || mapped[0];
         if (popular) setSelectedTicket(popular.id);
-        setAddons(ads.map(a => ({ id: String(a.addonId), name: a.name, price: a.price, description: a.description })));
+        const ticketAddons = ads.map(a => ({ id: String(a.addonId), name: a.name, price: a.price, description: a.description }));
+        const attractionAddons = (attrs || [])
+          .filter(a => a.status === 'Open' && a.price > 0)
+          .map(a => ({ id: `attr-${a.id}`, name: a.name, price: a.price, description: '' }));
+        setAddons([...ticketAddons, ...attractionAddons]);
       })
       .catch(() => {})
       .finally(() => setDataLoading(false));
@@ -119,9 +123,6 @@ const TicketingPage = () => {
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4">
             Buy Tickets
           </h1>
-          <p className="text-lg md:text-xl text-white max-w-2xl mx-auto font-medium">
-            Book online and save up to 15% on admission
-          </p>
         </div>
       </section>
 

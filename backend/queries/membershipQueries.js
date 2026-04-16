@@ -62,6 +62,12 @@ const getSubscriptionById = `
   SELECT *, CONCAT(ISNULL(FirstName,''),' ',ISNULL(LastName,'')) AS FullName FROM MembershipSubscriptions WHERE SubID = @id
 `;
 
+const cancelSubscriptionByEmail = `
+  UPDATE MembershipSubscriptions
+  SET EndDate = CAST(GETDATE() AS DATE)
+  WHERE Email = @Email AND EndDate >= CAST(GETDATE() AS DATE)
+`;
+
 module.exports = {
   getAllPlans,
   insertPlan,
@@ -72,4 +78,5 @@ module.exports = {
   countSubscriptions,
   getActiveByEmail,
   getSubscriptionById,
+  cancelSubscriptionByEmail,
 };

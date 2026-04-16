@@ -6,7 +6,10 @@ import { toast } from 'sonner';
 import AdminModalForm from '../AdminModalForm';
 import AdminSelect from '../AdminSelect';
 import TimePickerInput from '../TimePickerInput';
+import DatePickerInput from '../DatePickerInput';
 import attractionService, { uploadAttractionImage } from '../../../services/attractionService';
+import { createMaintenance } from '../../../services/maintenanceService';
+import { getExhibits } from '../../../services/exhibitService';
 import { API_BASE_URL } from '../../../services/apiClient';
 
 const TYPES = ['Ride', 'Show', 'Experience', 'Encounter', 'Feeding', 'Play Area', 'Tour'];
@@ -19,7 +22,7 @@ const shiftTime = (timeStr, deltaHours) => {
 };
 
 const EMPTY_FORM = {
-  name: '', type: 'Ride', location: '', description: '',
+  name: '', type: 'Ride', location: '', exhibitId: '', description: '',
   hours: '', duration: '', ageGroup: '', price: 0, capacity: 0, active: true,
 };
 
@@ -46,11 +49,18 @@ const ManageAttractions = () => {
   const [imageFile, setImageFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
 
+  // Maintenance modal (shown when closing an attraction)
+  const [maintenanceModal, setMaintenanceModal] = useState(false);
+  const [maintenanceForm, setMaintenanceForm] = useState({ issueType: '', location: '', date: '', priority: 'Medium', status: 'Pending' });
+  const [pendingSave, setPendingSave] = useState(null); // holds { payload, savedId, imageFile } while maintenance modal is open
+  const [exhibitsList, setExhibitsList] = useState([]);
+
   const loadData = async () => {
     try {
       setIsLoading(true);
-      const data = await attractionService.getAllAttractions();
+      const [data, exhData] = await Promise.all([attractionService.getAllAttractions(), getExhibits()]);
       setAttractions(data.map(item => ({ ...item, active: item.status === 'Open' })));
+      setExhibitsList(exhData.map(e => ({ value: String(e.ExhibitID), label: e.ExhibitName })));
     } catch (err) {
       console.error('Failed to load attractions:', err);
       toast.error(err.message || 'Failed to load attractions.');
@@ -110,6 +120,33 @@ const ManageAttractions = () => {
       toast.error('Opening time must be before closing time.');
       return;
     }
+    // If editing an open attraction and closing it, show maintenance modal first
+    const isClosing = editingAttraction && editingAttraction.active && !formData.active;
+    if (isClosing) {
+      try {
+        const payload = { ...formData, status: 'Closed' };
+        await attractionService.updateAttraction(editingAttraction.id, payload);
+        if (imageFile && editingAttraction.id) {
+          await uploadAttractionImage(editingAttraction.id, imageFile);
+        }
+        setIsModalOpen(false);
+        toast.success('Attraction closed.');
+        // Pre-populate and open maintenance modal
+        setMaintenanceForm({
+          issueType: '',
+          location: formData.name + (formData.location ? ` — ${formData.location}` : ''),
+          date: new Date().toISOString().split('T')[0],
+          priority: 'Medium',
+          status: 'Pending',
+        });
+        setMaintenanceModal(true);
+        await loadData();
+      } catch (err) {
+        toast.error(err.message || 'Failed to save attraction.');
+        console.error(err);
+      }
+      return;
+    }
     try {
       const payload = { ...formData, status: formData.active ? 'Open' : 'Closed' };
       let savedId;
@@ -129,6 +166,23 @@ const ManageAttractions = () => {
     } catch (err) {
       toast.error(err.message || 'Failed to save attraction.');
       console.error(err);
+    }
+  };
+
+  const handleMaintenanceSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await createMaintenance({
+        exhibit: maintenanceForm.location,
+        description: maintenanceForm.issueType,
+        dateSubmitted: maintenanceForm.date,
+        status: maintenanceForm.status,
+        reportedBy: 'Admin User',
+      });
+      toast.success('Maintenance request created.');
+      setMaintenanceModal(false);
+    } catch (err) {
+      toast.error(err.message || 'Failed to create maintenance request.');
     }
   };
 
@@ -180,16 +234,21 @@ const ManageAttractions = () => {
       ),
     },
     {
-      id: 'details',
-      header: 'Location / Schedule',
+      id: 'location',
+      header: 'Location',
       enableSorting: false,
       cell: ({ row }) => (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <span className="font-medium text-dark">{row.original.location || '—'}</span>
-          <span className="text-secondary">
-            {row.original.hours || '—'} &bull; {row.original.duration ? `${row.original.duration} min` : '—'} &bull; {row.original.ageGroup || 'All Ages'}
-          </span>
-        </div>
+        <span className="font-medium text-dark">{row.original.location || '—'}</span>
+      ),
+    },
+    {
+      id: 'schedule',
+      header: 'Schedule',
+      enableSorting: false,
+      cell: ({ row }) => (
+        <span className="text-secondary">
+          {row.original.hours || '—'} &bull; {row.original.duration ? `${row.original.duration} min` : '—'} &bull; {row.original.ageGroup || 'All Ages'}
+        </span>
       ),
     },
     {
@@ -218,10 +277,11 @@ const ManageAttractions = () => {
       id: 'modifiedBy',
       header: 'Modified By',
       enableSorting: false,
+      size: 160,
       cell: ({ row }) => {
         const { createdBy, updatedBy } = row.original;
-        if (updatedBy) return <span className="text-secondary" style={{ fontSize: '0.78rem' }}>Updated by <strong>{updatedBy}</strong></span>;
-        if (createdBy) return <span className="text-secondary" style={{ fontSize: '0.78rem' }}>Created by <strong>{createdBy}</strong></span>;
+        if (updatedBy) return <span className="text-secondary" style={{ fontSize: '0.78rem', display: 'block', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Updated by <strong>{updatedBy}</strong></span>;
+        if (createdBy) return <span className="text-secondary" style={{ fontSize: '0.78rem', display: 'block', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Created by <strong>{createdBy}</strong></span>;
         return <span className="text-secondary">—</span>;
       },
     },
@@ -230,7 +290,7 @@ const ManageAttractions = () => {
       header: 'Actions',
       enableSorting: false,
       cell: ({ row }) => (
-        <div className="action-buttons">
+        <div className="action-buttons" style={{ whiteSpace: 'nowrap' }}>
           <button className="action-btn edit" onClick={() => handleOpenModal(row.original)}><Edit2 size={16} /></button>
           <button className="action-btn delete" onClick={() => handleDelete(row.original.id)}><Trash2 size={16} /></button>
         </div>
@@ -368,10 +428,19 @@ const ManageAttractions = () => {
           />
         </div>
 
-        {/* Location */}
+        {/* Location (Exhibit) */}
         <div className="form-group">
-          <label>Location</label>
-          <input type="text" placeholder="e.g. East Gate, Zone B" value={formData.location} onChange={e => setFormData({ ...formData, location: e.target.value })} required />
+          <label>Location (Exhibit)</label>
+          <AdminSelect
+            value={formData.exhibitId ? String(formData.exhibitId) : ''}
+            onChange={val => {
+              const exh = exhibitsList.find(e => e.value === val);
+              setFormData({ ...formData, exhibitId: val, location: exh ? exh.label : '' });
+            }}
+            options={exhibitsList}
+            placeholder="Select exhibit..."
+            searchable
+          />
         </div>
 
         {/* Hours */}
@@ -456,6 +525,54 @@ const ManageAttractions = () => {
         <div className="form-group checkbox-group">
           <input type="checkbox" id="active-flag" checked={formData.active} onChange={e => setFormData({ ...formData, active: e.target.checked })} />
           <label htmlFor="active-flag">Open to Public</label>
+        </div>
+      </AdminModalForm>
+
+      {/* ── Maintenance Request Modal (shown when closing an attraction) ── */}
+      <AdminModalForm
+        title="Maintenance Request — Closure Reason"
+        isOpen={maintenanceModal}
+        onClose={() => setMaintenanceModal(false)}
+        onSubmit={handleMaintenanceSubmit}
+      >
+        <p style={{ margin: '0 0 12px', fontSize: '0.88rem', color: 'var(--adm-text-secondary)' }}>
+          This attraction has been closed. Log a maintenance request explaining why.
+        </p>
+        <div className="form-group">
+          <label>Issue / Reason for Closure</label>
+          <input
+            type="text"
+            placeholder="e.g. Broken handrail, Scheduled maintenance, Safety inspection"
+            value={maintenanceForm.issueType}
+            onChange={e => setMaintenanceForm({ ...maintenanceForm, issueType: e.target.value })}
+            required
+          />
+        </div>
+        <div className="form-group">
+          <label>Location</label>
+          <input
+            type="text"
+            value={maintenanceForm.location}
+            onChange={e => setMaintenanceForm({ ...maintenanceForm, location: e.target.value })}
+            required
+          />
+        </div>
+        <div className="form-row">
+          <div className="form-group">
+            <label>Date</label>
+            <DatePickerInput
+              value={maintenanceForm.date}
+              onChange={val => setMaintenanceForm({ ...maintenanceForm, date: val })}
+            />
+          </div>
+          <div className="form-group">
+            <label>Priority</label>
+            <AdminSelect
+              value={maintenanceForm.priority}
+              onChange={val => setMaintenanceForm({ ...maintenanceForm, priority: val })}
+              options={['Low', 'Medium', 'High', 'Critical']}
+            />
+          </div>
         </div>
       </AdminModalForm>
     </div>

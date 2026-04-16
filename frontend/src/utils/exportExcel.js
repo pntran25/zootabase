@@ -38,9 +38,47 @@ export function exportMultiSheetExcel(sheets, fileName) {
  * followed by a blank separator row before the next section.
  * @param {Array<{name: string, data: Object[]}>} sections - Array of { name, data }
  * @param {string} fileName - File name (without extension)
+ * @param {Object} [meta] - Optional metadata to prepend at the top of the sheet
+ * @param {string} [meta.reportName] - Name of the report
+ * @param {string} [meta.dateFrom] - Start of date range filter
+ * @param {string} [meta.dateTo] - End of date range filter
  */
-export function exportSectionsToSingleSheet(sections, fileName) {
+export function exportSectionsToSingleSheet(sections, fileName, meta) {
+  // Determine max column count from all sections for metadata rows
+  let maxCols = 1;
+  for (const { data } of sections) {
+    if (data && data.length > 0) {
+      maxCols = Math.max(maxCols, Object.keys(data[0]).length);
+    }
+  }
+
   const rows = [];
+
+  // Build metadata header rows
+  if (meta) {
+    const makeRow = (label, value) => {
+      const row = {};
+      // Use generic column keys so they align in the sheet
+      row['Col1'] = label;
+      row['Col2'] = value;
+      for (let i = 3; i <= maxCols; i++) row[`Col${i}`] = '';
+      return row;
+    };
+
+    if (meta.reportName) rows.push(makeRow('Report', meta.reportName));
+    rows.push(makeRow('Generated', new Date().toLocaleString()));
+    if (meta.dateFrom || meta.dateTo) {
+      const range = `${meta.dateFrom || 'Start'} — ${meta.dateTo || 'Present'}`;
+      rows.push(makeRow('Date Range', range));
+    } else {
+      rows.push(makeRow('Date Range', 'All dates'));
+    }
+    // Blank separator after metadata
+    const blankMeta = {};
+    for (let i = 1; i <= maxCols; i++) blankMeta[`Col${i}`] = '';
+    rows.push(blankMeta);
+  }
+
   for (const { name, data } of sections) {
     if (!data || data.length === 0) continue;
     const keys = Object.keys(data[0]);

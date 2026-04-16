@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import animalService from '../../../services/animalService';
 import './AnimalPage.css';
 import { API_BASE_URL } from '../../../services/apiClient';
-import { Info, MapPin, Search, Grid3X3, List, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Info, MapPin, Search, Grid3X3, List, ChevronDown, SlidersHorizontal } from 'lucide-react';
 import placeholderImg from '../../../assets/images/Exhibits_Images/ExhibitsComingSoon.png';
 import tigerHeroImg from '../../../assets/images/tiger1.jpg';
 
@@ -38,13 +38,10 @@ const AnimalPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState("All Exhibits");
+  const [selectedSpecies, setSelectedSpecies] = useState("All Species");
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState("grid");
-  const [exhibitPage, setExhibitPage] = useState(0);
-  const [animKey, setAnimKey]   = useState(0);
-  const [animDir, setAnimDir]   = useState('right');
-
-  const EXHIBIT_PAGE_SIZE = 3;
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const handleViewToggle = () => {
     setViewMode(v => v === 'grid' ? 'list' : 'grid');
@@ -68,15 +65,19 @@ const AnimalPage = () => {
   if (error) return <div className="flex h-screen items-center justify-center text-red-500">{error}</div>;
 
   const dynamicCategories = ["All Exhibits", ...Array.from(new Set(animals.map(a => a.exhibit).filter(Boolean)))];
+  const dynamicSpecies = ["All Species", ...Array.from(new Set(animals.map(a => a.species).filter(Boolean))).sort()];
+
+  const activeFilterCount = [selectedCategory !== 'All Exhibits', selectedSpecies !== 'All Species'].filter(Boolean).length;
 
   const filteredAnimals = animals.filter(animal => {
     const matchesCategory = selectedCategory === "All Exhibits" || animal.exhibit === selectedCategory;
+    const matchesSpecies = selectedSpecies === "All Species" || animal.species === selectedSpecies;
     const searchPart = searchQuery.toLowerCase();
     const matchesSearch =
       (animal.name || "").toLowerCase().includes(searchPart) ||
       (animal.species || "").toLowerCase().includes(searchPart) ||
       (animal.exhibit || "").toLowerCase().includes(searchPart);
-    return matchesCategory && matchesSearch;
+    return matchesCategory && matchesSpecies && matchesSearch;
   });
 
   return (
@@ -144,45 +145,47 @@ const AnimalPage = () => {
               </button>
             </div>
 
-            {/* RIGHT: Exhibit Filters — paginated 3 at a time */}
-            <div className="an-exhibit-scroll-wrapper">
-              <button
-                className={`an-scroll-arrow${exhibitPage === 0 ? ' an-scroll-hidden' : ''}`}
-                onClick={() => { setExhibitPage(p => p - 1); setAnimDir('left'); setAnimKey(k => k + 1); }}
-                aria-label="Previous exhibits"
-              >
-                <ChevronLeft style={{ width: '1rem', height: '1rem' }} />
-              </button>
-
-              <div key={animKey} className={`an-exhibit-filters an-slide-${animDir}`}>
-                {dynamicCategories
-                  .slice(exhibitPage * EXHIBIT_PAGE_SIZE, exhibitPage * EXHIBIT_PAGE_SIZE + EXHIBIT_PAGE_SIZE)
-                  .map((category) => (
-                    <button
-                      key={category}
-                      className={cn(
-                        "inline-flex whitespace-nowrap items-center shrink-0 rounded-lg border cursor-pointer transition-all text-sm font-medium",
-                        selectedCategory === category
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-background text-foreground border-border hover:bg-secondary"
-                      )}
-                      style={{ height: '2.25rem', padding: '0 0.875rem' }}
-                      onClick={() => setSelectedCategory(category)}
-                    >
-                      {category}
-                    </button>
-                  ))}
-              </div>
-
-              <button
-                className={`an-scroll-arrow${exhibitPage >= Math.ceil(dynamicCategories.length / EXHIBIT_PAGE_SIZE) - 1 ? ' an-scroll-hidden' : ''}`}
-                onClick={() => { setExhibitPage(p => p + 1); setAnimDir('right'); setAnimKey(k => k + 1); }}
-                aria-label="Next exhibits"
-              >
-                <ChevronRight style={{ width: '1rem', height: '1rem' }} />
-              </button>
-            </div>
+            {/* RIGHT: Filter Button */}
+            <button
+              className={`ww-filter-toggle-btn${filtersOpen ? ' open' : ''}`}
+              onClick={() => setFiltersOpen(f => !f)}
+            >
+              <SlidersHorizontal size={16} />
+              Filters
+              {activeFilterCount > 0 && <span className="ww-filter-badge">{activeFilterCount}</span>}
+              <ChevronDown size={14} className={`ww-filter-chevron${filtersOpen ? ' rotated' : ''}`} />
+            </button>
           </div>
+
+          {/* Expandable Filter Panel */}
+          {filtersOpen && (
+            <div className="ww-filter-panel" style={{ paddingTop: '1rem', borderTop: '1px solid var(--border)', marginTop: '1rem', display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', minWidth: 180 }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--muted-foreground)' }}>Exhibit</label>
+                <select
+                  style={{ height: '2.5rem', padding: '0 2rem 0 0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--foreground)', fontSize: '0.875rem', cursor: 'pointer' }}
+                  value={selectedCategory}
+                  onChange={e => setSelectedCategory(e.target.value)}
+                >
+                  {dynamicCategories.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', minWidth: 180 }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--muted-foreground)' }}>Species</label>
+                <select
+                  style={{ height: '2.5rem', padding: '0 2rem 0 0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--foreground)', fontSize: '0.875rem', cursor: 'pointer' }}
+                  value={selectedSpecies}
+                  onChange={e => setSelectedSpecies(e.target.value)}
+                >
+                  {dynamicSpecies.map(sp => (
+                    <option key={sp} value={sp}>{sp}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 

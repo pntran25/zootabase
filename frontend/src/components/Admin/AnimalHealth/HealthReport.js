@@ -86,6 +86,8 @@ const HealthReport = () => {
   const [tab, setTab] = useState('alerts');
   const [search, setSearch] = useState('');
   const [alertFilter, setAlertFilter] = useState('all'); // all | active | resolved
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   useEffect(() => {
     setLoading(true);
@@ -95,6 +97,16 @@ const HealthReport = () => {
       .finally(() => setLoading(false));
   }, []);
 
+  /* ── Date filter helper ───────────────────────────────── */
+  const inDateRange = (dateStr) => {
+    if (!dateFrom && !dateTo) return true;
+    if (!dateStr) return false;
+    const d = new Date(dateStr).toISOString().split('T')[0];
+    if (dateFrom && d < dateFrom) return false;
+    if (dateTo && d > dateTo) return false;
+    return true;
+  };
+
   /* ── Filtered data per tab ──────────────────────────── */
   const q = search.toLowerCase();
 
@@ -103,6 +115,7 @@ const HealthReport = () => {
     let list = data.alerts;
     if (alertFilter === 'active') list = list.filter(a => !a.IsResolved);
     if (alertFilter === 'resolved') list = list.filter(a => a.IsResolved);
+    list = list.filter(a => inDateRange(a.CreatedAt));
     if (q) list = list.filter(a =>
       (a.AnimalName || '').toLowerCase().includes(q) ||
       (a.AnimalCode || '').toLowerCase().includes(q) ||
@@ -111,11 +124,13 @@ const HealthReport = () => {
       (a.AlertMessage || '').toLowerCase().includes(q)
     );
     return list;
-  }, [data, alertFilter, q]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, alertFilter, q, dateFrom, dateTo]);
 
   const filteredRecords = useMemo(() => {
     if (!data) return [];
     let list = data.records;
+    list = list.filter(r => inDateRange(r.CheckupDate));
     if (q) list = list.filter(r =>
       (r.AnimalName || '').toLowerCase().includes(q) ||
       (r.AnimalCode || '').toLowerCase().includes(q) ||
@@ -123,11 +138,13 @@ const HealthReport = () => {
       (r.StaffName || '').toLowerCase().includes(q)
     );
     return list;
-  }, [data, q]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, q, dateFrom, dateTo]);
 
   const filteredMetrics = useMemo(() => {
     if (!data) return [];
     let list = data.metrics;
+    list = list.filter(m => inDateRange(m.RecordDate));
     if (q) list = list.filter(m =>
       (m.AnimalName || '').toLowerCase().includes(q) ||
       (m.AnimalCode || '').toLowerCase().includes(q) ||
@@ -136,7 +153,8 @@ const HealthReport = () => {
       (m.MedicalConditions || '').toLowerCase().includes(q)
     );
     return list;
-  }, [data, q]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, q, dateFrom, dateTo]);
 
   const stats = data?.stats;
 
@@ -159,18 +177,18 @@ const HealthReport = () => {
             className="dr-details-btn"
             style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', fontSize: '0.82rem', fontWeight: 600, whiteSpace: 'nowrap' }}
             onClick={() => {
-              const alertRows = (data.alerts || []).map(a => ({
+              const alertRows = filteredAlerts.map(a => ({
                 'Animal': a.AnimalName || '', 'Code': a.AnimalCode || '', 'Species': a.Species || '',
                 'Alert Type': a.AlertType || '', 'Message': a.AlertMessage || '',
                 'Date': a.CreatedAt ? new Date(a.CreatedAt).toLocaleDateString() : '',
                 'Status': a.IsResolved ? 'Resolved' : 'Active',
               }));
-              const recordRows = (data.records || []).map(r => ({
+              const recordRows = filteredRecords.map(r => ({
                 'Animal': r.AnimalName || '', 'Code': r.AnimalCode || '', 'Species': r.Species || '',
                 'Checkup Date': r.CheckupDate ? new Date(r.CheckupDate).toLocaleDateString() : '',
                 'Health Score': r.HealthScore ?? '', 'Staff': r.StaffName || '', 'Notes': r.Notes || '',
               }));
-              const metricRows = (data.metrics || []).map(m => ({
+              const metricRows = filteredMetrics.map(m => ({
                 'Animal': m.AnimalName || '', 'Code': m.AnimalCode || '', 'Species': m.Species || '',
                 'Date': m.RecordDate ? new Date(m.RecordDate).toLocaleDateString() : '',
                 'Weight': m.Weight ?? '', 'Activity Level': m.ActivityLevel || '',
@@ -196,7 +214,7 @@ const HealthReport = () => {
                 { name: 'Health Metrics', data: metricRows },
                 { name: 'Keeper Assignments', data: keeperRows },
                 { name: 'Feeding Schedules', data: feedingRows },
-              ], 'Health_Report');
+              ], 'Health_Report', { reportName: 'Health Report', dateFrom, dateTo });
               toast.success('Health report downloaded.');
             }}
           >
@@ -255,6 +273,15 @@ const HealthReport = () => {
                 onChange={e => setSearch(e.target.value)}
                 className="hr-search-input"
               />
+            </div>
+            <div className="hr-date-filters">
+              <label className="hr-date-label">From</label>
+              <input type="date" className="hr-date-input" value={dateFrom} max={new Date().toISOString().split('T')[0]} onChange={e => setDateFrom(e.target.value)} />
+              <label className="hr-date-label">To</label>
+              <input type="date" className="hr-date-input" value={dateTo} max={new Date().toISOString().split('T')[0]} onChange={e => setDateTo(e.target.value)} />
+              {(dateFrom || dateTo) && (
+                <button className="hr-filter-btn hr-filter-clear" onClick={() => { setDateFrom(''); setDateTo(''); }}>Clear</button>
+              )}
             </div>
             {tab === 'alerts' && (
               <div className="hr-filter-group">

@@ -83,6 +83,7 @@
   font-size: 0.875rem; /* text-sm */
   font-weight: 500;
   transition: color 0.2s ease;
+  white-space: nowrap;
 }
 
 .ww-nav-link:hover, .ww-nav-link.active {
@@ -168,12 +169,17 @@
   align-items: center;
   gap: 0.4rem;
   line-height: 1.2;
+  max-width: 160px;
+  overflow: hidden;
 }
 
 .ww-greeting-text {
   font-size: 0.82rem;
   font-weight: 600;
   color: oklch(0.45 0.12 145); /* primary green */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .ww-btn-profile-icon {

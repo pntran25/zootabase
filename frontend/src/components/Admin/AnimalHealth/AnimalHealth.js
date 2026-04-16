@@ -187,6 +187,11 @@ const AnimalHealth = () => {
   const [alertsLoading, setAlertsLoading] = useState(true);
   const [alertSubTab, setAlertSubTab] = useState('current');
 
+  // Resolve modal
+  const [resolveModal, setResolveModal] = useState(false);
+  const [resolvingAlert, setResolvingAlert] = useState(null);
+  const [resolutionNotes, setResolutionNotes] = useState('');
+
   /* ── Load data ─────────────────────────────────────────── */
   const loadAll = useCallback(async () => {
     try {
@@ -284,9 +289,23 @@ const AnimalHealth = () => {
   };
 
   /* ── Alert resolve ─────────────────────────────────────── */
-  const handleResolveAlert = async (id) => {
-    try { await resolveHealthAlert(id); toast.success('Alert resolved.'); await loadAll(); }
-    catch (err) { toast.error(err.message || 'Failed to resolve alert.'); }
+  const openResolveModal = (alert) => {
+    setResolvingAlert(alert);
+    setResolutionNotes('');
+    setResolveModal(true);
+  };
+
+  const handleResolveAlert = async () => {
+    if (!resolvingAlert) return;
+    try {
+      await resolveHealthAlert(resolvingAlert.AlertID, { ResolutionNotes: resolutionNotes });
+      toast.success('Alert resolved.');
+      setResolveModal(false);
+      setResolvingAlert(null);
+      setResolutionNotes('');
+      setAlertSubTab('resolved');
+      await loadAll();
+    } catch (err) { toast.error(err.message || 'Failed to resolve alert.'); }
   };
 
   /* ── Column definitions ────────────────────────────────── */
@@ -491,7 +510,11 @@ const AnimalHealth = () => {
               </button>
             </div>
             {(() => {
-              const visibleAlerts = filteredAlerts.filter(a => alertSubTab === 'current' ? !a.IsResolved : a.IsResolved);
+              const visibleAlerts = filteredAlerts
+                .filter(a => alertSubTab === 'current' ? !a.IsResolved : a.IsResolved)
+                .sort((a, b) => alertSubTab === 'resolved'
+                  ? new Date(b.ResolvedAt || 0) - new Date(a.ResolvedAt || 0)
+                  : new Date(b.CreatedAt || 0) - new Date(a.CreatedAt || 0));
               if (visibleAlerts.length === 0) {
                 return (
                   <div className="ah-empty">
@@ -513,11 +536,14 @@ const AnimalHealth = () => {
                         <div className="ah-alert-time">{fmtDate(a.CreatedAt)}</div>
                       </div>
                       {!a.IsResolved ? (
-                        <button className="ah-alert-resolve-btn" onClick={() => handleResolveAlert(a.AlertID)}>
+                        <button className="ah-alert-resolve-btn" onClick={() => openResolveModal(a)}>
                           <CheckCircle size={13} /> Resolve
                         </button>
                       ) : (
-                        <span className="ah-resolved-badge">Resolved {a.ResolvedAt ? fmtDate(a.ResolvedAt) : ''}</span>
+                        <div className="ah-resolved-info">
+                          <span className="ah-resolved-badge">Resolved {a.ResolvedAt ? fmtDate(a.ResolvedAt) : ''}</span>
+                          {a.ResolutionNotes && <span className="ah-resolved-notes">{a.ResolutionNotes}</span>}
+                        </div>
                       )}
                     </div>
                   ))}
@@ -638,6 +664,50 @@ const AnimalHealth = () => {
           </div>
         </div>
       </AdminModalForm>
+
+      {/* ══════ Resolve Alert Modal ══════ */}
+      {resolveModal && resolvingAlert && (
+        <div className="admin-modal-overlay" onClick={() => setResolveModal(false)}>
+          <div className="admin-modal-container ah-resolve-modal" onClick={e => e.stopPropagation()}>
+            <div className="admin-modal-header">
+              <h2>Resolve Alert</h2>
+              <button className="admin-modal-close" onClick={() => setResolveModal(false)} aria-label="Close">✕</button>
+            </div>
+            <div className="admin-modal-content">
+              <div className="ah-resolve-details">
+                <div className="ah-resolve-detail-row">
+                  <span className="ah-resolve-label">Animal</span>
+                  <span className="ah-resolve-value">{resolvingAlert.AnimalName} ({resolvingAlert.Species})</span>
+                </div>
+                <div className="ah-resolve-detail-row">
+                  <span className="ah-resolve-label">Alert Type</span>
+                  <span className="ah-resolve-value">{resolvingAlert.AlertType}</span>
+                </div>
+                <div className="ah-resolve-detail-row">
+                  <span className="ah-resolve-label">Message</span>
+                  <span className="ah-resolve-value">{resolvingAlert.AlertMessage}</span>
+                </div>
+                <div className="ah-resolve-detail-row">
+                  <span className="ah-resolve-label">Created</span>
+                  <span className="ah-resolve-value">{fmtDate(resolvingAlert.CreatedAt)}</span>
+                </div>
+              </div>
+              <div className="form-group" style={{ marginTop: 16 }}>
+                <label>Resolution Notes *</label>
+                <textarea rows={4} value={resolutionNotes}
+                  onChange={e => setResolutionNotes(e.target.value)}
+                  placeholder="Describe how this alert was resolved (e.g. treatment administered, diet adjusted, weight returned to normal)..." />
+              </div>
+              <div className="admin-modal-actions">
+                <button type="button" className="admin-btn-secondary" onClick={() => setResolveModal(false)}>Cancel</button>
+                <button type="button" className="admin-btn-primary" onClick={handleResolveAlert} disabled={!resolutionNotes.trim()}>
+                  <CheckCircle size={14} /> Confirm Resolution
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

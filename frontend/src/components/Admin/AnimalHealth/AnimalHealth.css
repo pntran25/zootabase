@@ -599,3 +599,61 @@
   }
 }
 
+/* ── Resolve modal ────────────────────────────────────── */
+.ah-resolve-modal {
+  max-width: 520px;
+}
+
+.ah-resolve-details {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 8px;
+  background: var(--adm-bg-surface-2, rgba(255,255,255,0.04));
+  border: 1px solid var(--adm-border);
+}
+
+.ah-resolve-detail-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.ah-resolve-label {
+  flex-shrink: 0;
+  width: 80px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--adm-text-muted);
+  padding-top: 2px;
+}
+
+.ah-resolve-value {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--adm-text-primary);
+  line-height: 1.4;
+}
+
+/* ── Resolved info (badge + notes) ──────────────────── */
+.ah-resolved-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+
+.ah-resolved-notes {
+  font-size: 0.7rem;
+  color: var(--adm-text-secondary);
+  max-width: 200px;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+

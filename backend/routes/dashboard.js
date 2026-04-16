@@ -40,6 +40,7 @@ router.get('/', async (req, res) => {
             ticketThisMonth, ticketLastMonth,
             memberThisMonth, memberLastMonth,
             currWeekRes, prevWeekRes,
+            healthAlertsRes, healthAlertCountRes,
         ] = await Promise.all([
             // ── Animals: total + new this month vs last month ───────────
             pool.request().query(Q.animalStats),
@@ -61,6 +62,10 @@ router.get('/', async (req, res) => {
             mk().query(Q.visitorsCurrentWeek),
             // ── Visitor attendance: previous week by VisitDate ─────────
             mk().query(Q.visitorsPreviousWeek),
+            // ── Unresolved health alerts ───────────────────────────────
+            pool.request().query(Q.unresolvedHealthAlerts),
+            // ── Unresolved health alert count ──────────────────────────
+            pool.request().query(Q.unresolvedHealthAlertCount),
         ]);
 
         // ── Build weekly visitor chart (Mon–Sun) ─────────────────────
@@ -93,6 +98,8 @@ router.get('/', async (req, res) => {
             membersThisMonth:  Number(memberThisMonth.recordset[0].cnt),
             membersLastMonth:  Number(memberLastMonth.recordset[0].cnt),
             weeklyVisitors,
+            healthAlerts:      healthAlertsRes.recordset,
+            unresolvedAlertCount: Number(healthAlertCountRes.recordset[0].cnt),
         });
     } catch (error) {
         console.error('Dashboard stats error:', error);
