@@ -72,17 +72,40 @@ jobs:
 
       - name: 'Deploy to Azure Web App'
         run: |
+          set -e
           RG=$(az webapp list --query "[?name=='wildwoods-frontend'].resourceGroup | [0]" -o tsv)
 
-          # Remove settings that block zip deployment
+          # Remove any settings that block deployment
           az webapp config appsettings delete \
             -n wildwoods-frontend -g "$RG" \
-            --setting-names WEBSITE_RUN_FROM_PACKAGE SCM_DO_BUILD_DURING_DEPLOYMENT || true
+            --setting-names WEBSITE_RUN_FROM_PACKAGE 2>/dev/null || true
 
+          # Get Kudu publishing credentials
+          CREDS=$(az webapp deployment list-publishing-credentials \
+            -n wildwoods-frontend -g "$RG" -o json)
+          USER=$(echo "$CREDS" | jq -r .publishingUserName)
+          PASS=$(echo "$CREDS" | jq -r .publishingPassword)
+          SCM="https://wildwoods-frontend-ewdsetbrhzf2bwac.scm.eastus2-01.azurewebsites.net"
+
+          echo "=== Clearing stale deployment state ==="
+          curl -sf -X POST -u "$USER:$PASS" \
+            "$SCM/api/command" \
+            -H "Content-Type: application/json" \
+            -d '{"command":"rm -rf /home/site/deployments/* /home/site/locks/* 2>/dev/null; echo cleared","dir":"/"}'
+
+          echo "=== Deploying zip ==="
           zip -r /tmp/app.zip .
+          curl -X POST -u "$USER:$PASS" \
+            --data-binary @/tmp/app.zip \
+            -H "Content-Type: application/zip" \
+            "$SCM/api/zipdeploy?isAsync=false" \
+            --fail --show-error --max-time 300
 
-          az webapp deploy -n wildwoods-frontend -g "$RG" \
-            --src-path /tmp/app.zip \
-            --type zip \
-            --restart true \
-            --async false
+          echo "=== Verifying index.html exists ==="
+          curl -sf -X POST -u "$USER:$PASS" \
+            "$SCM/api/command" \
+            -H "Content-Type: application/json" \
+            -d '{"command":"ls -la /home/site/wwwroot/index.html","dir":"/"}'
+
+          az webapp restart -n wildwoods-frontend -g "$RG"
+          echo "=== Deployment complete ==="
