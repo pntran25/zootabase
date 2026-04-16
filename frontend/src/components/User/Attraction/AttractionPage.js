@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import './AttractionPage.css';
 import { Search, MapPin, Users, Clock, ChevronDown, SlidersHorizontal } from 'lucide-react';
 import { getAllAttractions } from '../../../services/attractionService';
@@ -104,6 +104,7 @@ const AttractionPage = () => {
   const [activeAgeGroup, setActiveAgeGroup] = useState('All');
   const [activeDuration, setActiveDuration] = useState('All');
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [sortBy, setSortBy] = useState('name-az');
 
   useEffect(() => {
     const fetchAttractions = async () => {
@@ -123,17 +124,28 @@ const AttractionPage = () => {
   const ageGroups = ['All', ...Array.from(new Set(attractions.map(a => a.ageGroup).filter(Boolean)))];
   const durations = ['All', ...Array.from(new Set(attractions.map(a => a.duration).filter(Boolean))).sort((a, b) => parseInt(a) - parseInt(b))];
 
-  const activeFilterCount = [activeType !== 'All', activeAgeGroup !== 'All', activeDuration !== 'All'].filter(Boolean).length;
+  const activeFilterCount = [activeType !== 'All', activeAgeGroup !== 'All', activeDuration !== 'All', sortBy !== 'name-az'].filter(Boolean).length;
 
-  const filtered = attractions.filter(a => {
-    const matchSearch =
-      a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (a.location || '').toLowerCase().includes(searchQuery.toLowerCase());
-    const matchType = activeType === 'All' || a.type === activeType;
-    const matchAge = activeAgeGroup === 'All' || a.ageGroup === activeAgeGroup;
-    const matchDuration = activeDuration === 'All' || a.duration === activeDuration;
-    return matchSearch && matchType && matchAge && matchDuration;
-  });
+  const filtered = useMemo(() => {
+    const base = attractions.filter(a => {
+      const matchSearch =
+        a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (a.location || '').toLowerCase().includes(searchQuery.toLowerCase());
+      const matchType = activeType === 'All' || a.type === activeType;
+      const matchAge = activeAgeGroup === 'All' || a.ageGroup === activeAgeGroup;
+      const matchDuration = activeDuration === 'All' || a.duration === activeDuration;
+      return matchSearch && matchType && matchAge && matchDuration;
+    });
+    return [...base].sort((a, b) => {
+      switch (sortBy) {
+        case 'name-az':    return (a.name || '').localeCompare(b.name || '');
+        case 'name-za':    return (b.name || '').localeCompare(a.name || '');
+        case 'price-asc':  return Number(a.price || 0) - Number(b.price || 0);
+        case 'price-desc': return Number(b.price || 0) - Number(a.price || 0);
+        default: return 0;
+      }
+    });
+  }, [attractions, searchQuery, activeType, activeAgeGroup, activeDuration, sortBy]);
 
   return (
     <main className="ww-attr-page">
@@ -211,6 +223,19 @@ const AttractionPage = () => {
                   value={activeDuration}
                   onChange={setActiveDuration}
                   options={durations.map(d => ({ value: d, label: d === 'All' ? 'All' : `${d}` }))}
+                />
+              </div>
+              <div className="ww-filter-panel-group">
+                <label className="ww-filter-panel-label">Sort By</label>
+                <CustomDropdown
+                  value={sortBy}
+                  onChange={setSortBy}
+                  options={[
+                    { value: 'name-az',    label: 'Name A–Z' },
+                    { value: 'name-za',    label: 'Name Z–A' },
+                    { value: 'price-asc',  label: 'Price: Low → High' },
+                    { value: 'price-desc', label: 'Price: High → Low' },
+                  ]}
                 />
               </div>
             </div>
