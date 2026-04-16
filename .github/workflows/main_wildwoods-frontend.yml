@@ -73,14 +73,8 @@ jobs:
       - name: 'Deploy to Azure Web App'
         run: |
           RG=$(az webapp list --query "[?name=='wildwoods-frontend'].resourceGroup | [0]" -o tsv)
-          az webapp stop -n wildwoods-frontend -g "$RG" || true
-          sleep 10
-          az webapp config appsettings set -n wildwoods-frontend -g "$RG" \
-            --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false
           zip -r /tmp/app.zip .
-          az webapp deploy -n wildwoods-frontend -g "$RG" \
-            --src-path /tmp/app.zip \
-            --type zip \
-            --clean true \
-            --async false
-          az webapp start -n wildwoods-frontend -g "$RG"
+          az webapp deployment source config-zip \
+            -n wildwoods-frontend -g "$RG" \
+            --src /tmp/app.zip
+          az webapp restart -n wildwoods-frontend -g "$RG"
