@@ -70,11 +70,14 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_F91F72F7806846A48E6D86D5B7A74E5E }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_351EA28B835449ADB9F1C4F5847DFC83 }}
 
-      - name: Enable SCM basic auth and clear deployment lock
+      - name: Ensure app is running and clear locks
         run: |
           RG=$(az webapp list --query "[?name=='wildwoods-frontend'].resourceGroup | [0]" -o tsv)
 
-          echo "=== Enabling basic auth on SCM site ==="
+          echo "=== Starting app (in case it is stopped) ==="
+          az webapp start -n wildwoods-frontend -g "$RG"
+
+          echo "=== Enabling basic auth on SCM ==="
           az resource update \
             --resource-group "$RG" \
             --name scm \
@@ -83,39 +86,34 @@ jobs:
             --parent sites/wildwoods-frontend \
             --set properties.allow=true
 
-          echo "=== Enabling basic auth on FTP ==="
-          az resource update \
-            --resource-group "$RG" \
-            --name ftp \
-            --namespace Microsoft.Web \
-            --resource-type basicPublishingCredentialsPolicies \
-            --parent sites/wildwoods-frontend \
-            --set properties.allow=true
-
-          echo "=== Getting publish credentials ==="
+          echo "=== Waiting for Kudu to come online ==="
           CREDS=$(az webapp deployment list-publishing-credentials \
             -n wildwoods-frontend -g "$RG" -o json)
           USER=$(echo "$CREDS" | jq -r .publishingUserName)
           PASS=$(echo "$CREDS" | jq -r .publishingPassword)
           SCM="https://wildwoods-frontend-ewdsetbrhzf2bwac.scm.eastus2-01.azurewebsites.net"
 
-          echo "=== Deleting deployment lock files ==="
+          for i in 1 2 3 4 5 6; do
+            HTTP=$(curl -s -o /dev/null -w "%{http_code}" -u "$USER:$PASS" "$SCM/api/settings")
+            echo "  Kudu check $i: $HTTP"
+            [ "$HTTP" = "200" ] && break
+            sleep 10
+          done
+
+          echo "=== Clearing deployment locks ==="
           curl -s -o /dev/null -w "locks: %{http_code}\n" \
             -X DELETE -u "$USER:$PASS" \
             "$SCM/api/vfs/site/locks/?recursive=true" \
             -H "If-Match: *" || true
 
-          echo "=== Deleting stale deployment records ==="
           curl -s -u "$USER:$PASS" "$SCM/api/deployments" | \
             jq -r '.[].id' 2>/dev/null | while read -r id; do
               [ -z "$id" ] && continue
-              echo "Deleting: $id"
+              echo "Deleting deployment: $id"
               curl -s -o /dev/null -w "  %{http_code}\n" \
-                -X DELETE -u "$USER:$PASS" \
-                "$SCM/api/deployments/$id" || true
+                -X DELETE -u "$USER:$PASS" "$SCM/api/deployments/$id" || true
             done
-
-          echo "=== Ready to deploy ==="
+          echo "=== Ready ==="
 
       - name: 'Deploy to Azure Web App'
         run: |
@@ -128,7 +126,7 @@ jobs:
 
           zip -r /tmp/app.zip .
 
-          echo "=== Deploying via /api/zip (direct extract to wwwroot) ==="
+          echo "=== Deploying via /api/zip ==="
           HTTP_CODE=$(curl -s -o /tmp/deploy_out.txt -w "%{http_code}" \
             -X PUT -u "$USER:$PASS" \
             --data-binary @/tmp/app.zip \
@@ -147,6 +145,5 @@ jobs:
           curl -s -u "$USER:$PASS" "$SCM/api/vfs/site/wwwroot/" | \
             jq -r '.[].name' 2>/dev/null || echo "Could not list files"
 
-          az webapp start -n wildwoods-frontend -g "$RG" || true
-          az webapp restart -n wildwoods-frontend -g "$RG" || true
+          az webapp restart -n wildwoods-frontend -g "$RG"
           echo "=== Done ==="
