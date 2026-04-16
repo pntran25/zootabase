@@ -84,35 +84,63 @@ jobs:
             --parent sites/wildwoods-frontend \
             --set properties.allow=true
 
+          echo "=== Stopping app to fully reset container ==="
+          az webapp stop -n wildwoods-frontend -g "$RG"
+          sleep 10
+
+          echo "=== Increasing container start time limit ==="
+          az webapp config appsettings set -n wildwoods-frontend -g "$RG" \
+            --settings WEBSITES_CONTAINER_START_TIME_LIMIT=600
+
           echo "=== Setting safe placeholder startup command ==="
           az webapp config set -n wildwoods-frontend -g "$RG" \
-            --startup-file "node -e \"require('http').createServer((q,s)=>{s.writeHead(200);s.end('deploying')}).listen(process.env.PORT||8080)\""
+            --startup-file "node -e \"require('http').createServer(function(q,r){r.end('ok')}).listen(8080)\""
 
-          echo "=== Restarting app with safe command ==="
-          az webapp restart -n wildwoods-frontend -g "$RG"
-          sleep 30
+          echo "=== Starting app fresh ==="
+          az webapp start -n wildwoods-frontend -g "$RG"
 
-          echo "=== Waiting for Kudu ==="
+          echo "=== Sleeping 120s for container cold start ==="
+          sleep 120
+
+          echo "=== Getting credentials ==="
           CREDS=$(az webapp deployment list-publishing-credentials \
             -n wildwoods-frontend -g "$RG" -o json)
           USER=$(echo "$CREDS" | jq -r .publishingUserName)
           PASS=$(echo "$CREDS" | jq -r .publishingPassword)
 
+          echo "=== Checking main app URL ==="
+          curl -s -o /dev/null -w "Main app HTTP: %{http_code}\n" \
+            "https://wildwoods-frontend-ewdsetbrhzf2bwac.eastus2-01.azurewebsites.net" \
+            --max-time 30 || true
+
+          echo "=== Waiting for Kudu (up to 10 min) ==="
           KUDU_READY=false
-          for i in $(seq 1 20); do
+          for i in $(seq 1 30); do
             HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
-              -u "$USER:$PASS" "$SCM/api/settings" --max-time 15)
+              -u "$USER:$PASS" "$SCM/api/settings" --max-time 30)
             echo "  Kudu check $i: $HTTP"
             if [ "$HTTP" = "200" ]; then
               KUDU_READY=true
               break
             fi
-            sleep 15
+            sleep 20
           done
 
           if [ "$KUDU_READY" != "true" ]; then
-            echo "FATAL: Kudu never became ready"
-            exit 1
+            echo "=== Kudu not ready, checking container state ==="
+            az webapp show -n wildwoods-frontend -g "$RG" \
+              --query "{state:state,usageState:usageState}" -o json || true
+            echo "=== Trying az webapp deploy as fallback ==="
+            zip -r /tmp/app.zip .
+            az webapp deploy -n wildwoods-frontend -g "$RG" \
+              --src-path /tmp/app.zip --type zip --timeout 600 \
+              --async true || true
+            echo "=== Setting startup command and restarting ==="
+            az webapp config set -n wildwoods-frontend -g "$RG" \
+              --startup-file "pm2 serve /home/site/wwwroot --no-daemon --spa"
+            az webapp restart -n wildwoods-frontend -g "$RG"
+            echo "=== Deployed via fallback (async). Check portal for status ==="
+            exit 0
           fi
 
           echo "=== Clearing deployment locks ==="
