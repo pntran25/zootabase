@@ -70,27 +70,47 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_F91F72F7806846A48E6D86D5B7A74E5E }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_351EA28B835449ADB9F1C4F5847DFC83 }}
 
-      - name: Deploy to Azure
+      - name: Deploy to Azure via FTP
         run: |
           set -e
           RG="imaginaryzoo"
           APP="wildwoods-frontend"
 
-          echo "=== Creating deployment package ==="
-          zip -r /tmp/app.zip .
+          echo "=== Enabling basic auth for FTP ==="
+          az resource update \
+            --resource-group "$RG" --name ftp \
+            --namespace Microsoft.Web \
+            --resource-type basicPublishingCredentialsPolicies \
+            --parent "sites/$APP" \
+            --set properties.allow=true
 
-          echo "=== Deploying via az webapp deploy ==="
-          az webapp deploy -n "$APP" -g "$RG" \
-            --src-path /tmp/app.zip \
-            --type zip \
-            --clean true \
-            --restart true \
-            --timeout 600
+          echo "=== Getting FTP credentials ==="
+          CREDS=$(az webapp deployment list-publishing-credentials \
+            -n "$APP" -g "$RG" -o json)
+          FTP_USER=$(echo "$CREDS" | jq -r '.publishingUserName')
+          FTP_PASS=$(echo "$CREDS" | jq -r '.publishingPassword')
+          FTP_URL=$(echo "$CREDS" | jq -r '.ftpString')
+          echo "FTP URL: $FTP_URL"
+
+          FTP_HOST=$(echo "$FTP_URL" | sed 's|^ftps\?://||' | cut -d'/' -f1)
+          echo "FTP Host: $FTP_HOST"
+
+          echo "=== Installing lftp ==="
+          sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+
+          echo "=== Uploading files via FTPS ==="
+          lftp -u "$FTP_USER,$FTP_PASS" "ftps://$FTP_HOST" <<'LFTP_SCRIPT'
+          set ssl:verify-certificate false
+          set ftp:ssl-protect-data true
+          set mirror:parallel-transfer-count 5
+          mirror --reverse --delete --verbose . /site/wwwroot/
+          quit
+          LFTP_SCRIPT
 
           echo "=== Setting SPA startup command ==="
           az webapp config set -n "$APP" -g "$RG" \
             --startup-file "pm2 serve /home/site/wwwroot --no-daemon --spa"
 
-          echo "=== Restarting with SPA command ==="
+          echo "=== Restarting app ==="
           az webapp restart -n "$APP" -g "$RG"
           echo "=== Done ==="
