@@ -70,80 +70,41 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_F91F72F7806846A48E6D86D5B7A74E5E }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_351EA28B835449ADB9F1C4F5847DFC83 }}
 
-      - name: 'Deploy to Azure Web App'
+      - name: Clear stale deployment lock
         run: |
           RG=$(az webapp list --query "[?name=='wildwoods-frontend'].resourceGroup | [0]" -o tsv)
-
-          # Remove any settings that block deployment
-          az webapp config appsettings delete \
-            -n wildwoods-frontend -g "$RG" \
-            --setting-names WEBSITE_RUN_FROM_PACKAGE 2>/dev/null || true
-
-          # Get Kudu publishing credentials
-          CREDS=$(az webapp deployment list-publishing-credentials \
-            -n wildwoods-frontend -g "$RG" -o json)
-          USER=$(echo "$CREDS" | jq -r .publishingUserName)
-          PASS=$(echo "$CREDS" | jq -r .publishingPassword)
+          SUB=$(az account show --query id -o tsv)
           SCM="https://wildwoods-frontend-ewdsetbrhzf2bwac.scm.eastus2-01.azurewebsites.net"
 
-          # Clear stale deployment state (non-fatal)
-          echo "=== Clearing stale deployments via VFS ==="
-          curl -s -o /dev/null -w "deployments delete: %{http_code}\n" \
-            -X DELETE -u "$USER:$PASS" \
-            "$SCM/api/vfs/site/deployments/?recursive=true" \
-            -H "If-Match: *" || true
-          curl -s -o /dev/null -w "locks delete: %{http_code}\n" \
-            -X DELETE -u "$USER:$PASS" \
-            "$SCM/api/vfs/site/locks/?recursive=true" \
-            -H "If-Match: *" || true
+          # Get bearer token for SCM site
+          TOKEN=$(az account get-access-token --resource "https://management.azure.com/" --query accessToken -o tsv)
 
-          # Upload files directly via VFS instead of zipdeploy
-          echo "=== Uploading files via Kudu VFS ==="
-          # First clear wwwroot
-          curl -s -o /dev/null -w "wwwroot clear: %{http_code}\n" \
-            -X DELETE -u "$USER:$PASS" \
-            "$SCM/api/vfs/site/wwwroot/?recursive=true" \
-            -H "If-Match: *" || true
-          # Recreate wwwroot
-          curl -s -o /dev/null -w "wwwroot mkdir: %{http_code}\n" \
-            -X PUT -u "$USER:$PASS" \
-            "$SCM/api/vfs/site/wwwroot/"
+          # List and delete stale deployments via Kudu API using bearer token
+          echo "=== Listing deployments ==="
+          DEPS=$(curl -s -H "Authorization: Bearer $TOKEN" \
+            -H "x-ms-client-request-id: $(uuidgen)" \
+            "$SCM/api/deployments" 2>/dev/null || echo "[]")
+          echo "$DEPS" | jq '.[].id' 2>/dev/null || echo "No deployments to clear"
 
-          # Use zip deploy via Kudu wardeploy (alternative to zipdeploy)
-          echo "=== Creating zip ==="
-          zip -r /tmp/app.zip .
+          echo "$DEPS" | jq -r '.[].id' 2>/dev/null | while read -r id; do
+            [ -z "$id" ] && continue
+            echo "Deleting deployment: $id"
+            curl -s -o /dev/null -w "  status: %{http_code}\n" \
+              -X DELETE \
+              -H "Authorization: Bearer $TOKEN" \
+              "$SCM/api/deployments/$id" || true
+          done
 
-          echo "=== Deploying via zipdeploy ==="
-          HTTP_CODE=$(curl -s -o /tmp/deploy_response.txt -w "%{http_code}" \
-            -X POST -u "$USER:$PASS" \
-            --data-binary @/tmp/app.zip \
-            -H "Content-Type: application/zip" \
-            "$SCM/api/zipdeploy?isAsync=false" \
-            --max-time 300)
-          echo "zipdeploy response code: $HTTP_CODE"
-          cat /tmp/deploy_response.txt || true
-          echo ""
+          # Also try via ARM API to delete deployment history
+          echo "=== Resetting via ARM ==="
+          az rest --method POST \
+            --url "https://management.azure.com/subscriptions/$SUB/resourceGroups/$RG/providers/Microsoft.Web/sites/wildwoods-frontend/resetSlotConfig?api-version=2023-12-01" \
+            2>/dev/null || true
 
-          if [ "$HTTP_CODE" -ge 400 ]; then
-            echo "=== zipdeploy failed, trying PUT to /api/zip ==="
-            HTTP_CODE2=$(curl -s -o /tmp/deploy_response2.txt -w "%{http_code}" \
-              -X PUT -u "$USER:$PASS" \
-              --data-binary @/tmp/app.zip \
-              -H "Content-Type: application/zip" \
-              "$SCM/api/zip/site/wwwroot/" \
-              --max-time 300)
-            echo "api/zip response code: $HTTP_CODE2"
-            cat /tmp/deploy_response2.txt || true
-            echo ""
-            if [ "$HTTP_CODE2" -ge 400 ]; then
-              echo "Both deploy methods failed"
-              exit 1
-            fi
-          fi
-
-          echo "=== Verifying deployment ==="
-          curl -s -u "$USER:$PASS" \
-            "$SCM/api/vfs/site/wwwroot/" | jq '.[].name' || true
-
-          az webapp restart -n wildwoods-frontend -g "$RG"
-          echo "=== Done ==="
+      - name: 'Deploy to Azure Web App'
+        id: deploy-to-webapp
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'wildwoods-frontend'
+          slot-name: 'Production'
+          package: .
