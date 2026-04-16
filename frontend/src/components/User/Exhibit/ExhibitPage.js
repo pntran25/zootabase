@@ -4,6 +4,7 @@ import { Search, MapPin, Clock, Leaf, Users, ArrowRight, ChevronDown, SlidersHor
 import { getExhibits } from '../../../services/exhibitService';
 import { API_BASE_URL } from '../../../services/apiClient';
 import placeholderImg from '../../../assets/images/Exhibits_Images/ExhibitsComingSoon.png';
+import CustomDropdown from '../CustomDropdown';
 import heroWildlife from '../../../assets/images/giraffe-habitat.jpg';
 
 const ExhibitPage = () => {
@@ -94,15 +95,11 @@ const ExhibitPage = () => {
             <div className="ww-filter-panel">
               <div className="ww-filter-panel-group">
                 <label className="ww-filter-panel-label">Region</label>
-                <select
-                  className="ww-filter-select"
+                <CustomDropdown
                   value={activeCategory}
-                  onChange={e => setActiveCategory(e.target.value)}
-                >
-                  {dynamicRegions.map(region => (
-                    <option key={region} value={region}>{region}</option>
-                  ))}
-                </select>
+                  onChange={setActiveCategory}
+                  options={dynamicRegions.map(region => ({ value: region, label: region }))}
+                />
               </div>
             </div>
           )}

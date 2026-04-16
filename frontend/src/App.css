@@ -194,3 +194,29 @@
     font-size: 2rem;
   }
 }
+
+/* User Pages Dropdown Styling */
+.zoo-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  height: 2.75rem;
+  padding: 0 2.5rem 0 0.875rem;
+  border-radius: 0.5rem;
+  border: 1px solid #ebebeb;
+  background-color: #ffffff;
+  color: #222222;
+  font-size: 0.9375rem;
+  cursor: pointer;
+  background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23555555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>');
+  background-repeat: no-repeat;
+  background-position: right 0.875rem center;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.04);
+}
+
+.zoo-select:focus {
+  outline: none;
+  border-color: #e8611a;
+  box-shadow: 0 0 0 2px rgba(232, 97, 26, 0.15);
+}

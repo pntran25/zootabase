@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Download } from 'lucide-react';
+import AdminSelect from '../AdminSelect';
+import AdminDatePicker from '../AdminDatePicker';
 import { getAnimalReport, getAnimalsForDropdown, getHealthReport } from '../../../services/animalHealthService';
 import { exportSectionsToSingleSheet } from '../../../utils/exportExcel';
 
@@ -68,8 +70,38 @@ const AnimalReport = () => {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [dateFilter, setDateFilter] = useState('custom');
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
+
+  const getYMD = (d) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  const TODAY = getYMD(new Date());
+
+  const { dateFrom, dateTo } = React.useMemo(() => {
+    const now = new Date();
+    const todayStr = getYMD(now);
+    
+    if (dateFilter === 'today') return { dateFrom: todayStr, dateTo: todayStr };
+    if (dateFilter === 'week') {
+      const s = new Date(now);
+      s.setDate(s.getDate() - s.getDay());
+      return { dateFrom: getYMD(s), dateTo: todayStr };
+    }
+    if (dateFilter === 'month') {
+      const s = new Date(now.getFullYear(), now.getMonth(), 1);
+      return { dateFrom: getYMD(s), dateTo: todayStr };
+    }
+    if (dateFilter === 'custom') {
+      return { dateFrom: customStart || '', dateTo: customEnd || '' };
+    }
+    return { dateFrom: '', dateTo: '' };
+  }, [dateFilter, customStart, customEnd]);
 
   useEffect(() => {
     getAnimalsForDropdown()
@@ -109,14 +141,16 @@ const AnimalReport = () => {
   const inDateRange = (dateStr) => {
     if (!dateFrom && !dateTo) return true;
     if (!dateStr) return false;
-    const d = new Date(dateStr).toISOString().split('T')[0];
+    const d = (dateStr.includes('T') ? dateStr.split('T')[0] : dateStr);
     if (dateFrom && d < dateFrom) return false;
     if (dateTo && d > dateTo) return false;
     return true;
   };
 
-  const filteredHealthRecords = report?.healthRecords?.filter(r => inDateRange(r.CheckupDate)) || [];
-  const filteredAlerts = report?.alerts?.filter(a => inDateRange(a.CreatedAt)) || [];
+  const filteredHealthRecords = (report?.healthRecords?.filter(r => inDateRange(r.CheckupDate)) || [])
+    .sort((a, b) => new Date(b.CheckupDate || 0) - new Date(a.CheckupDate || 0));
+  const filteredAlerts = (report?.alerts?.filter(a => inDateRange(a.CreatedAt)) || [])
+    .sort((a, b) => new Date(b.CreatedAt || 0) - new Date(a.CreatedAt || 0));
 
   return (
     <div className="admin-page">
@@ -174,36 +208,17 @@ const AnimalReport = () => {
         </button>
       </div>
 
-      {/* ── Search bar + Date filter ── */}
+      {/* ── Search bar ── */}
       <div className="ar-toolbar">
-        <div style={{ position: 'relative', maxWidth: 340, flex: 1 }}>
-          <Search size={15} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--adm-text-muted)', pointerEvents: 'none' }} />
+        <div className="admin-search-container" style={{ maxWidth: 340, flex: 1, margin: 0 }}>
+          <Search size={15} className="search-icon" />
           <input
             type="text"
+            className="admin-search-input"
             placeholder="Search by name, ID, or species..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '8px 12px 8px 34px',
-              background: 'var(--adm-bg-surface)',
-              border: '1px solid var(--adm-border)',
-              borderRadius: 8,
-              color: 'var(--adm-text-primary)',
-              fontSize: '0.85rem',
-              outline: 'none',
-              boxSizing: 'border-box',
-            }}
           />
-        </div>
-        <div className="ar-date-filter">
-          <label className="ar-date-label">From</label>
-          <input type="date" className="ar-date-input" value={dateFrom} max={new Date().toISOString().split('T')[0]} onChange={e => setDateFrom(e.target.value)} />
-          <label className="ar-date-label">To</label>
-          <input type="date" className="ar-date-input" value={dateTo} max={new Date().toISOString().split('T')[0]} onChange={e => setDateTo(e.target.value)} />
-          {(dateFrom || dateTo) && (
-            <button className="ar-date-clear" onClick={() => { setDateFrom(''); setDateTo(''); }}>Clear</button>
-          )}
         </div>
       </div>
 
@@ -303,7 +318,39 @@ const AnimalReport = () => {
               )}
 
               {!loading && report && a && (
-                <div className="ar-sections">
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, marginBottom: 16 }}>
+                    {dateFilter === 'custom' && (
+                      <>
+                        <AdminDatePicker
+                          value={customStart}
+                          onChange={setCustomStart}
+                          placeholder="Start date"
+                          maxDate={customEnd || TODAY}
+                        />
+                        <span style={{ color: 'var(--adm-text-secondary)', fontSize: '0.82rem' }}>to</span>
+                        <AdminDatePicker
+                          value={customEnd}
+                          onChange={setCustomEnd}
+                          placeholder="End date"
+                          minDate={customStart || undefined}
+                          maxDate={TODAY}
+                        />
+                      </>
+                    )}
+                    <AdminSelect
+                      value={dateFilter}
+                      onChange={v => { setDateFilter(v); setCustomStart(''); setCustomEnd(''); }}
+                      width="148px"
+                      options={[
+                        { value: 'today', label: 'Today' },
+                        { value: 'week', label: 'This Week' },
+                        { value: 'month', label: 'This Month' },
+                        { value: 'custom', label: 'Custom Range' },
+                      ]}
+                    />
+                  </div>
+                  <div className="ar-sections">
                   {/* ── Animal Profile ── */}
                   <Section icon={<PawPrint size={16} color="var(--adm-accent)" />} title="Animal Profile" defaultOpen={true}>
                     <div className="ar-profile">
@@ -393,6 +440,7 @@ const AnimalReport = () => {
                     )}
                   </Section>
                 </div>
+                </>
               )}
             </div>
           </div>

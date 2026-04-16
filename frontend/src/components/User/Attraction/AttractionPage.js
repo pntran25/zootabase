@@ -4,6 +4,7 @@ import { Search, MapPin, Users, Clock, ChevronDown, SlidersHorizontal } from 'lu
 import { getAllAttractions } from '../../../services/attractionService';
 import { API_BASE_URL } from '../../../services/apiClient';
 import attractionsHero from '../../../assets/images/attractions-hero.png';
+import CustomDropdown from '../CustomDropdown';
 
 const TYPE_META = {
   Ride:        { emoji: '🎢', gradient: 'linear-gradient(145deg, #1a4fa0 0%, #0d2a5c 100%)', fallbackDesc: 'An exciting ride through the zoo grounds, perfect for the whole family.' },
@@ -190,39 +191,27 @@ const AttractionPage = () => {
             <div className="ww-filter-panel">
               <div className="ww-filter-panel-group">
                 <label className="ww-filter-panel-label">Type</label>
-                <select
-                  className="ww-filter-select"
+                <CustomDropdown
                   value={activeType}
-                  onChange={e => setActiveType(e.target.value)}
-                >
-                  {types.map(type => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
-                </select>
+                  onChange={setActiveType}
+                  options={types.map(type => ({ value: type, label: type }))}
+                />
               </div>
               <div className="ww-filter-panel-group">
                 <label className="ww-filter-panel-label">Age Group</label>
-                <select
-                  className="ww-filter-select"
+                <CustomDropdown
                   value={activeAgeGroup}
-                  onChange={e => setActiveAgeGroup(e.target.value)}
-                >
-                  {ageGroups.map(ag => (
-                    <option key={ag} value={ag}>{ag}</option>
-                  ))}
-                </select>
+                  onChange={setActiveAgeGroup}
+                  options={ageGroups.map(ag => ({ value: ag, label: ag }))}
+                />
               </div>
               <div className="ww-filter-panel-group">
                 <label className="ww-filter-panel-label">Duration</label>
-                <select
-                  className="ww-filter-select"
+                <CustomDropdown
                   value={activeDuration}
-                  onChange={e => setActiveDuration(e.target.value)}
-                >
-                  {durations.map(d => (
-                    <option key={d} value={d}>{d === 'All' ? 'All' : `${d}`}</option>
-                  ))}
-                </select>
+                  onChange={setActiveDuration}
+                  options={durations.map(d => ({ value: d, label: d === 'All' ? 'All' : `${d}` }))}
+                />
               </div>
             </div>
           )}

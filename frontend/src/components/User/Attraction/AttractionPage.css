@@ -416,6 +416,12 @@
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.ww-attr-card:hover .ww-attr-card-desc {
+  -webkit-line-clamp: unset;
+  display: block;
 }
 
 .ww-attr-card-meta {
