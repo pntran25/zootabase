@@ -88,7 +88,8 @@ const buildPath = path.join(__dirname, 'public');
 app.use(express.static(buildPath));
 
 // Client-side routing catch-all – must come after all API routes
-app.get('*', (req, res) => {
+// Express 5 requires named wildcards: {*splat}
+app.get('{*splat}', (req, res) => {
 	res.sendFile(path.join(buildPath, 'index.html'));
 });
 
