@@ -288,14 +288,13 @@ const StaffScheduling = () => {
 
         <div style={{ display: 'flex', gap: 6, marginLeft: 'auto', flexWrap: 'wrap', alignItems: 'center' }}>
           {/* Role filter */}
-          <select
+          <AdminSelect
             value={filterRole}
-            onChange={e => { setFilterRole(e.target.value); setFilterStaff(''); }}
-            style={{ padding: '6px 10px', borderRadius: 7, border: '1px solid var(--adm-border)', background: 'var(--adm-bg-surface)', color: 'var(--adm-text-primary)', fontSize: '0.78rem', cursor: 'pointer' }}
-          >
-            <option value="">All Roles</option>
-            {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-          </select>
+            onChange={val => { setFilterRole(val); setFilterStaff(''); }}
+            options={[{ value: '', label: 'All Roles' }, ...ROLES]}
+            placeholder="All Roles"
+            width={140}
+          />
 
           {/* Staff filter */}
           <AdminSelect

@@ -290,16 +290,55 @@ const AnimalHealth = () => {
 
   /* ── Alert resolve ─────────────────────────────────────── */
   const openResolveModal = (alert) => {
+    const recentRecord = records.find(r => String(r.AnimalID) === String(alert.AnimalID)) || {};
+    
     setResolvingAlert(alert);
     setResolutionNotes('');
+    setRecordForm({
+      AnimalID: String(alert.AnimalID),
+      CheckupDate: new Date().toISOString().split('T')[0],
+      HealthScore: '', Notes: '', StaffID: '',
+      ActivityLevel: recentRecord.ActivityLevel || '',
+      Weight: recentRecord.Weight != null ? String(recentRecord.Weight) : '',
+      WeightRangeLow: recentRecord.WeightRangeLow != null ? String(recentRecord.WeightRangeLow) : '',
+      WeightRangeHigh: recentRecord.WeightRangeHigh != null ? String(recentRecord.WeightRangeHigh) : '',
+      MedicalConditions: recentRecord.MedicalConditions || '',
+      RecentTreatments: recentRecord.RecentTreatments || '',
+      AppetiteStatus: recentRecord.AppetiteStatus || ''
+    });
+    setAssessment(defaultAssessment());
     setResolveModal(true);
   };
 
   const handleResolveAlert = async () => {
     if (!resolvingAlert) return;
     try {
+      const computedScore = calcHealthScore(assessment);
+      if (computedScore == null) {
+        toast.error('Please fill in all health assessment categories.');
+        return;
+      }
+      if (!recordForm.StaffID) {
+        toast.error('Please select Vet / Staff.');
+        return;
+      }
+      if (!resolutionNotes.trim()) {
+        toast.error('Please provide resolution notes.');
+        return;
+      }
+
+      const payload = { ...recordForm, HealthScore: String(computedScore), AnimalID: String(resolvingAlert.AnimalID) };
+      if (payload.Weight === '') payload.Weight = null;
+      if (payload.WeightRangeLow === '') payload.WeightRangeLow = null;
+      if (payload.WeightRangeHigh === '') payload.WeightRangeHigh = null;
+
+      // 1) Create the new health record
+      await createHealthRecord(payload);
+
+      // 2) Resolve the alert
       await resolveHealthAlert(resolvingAlert.AlertID, { ResolutionNotes: resolutionNotes });
-      toast.success('Alert resolved.');
+      toast.success('Alert resolved and new health record added.');
+      
       setResolveModal(false);
       setResolvingAlert(null);
       setResolutionNotes('');
@@ -321,7 +360,16 @@ const AnimalHealth = () => {
         <span style={{ fontSize: '0.76rem', color: 'var(--adm-text-secondary)' }}>{row.original.Species}</span>
       </div>
     )},
-    { accessorKey: 'CheckupDate', header: 'Checkup Date', cell: info => fmtDate(info.getValue()) },
+    { accessorKey: 'CheckupDate', header: 'Checkup Date', cell: info => fmtDate(info.getValue()),
+      sortingFn: (rowA, rowB, columnId) => {
+        const a = rowA.original.CheckupDate || '';
+        const b = rowB.original.CheckupDate || '';
+        if (a < b) return -1;
+        if (a > b) return 1;
+        // Same date → sort by RecordID descending (newest first)
+        return (rowA.original.RecordID || 0) - (rowB.original.RecordID || 0);
+      },
+    },
     { accessorKey: 'HealthScore', header: 'Health Score', size: 130, cell: info => {
       const v = info.getValue();
       return (
@@ -418,6 +466,123 @@ const AnimalHealth = () => {
       </div>
     );
   }, []);
+
+  /* ── Shared Form Fields ────────────────────────────────── */
+  const renderHealthFormFields = (isResolve = false) => (
+    <>
+      <div className="form-row">
+        {!isResolve && (
+          <div className="form-group">
+            <label>Animal *</label>
+            <AdminSelect value={recordForm.AnimalID} onChange={v => setRecordForm(p => ({ ...p, AnimalID: v }))}
+              options={animalOptions} placeholder="Select animal..." searchable />
+          </div>
+        )}
+        <div className="form-group">
+          <label>Vet / Staff *</label>
+          <AdminSelect value={recordForm.StaffID} onChange={v => setRecordForm(p => ({ ...p, StaffID: v }))}
+            options={staffOptions} placeholder="Select staff..." searchable />
+        </div>
+      </div>
+      {!isResolve && (
+        <div className="form-row">
+          <div className="form-group">
+            <label>Checkup Date *</label>
+            <DatePickerInput value={recordForm.CheckupDate} onChange={v => setRecordForm(p => ({ ...p, CheckupDate: v }))} />
+          </div>
+        </div>
+      )}
+
+      <div className="ah-assess-section">
+        <label className="ah-assess-title">Health Assessment *</label>
+        <div className="ah-assess-grid">
+          {HEALTH_CATEGORIES.map(cat => (
+            <div key={cat.key} className="ah-assess-category">
+              <span className="ah-assess-label">{cat.label} <span className="ah-assess-pts">({cat.max} pts)</span></span>
+              <div className="ah-assess-options">
+                {cat.options.map(opt => (
+                  <button type="button" key={opt.value}
+                    className={`ah-assess-btn${assessment[cat.key] === String(opt.value) ? ' active ' + scoreClass(opt.value / cat.max * 100) : ''}`}
+                    onClick={() => setAssessment(p => ({ ...p, [cat.key]: String(opt.value) }))}>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        {(() => {
+          const s = calcHealthScore(assessment);
+          return s != null ? (
+            <div className="ah-assess-result">
+              <span className={`ah-score-hint ${scoreClass(s)}`}>
+                Calculated Score: {s}/100 — {scoreLabel(s)}
+              </span>
+              <div className="ah-score-guide">
+                <span className="ah-score-guide-item ah-score-excellent">90-100 Excellent</span>
+                <span className="ah-score-guide-item ah-score-good">65-89 Good</span>
+                <span className="ah-score-guide-item ah-score-fair">40-64 Fair</span>
+                <span className="ah-score-guide-item ah-score-critical">0-39 Critical</span>
+              </div>
+            </div>
+          ) : (
+            <p className="ah-assess-hint-text">Select all categories to calculate the health score.</p>
+          );
+        })()}
+      </div>
+
+      <div className="form-group">
+        <label>Notes</label>
+        <textarea rows={3} value={recordForm.Notes}
+          onChange={e => setRecordForm(p => ({ ...p, Notes: e.target.value }))} placeholder="Optional checkup notes..." />
+      </div>
+
+      <div className="ah-assess-section" style={{ marginTop: 8 }}>
+        <label className="ah-assess-title">Body Metrics</label>
+        <div className="form-row">
+          <div className="form-group">
+            <label>Weight (kg)</label>
+            <input type="number" step="0.01" value={recordForm.Weight}
+              onChange={e => setRecordForm(p => ({ ...p, Weight: e.target.value }))} placeholder="e.g. 120.5" />
+          </div>
+          <div className="form-group">
+            <label>Activity Level</label>
+            <AdminSelect value={recordForm.ActivityLevel} onChange={v => setRecordForm(p => ({ ...p, ActivityLevel: v }))}
+              options={['High', 'Normal', 'Low', 'Sedentary']} placeholder="Select level..." />
+          </div>
+        </div>
+        <div className="form-row">
+          <div className="form-group">
+            <label>Weight Range Low (kg)</label>
+            <input type="number" step="0.01" value={recordForm.WeightRangeLow}
+              onChange={e => setRecordForm(p => ({ ...p, WeightRangeLow: e.target.value }))} placeholder="Min expected" />
+          </div>
+          <div className="form-group">
+            <label>Weight Range High (kg)</label>
+            <input type="number" step="0.01" value={recordForm.WeightRangeHigh}
+              onChange={e => setRecordForm(p => ({ ...p, WeightRangeHigh: e.target.value }))} placeholder="Max expected" />
+          </div>
+        </div>
+        <div className="form-row">
+          <div className="form-group">
+            <label>Appetite Status</label>
+            <AdminSelect value={recordForm.AppetiteStatus} onChange={v => setRecordForm(p => ({ ...p, AppetiteStatus: v }))}
+              options={['Normal', 'Increased', 'Decreased', 'None']} placeholder="Select..." />
+          </div>
+          <div className="form-group">
+            <label>Medical Conditions</label>
+            <input value={recordForm.MedicalConditions}
+              onChange={e => setRecordForm(p => ({ ...p, MedicalConditions: e.target.value }))} placeholder="e.g. Arthritis, skin rash" />
+          </div>
+        </div>
+        <div className="form-group">
+          <label>Recent Treatments</label>
+          <input value={recordForm.RecentTreatments}
+            onChange={e => setRecordForm(p => ({ ...p, RecentTreatments: e.target.value }))} placeholder="e.g. Antibiotics course, surgery" />
+        </div>
+      </div>
+    </>
+  );
 
   return (
     <div className="admin-page">
@@ -556,113 +721,7 @@ const AnimalHealth = () => {
 
       {/* ══════ Record Modal ══════ */}
       <AdminModalForm title={editingRecord ? 'Edit Health Record' : 'New Health Record'} isOpen={recordModal} onClose={() => setRecordModal(false)} onSubmit={handleRecordSubmit}>
-        <div className="form-row">
-          <div className="form-group">
-            <label>Animal *</label>
-            <AdminSelect value={recordForm.AnimalID} onChange={v => setRecordForm(p => ({ ...p, AnimalID: v }))}
-              options={animalOptions} placeholder="Select animal..." searchable />
-          </div>
-          <div className="form-group">
-            <label>Vet / Staff *</label>
-            <AdminSelect value={recordForm.StaffID} onChange={v => setRecordForm(p => ({ ...p, StaffID: v }))}
-              options={staffOptions} placeholder="Select staff..." searchable />
-          </div>
-        </div>
-        <div className="form-row">
-          <div className="form-group">
-            <label>Checkup Date *</label>
-            <DatePickerInput value={recordForm.CheckupDate} onChange={v => setRecordForm(p => ({ ...p, CheckupDate: v }))} />
-          </div>
-        </div>
-
-        <div className="ah-assess-section">
-          <label className="ah-assess-title">Health Assessment *</label>
-          <div className="ah-assess-grid">
-            {HEALTH_CATEGORIES.map(cat => (
-              <div key={cat.key} className="ah-assess-category">
-                <span className="ah-assess-label">{cat.label} <span className="ah-assess-pts">({cat.max} pts)</span></span>
-                <div className="ah-assess-options">
-                  {cat.options.map(opt => (
-                    <button type="button" key={opt.value}
-                      className={`ah-assess-btn${assessment[cat.key] === String(opt.value) ? ' active ' + scoreClass(opt.value / cat.max * 100) : ''}`}
-                      onClick={() => setAssessment(p => ({ ...p, [cat.key]: String(opt.value) }))}>
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-          {(() => {
-            const s = calcHealthScore(assessment);
-            return s != null ? (
-              <div className="ah-assess-result">
-                <span className={`ah-score-hint ${scoreClass(s)}`}>
-                  Calculated Score: {s}/100 — {scoreLabel(s)}
-                </span>
-                <div className="ah-score-guide">
-                  <span className="ah-score-guide-item ah-score-excellent">90-100 Excellent</span>
-                  <span className="ah-score-guide-item ah-score-good">65-89 Good</span>
-                  <span className="ah-score-guide-item ah-score-fair">40-64 Fair</span>
-                  <span className="ah-score-guide-item ah-score-critical">0-39 Critical</span>
-                </div>
-              </div>
-            ) : (
-              <p className="ah-assess-hint-text">Select all categories to calculate the health score.</p>
-            );
-          })()}
-        </div>
-
-        <div className="form-group">
-          <label>Notes</label>
-          <textarea rows={3} value={recordForm.Notes}
-            onChange={e => setRecordForm(p => ({ ...p, Notes: e.target.value }))} placeholder="Optional checkup notes..." />
-        </div>
-
-        <div className="ah-assess-section" style={{ marginTop: 8 }}>
-          <label className="ah-assess-title">Body Metrics (optional)</label>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Weight (kg)</label>
-              <input type="number" step="0.01" value={recordForm.Weight}
-                onChange={e => setRecordForm(p => ({ ...p, Weight: e.target.value }))} placeholder="e.g. 120.5" />
-            </div>
-            <div className="form-group">
-              <label>Activity Level</label>
-              <AdminSelect value={recordForm.ActivityLevel} onChange={v => setRecordForm(p => ({ ...p, ActivityLevel: v }))}
-                options={['High', 'Normal', 'Low', 'Sedentary']} placeholder="Select level..." />
-            </div>
-          </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Weight Range Low (kg)</label>
-              <input type="number" step="0.01" value={recordForm.WeightRangeLow}
-                onChange={e => setRecordForm(p => ({ ...p, WeightRangeLow: e.target.value }))} placeholder="Min expected" />
-            </div>
-            <div className="form-group">
-              <label>Weight Range High (kg)</label>
-              <input type="number" step="0.01" value={recordForm.WeightRangeHigh}
-                onChange={e => setRecordForm(p => ({ ...p, WeightRangeHigh: e.target.value }))} placeholder="Max expected" />
-            </div>
-          </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Appetite Status</label>
-              <AdminSelect value={recordForm.AppetiteStatus} onChange={v => setRecordForm(p => ({ ...p, AppetiteStatus: v }))}
-                options={['Normal', 'Increased', 'Decreased', 'None']} placeholder="Select..." />
-            </div>
-            <div className="form-group">
-              <label>Medical Conditions</label>
-              <input value={recordForm.MedicalConditions}
-                onChange={e => setRecordForm(p => ({ ...p, MedicalConditions: e.target.value }))} placeholder="e.g. Arthritis, skin rash" />
-            </div>
-          </div>
-          <div className="form-group">
-            <label>Recent Treatments</label>
-            <input value={recordForm.RecentTreatments}
-              onChange={e => setRecordForm(p => ({ ...p, RecentTreatments: e.target.value }))} placeholder="e.g. Antibiotics course, surgery" />
-          </div>
-        </div>
+        {renderHealthFormFields()}
       </AdminModalForm>
 
       {/* ══════ Resolve Alert Modal ══════ */}
@@ -674,7 +733,7 @@ const AnimalHealth = () => {
               <button className="admin-modal-close" onClick={() => setResolveModal(false)} aria-label="Close">✕</button>
             </div>
             <div className="admin-modal-content">
-              <div className="ah-resolve-details">
+              <div className="ah-resolve-details" style={{ marginBottom: 16 }}>
                 <div className="ah-resolve-detail-row">
                   <span className="ah-resolve-label">Animal</span>
                   <span className="ah-resolve-value">{resolvingAlert.AnimalName} ({resolvingAlert.Species})</span>
@@ -692,6 +751,9 @@ const AnimalHealth = () => {
                   <span className="ah-resolve-value">{fmtDate(resolvingAlert.CreatedAt)}</span>
                 </div>
               </div>
+
+              {renderHealthFormFields(true)}
+
               <div className="form-group" style={{ marginTop: 16 }}>
                 <label>Resolution Notes *</label>
                 <textarea rows={4} value={resolutionNotes}
@@ -700,7 +762,7 @@ const AnimalHealth = () => {
               </div>
               <div className="admin-modal-actions">
                 <button type="button" className="admin-btn-secondary" onClick={() => setResolveModal(false)}>Cancel</button>
-                <button type="button" className="admin-btn-primary" onClick={handleResolveAlert} disabled={!resolutionNotes.trim()}>
+                <button type="button" className="admin-btn-primary" onClick={handleResolveAlert}>
                   <CheckCircle size={14} /> Confirm Resolution
                 </button>
               </div>

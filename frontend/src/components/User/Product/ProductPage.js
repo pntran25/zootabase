@@ -5,6 +5,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { auth } from '../../../services/firebase';
 import giftShopHeroImg from '../../../assets/images/zoo-giftshop.jpg';
 import './ProductPage.css';
+import CustomDropdown from '../CustomDropdown';
 import { Search, ShoppingCart, Plus, Minus, X, ChevronDown, SlidersHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
 import CheckoutModal from './CheckoutModal';
@@ -235,15 +236,11 @@ const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0
             <div style={{ paddingTop: '1rem', borderTop: '1px solid var(--border)', marginTop: '1rem', display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', minWidth: 180 }}>
                 <label style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--muted-foreground)' }}>Category</label>
-                <select
-                  style={{ height: '2.5rem', padding: '0 2rem 0 0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--foreground)', fontSize: '0.875rem', cursor: 'pointer' }}
+                <CustomDropdown
                   value={selectedCategory}
-                  onChange={e => setSelectedCategory(e.target.value)}
-                >
-                  {categories.map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.label}</option>
-                  ))}
-                </select>
+                  onChange={setSelectedCategory}
+                  options={categories.map(cat => ({ value: cat.id, label: cat.label }))}
+                />
               </div>
             </div>
           )}

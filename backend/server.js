@@ -10,11 +10,11 @@ const PORT = parseInt(process.env.PORT, 10) || 5000;
 // CORS: allow only known origins in production
 const allowedOrigins = process.env.CORS_ORIGINS
 	? process.env.CORS_ORIGINS.split(',').map(o => o.trim().replace(/\/$/, ''))
-	: ['http://localhost:3000'];
+	: ['http://localhost:3000', 'http://localhost:3001', 'http://172.25.156.187:3000', 'http://172.25.156.187:3001'];
 app.use(cors({
 	origin: (origin, cb) => {
 		// Allow requests with no origin (mobile apps, curl, Postman in dev)
-		if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+		if (!origin || origin.includes('localhost') || origin.match(/^http:\/\/172\.25\.\d+\.\d+:\d+/) || allowedOrigins.includes(origin)) return cb(null, true);
 		cb(new Error('Not allowed by CORS'));
 	}
 }));

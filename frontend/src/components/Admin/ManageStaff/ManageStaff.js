@@ -205,16 +205,13 @@ const ManageStaff = () => {
                   className="admin-search-input"
                 />
               </div>
-              <select
+              <AdminSelect
                 value={filterRole}
-                onChange={e => setFilterRole(e.target.value)}
-                style={{ padding: '7px 12px', borderRadius: 8, border: '1px solid var(--adm-border)', background: 'var(--adm-bg-surface)', color: 'var(--adm-text-primary)', fontSize: '0.82rem', cursor: 'pointer', minWidth: 140 }}
-              >
-                <option value="">All Roles</option>
-                {ROLES.map(r => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
-              </select>
+                onChange={val => setFilterRole(val)}
+                options={[{ value: '', label: 'All Roles' }, ...ROLES]}
+                placeholder="All Roles"
+                width={140}
+              />
               <button className="admin-btn-primary" onClick={() => handleOpenModal()}>
                 <Plus size={16} /> Add Staff
               </button>

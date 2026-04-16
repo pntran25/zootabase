@@ -4,6 +4,7 @@ import './AnimalPage.css';
 import { API_BASE_URL } from '../../../services/apiClient';
 import { Info, MapPin, Search, Grid3X3, List, ChevronDown, SlidersHorizontal } from 'lucide-react';
 import placeholderImg from '../../../assets/images/Exhibits_Images/ExhibitsComingSoon.png';
+import CustomDropdown from '../CustomDropdown';
 import tigerHeroImg from '../../../assets/images/tiger1.jpg';
 
 // Custom cn utility for Tailwind
@@ -162,27 +163,19 @@ const AnimalPage = () => {
             <div className="ww-filter-panel" style={{ paddingTop: '1rem', borderTop: '1px solid var(--border)', marginTop: '1rem', display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', minWidth: 180 }}>
                 <label style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--muted-foreground)' }}>Exhibit</label>
-                <select
-                  style={{ height: '2.5rem', padding: '0 2rem 0 0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--foreground)', fontSize: '0.875rem', cursor: 'pointer' }}
+                <CustomDropdown
                   value={selectedCategory}
-                  onChange={e => setSelectedCategory(e.target.value)}
-                >
-                  {dynamicCategories.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
+                  onChange={setSelectedCategory}
+                  options={dynamicCategories.map(cat => ({ value: cat, label: cat }))}
+                />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', minWidth: 180 }}>
                 <label style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--muted-foreground)' }}>Species</label>
-                <select
-                  style={{ height: '2.5rem', padding: '0 2rem 0 0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border)', backgroundColor: 'var(--background)', color: 'var(--foreground)', fontSize: '0.875rem', cursor: 'pointer' }}
+                <CustomDropdown
                   value={selectedSpecies}
-                  onChange={e => setSelectedSpecies(e.target.value)}
-                >
-                  {dynamicSpecies.map(sp => (
-                    <option key={sp} value={sp}>{sp}</option>
-                  ))}
-                </select>
+                  onChange={setSelectedSpecies}
+                  options={dynamicSpecies.map(sp => ({ value: sp, label: sp }))}
+                />
               </div>
             </div>
           )}
