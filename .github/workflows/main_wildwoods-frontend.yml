@@ -129,6 +129,7 @@ jobs:
           az webapp config set -n "$APP" -g "$RG" \
             --startup-file "pm2 serve /home/site/wwwroot --no-daemon --spa"
 
-          echo "=== Restarting app ==="
+          echo "=== Starting and restarting app ==="
+          az webapp start -n "$APP" -g "$RG" || true
           az webapp restart -n "$APP" -g "$RG"
           echo "=== Done ==="
