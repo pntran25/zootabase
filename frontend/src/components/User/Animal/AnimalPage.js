@@ -43,6 +43,7 @@ const AnimalPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState("grid");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [sortBy, setSortBy] = useState('name-az');
 
   const handleViewToggle = () => {
     setViewMode(v => v === 'grid' ? 'list' : 'grid');
@@ -68,18 +69,29 @@ const AnimalPage = () => {
   const dynamicCategories = ["All Exhibits", ...Array.from(new Set(animals.map(a => a.exhibit).filter(Boolean)))];
   const dynamicSpecies = ["All Species", ...Array.from(new Set(animals.map(a => a.species).filter(Boolean))).sort()];
 
-  const activeFilterCount = [selectedCategory !== 'All Exhibits', selectedSpecies !== 'All Species'].filter(Boolean).length;
+  const activeFilterCount = [selectedCategory !== 'All Exhibits', selectedSpecies !== 'All Species', sortBy !== 'name-az'].filter(Boolean).length;
 
-  const filteredAnimals = animals.filter(animal => {
-    const matchesCategory = selectedCategory === "All Exhibits" || animal.exhibit === selectedCategory;
-    const matchesSpecies = selectedSpecies === "All Species" || animal.species === selectedSpecies;
-    const searchPart = searchQuery.toLowerCase();
-    const matchesSearch =
-      (animal.name || "").toLowerCase().includes(searchPart) ||
-      (animal.species || "").toLowerCase().includes(searchPart) ||
-      (animal.exhibit || "").toLowerCase().includes(searchPart);
-    return matchesCategory && matchesSpecies && matchesSearch;
-  });
+  const filteredAnimals = (() => {
+    const filtered = animals.filter(animal => {
+      const matchesCategory = selectedCategory === "All Exhibits" || animal.exhibit === selectedCategory;
+      const matchesSpecies = selectedSpecies === "All Species" || animal.species === selectedSpecies;
+      const searchPart = searchQuery.toLowerCase();
+      const matchesSearch =
+        (animal.name || "").toLowerCase().includes(searchPart) ||
+        (animal.species || "").toLowerCase().includes(searchPart) ||
+        (animal.exhibit || "").toLowerCase().includes(searchPart);
+      return matchesCategory && matchesSpecies && matchesSearch;
+    });
+    return [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case 'name-az':  return (a.name || '').localeCompare(b.name || '');
+        case 'name-za':  return (b.name || '').localeCompare(a.name || '');
+        case 'exhibit':  return (a.exhibit || '').localeCompare(b.exhibit || '');
+        case 'endangered': return (b.isEndangered ? 1 : 0) - (a.isEndangered ? 1 : 0);
+        default: return 0;
+      }
+    });
+  })();
 
   return (
     <div className="min-h-screen bg-background pb-12">
@@ -175,6 +187,19 @@ const AnimalPage = () => {
                   value={selectedSpecies}
                   onChange={setSelectedSpecies}
                   options={dynamicSpecies.map(sp => ({ value: sp, label: sp }))}
+                />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', minWidth: 180 }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--muted-foreground)' }}>Sort By</label>
+                <CustomDropdown
+                  value={sortBy}
+                  onChange={setSortBy}
+                  options={[
+                    { value: 'name-az',    label: 'Name A–Z' },
+                    { value: 'name-za',    label: 'Name Z–A' },
+                    { value: 'exhibit',    label: 'Exhibit A–Z' },
+                    { value: 'endangered', label: 'Endangered First' },
+                  ]}
                 />
               </div>
             </div>

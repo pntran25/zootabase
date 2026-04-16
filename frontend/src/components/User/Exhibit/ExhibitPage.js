@@ -13,6 +13,7 @@ const ExhibitPage = () => {
   const [exhibits, setExhibits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [sortBy, setSortBy] = useState('name-az');
 
   useEffect(() => {
     const fetchExhibits = async () => {
@@ -31,12 +32,28 @@ const ExhibitPage = () => {
   // Compute dynamic categories based on regions
   const dynamicRegions = ['All Regions', ...Array.from(new Set(exhibits.map(e => e.AreaName).filter(Boolean)))];
 
-  const filteredExhibits = exhibits.filter(exhibit => {
-    const matchesSearch = exhibit.ExhibitName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          (exhibit.AreaName || "").toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = activeCategory === 'All Regions' || exhibit.AreaName === activeCategory;
-    return matchesSearch && matchesCategory;
-  });
+  const filteredExhibits = (() => {
+    const filtered = exhibits.filter(exhibit => {
+      const matchesSearch = exhibit.ExhibitName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            (exhibit.AreaName || "").toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = activeCategory === 'All Regions' || exhibit.AreaName === activeCategory;
+      return matchesSearch && matchesCategory;
+    });
+    return [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case 'name-az':   return (a.ExhibitName || '').localeCompare(b.ExhibitName || '');
+        case 'name-za':   return (b.ExhibitName || '').localeCompare(a.ExhibitName || '');
+        case 'region':    return (a.AreaName || '').localeCompare(b.AreaName || '');
+        case 'featured':  return (b.IsFeatured ? 1 : 0) - (a.IsFeatured ? 1 : 0);
+        case 'animals': {
+          const countA = a.AnimalNames ? a.AnimalNames.split(',').filter(n => n.trim()).length : 0;
+          const countB = b.AnimalNames ? b.AnimalNames.split(',').filter(n => n.trim()).length : 0;
+          return countB - countA;
+        }
+        default: return 0;
+      }
+    });
+  })();
 
   return (
     <main className="ww-exhibit-page">
@@ -99,6 +116,20 @@ const ExhibitPage = () => {
                   value={activeCategory}
                   onChange={setActiveCategory}
                   options={dynamicRegions.map(region => ({ value: region, label: region }))}
+                />
+              </div>
+              <div className="ww-filter-panel-group">
+                <label className="ww-filter-panel-label">Sort By</label>
+                <CustomDropdown
+                  value={sortBy}
+                  onChange={setSortBy}
+                  options={[
+                    { value: 'name-az',  label: 'Name A–Z' },
+                    { value: 'name-za',  label: 'Name Z–A' },
+                    { value: 'region',   label: 'Region A–Z' },
+                    { value: 'featured', label: 'Featured First' },
+                    { value: 'animals',  label: 'Most Animals' },
+                  ]}
                 />
               </div>
             </div>

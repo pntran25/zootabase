@@ -514,6 +514,30 @@ const DataReports = () => {
   const [dateFilter, setDateFilter] = useState('custom');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
+  // Extended filters
+  const [revenueMin, setRevenueMin] = useState('');
+  const [revenueMax, setRevenueMax] = useState('');
+  const [activeChannels, setActiveChannels] = useState(['shop','tickets','memberships','events']);
+
+  const setPresetDates = (days) => {
+    const now = new Date();
+    const to = now.toISOString().split('T')[0];
+    let from;
+    if (days === 'year') {
+      from = `${now.getFullYear()}-01-01`;
+    } else if (days === '180') {
+      const d = new Date(now); d.setDate(d.getDate() - 180); from = d.toISOString().split('T')[0];
+    } else {
+      const d = new Date(now); d.setDate(d.getDate() - Number(days)); from = d.toISOString().split('T')[0];
+    }
+    setDateFilter('custom');
+    setCustomStart(from);
+    setCustomEnd(to);
+  };
+
+  const toggleChannel = (ch) => setActiveChannels(prev =>
+    prev.includes(ch) ? (prev.length > 1 ? prev.filter(x => x !== ch) : prev) : [...prev, ch]
+  );
 
   // Debounce search for all server-side fetches
   const [debouncedSearch, setDebouncedSearch] = useState(search);
@@ -576,7 +600,7 @@ const DataReports = () => {
   // Reset pagination automatically when filters or searches change
   useEffect(() => {
     setOrderPage(1); setTicketPage(1); setMembershipPage(1); setEventPage(1);
-  }, [debouncedSearch, dateFilter, customStart, customEnd]);
+  }, [debouncedSearch, dateFilter, customStart, customEnd, revenueMin, revenueMax]);
 
   // Lazy-load each tab only when active; re-fetch on filter/search change or page change
   useEffect(() => {
@@ -667,10 +691,30 @@ const DataReports = () => {
     { id: 'actions', header: '', enableSorting: false, size: 110, cell: info => <button className="dr-details-btn" onClick={() => setSelectedEventBookingId(info.row.original.EventBookingID)}>View Details</button> },
   ], []);
 
+  // Client-side revenue filter applied to current page rows
+  const applyRevFilter = (rows) => {
+    if (revenueMin === '' && revenueMax === '') return rows;
+    return rows.filter(r => {
+      const t = Number(r.Total);
+      if (revenueMin !== '' && t < Number(revenueMin)) return false;
+      if (revenueMax !== '' && t > Number(revenueMax)) return false;
+      return true;
+    });
+  };
+
   const activeCount = activeTab === 'shop' ? orderTotal
     : activeTab === 'tickets' ? ticketTotal
     : activeTab === 'events' ? eventTotal
     : membershipTotal;
+
+  const channelLabels = { shop: 'Gift Shop', tickets: 'Ticket Sales', memberships: 'Memberships', events: 'Event Sales' };
+  const channelColors = { shop: '#f59e0b', tickets: '#3b82f6', memberships: '#10b981', events: '#a855f7' };
+
+  const activeSalesFilterCount = [
+    revenueMin !== '', revenueMax !== ''
+  ].filter(Boolean).length;
+
+  const resetSalesFilters = () => { setRevenueMin(''); setRevenueMax(''); setActiveChannels(['shop','tickets','memberships','events']); setSearch(''); setDateFilter('custom'); setCustomStart(''); setCustomEnd(''); };
 
   return (
     <div className="admin-page">
@@ -762,22 +806,31 @@ const DataReports = () => {
         <button className={`dr-tab${activeTab === 'overview' ? ' active' : ''}`} onClick={() => setActiveTab('overview')}>
           <LayoutDashboard size={14} /> Overview
         </button>
-        <button className={`dr-tab${activeTab === 'shop' ? ' active' : ''}`} onClick={() => { setActiveTab('shop'); setSearch(''); setDateFilter('custom'); setCustomStart(''); setCustomEnd(''); }}>
-          <ShoppingBag size={14} /> Gift Shop Orders
-        </button>
-        <button className={`dr-tab${activeTab === 'events' ? ' active' : ''}`} onClick={() => { setActiveTab('events'); setSearch(''); setDateFilter('custom'); setCustomStart(''); setCustomEnd(''); }}>
-          <CalendarCheck size={14} /> Event Sales
-        </button>
-        <button className={`dr-tab${activeTab === 'tickets' ? ' active' : ''}`} onClick={() => { setActiveTab('tickets'); setSearch(''); setDateFilter('custom'); setCustomStart(''); setCustomEnd(''); }}>
-          <Ticket size={14} /> Ticket Sales
-        </button>
-        <button className={`dr-tab${activeTab === 'memberships' ? ' active' : ''}`} onClick={() => { setActiveTab('memberships'); setSearch(''); setDateFilter('custom'); setCustomStart(''); setCustomEnd(''); }}>
-          <CreditCard size={14} /> Memberships
-        </button>
+        {activeChannels.includes('shop') && (
+          <button className={`dr-tab${activeTab === 'shop' ? ' active' : ''}`} onClick={() => { setActiveTab('shop'); setSearch(''); setDateFilter('custom'); setCustomStart(''); setCustomEnd(''); }}>
+            <ShoppingBag size={14} /> Gift Shop Orders
+          </button>
+        )}
+        {activeChannels.includes('events') && (
+          <button className={`dr-tab${activeTab === 'events' ? ' active' : ''}`} onClick={() => { setActiveTab('events'); setSearch(''); setDateFilter('custom'); setCustomStart(''); setCustomEnd(''); }}>
+            <CalendarCheck size={14} /> Event Sales
+          </button>
+        )}
+        {activeChannels.includes('tickets') && (
+          <button className={`dr-tab${activeTab === 'tickets' ? ' active' : ''}`} onClick={() => { setActiveTab('tickets'); setSearch(''); setDateFilter('custom'); setCustomStart(''); setCustomEnd(''); }}>
+            <Ticket size={14} /> Ticket Sales
+          </button>
+        )}
+        {activeChannels.includes('memberships') && (
+          <button className={`dr-tab${activeTab === 'memberships' ? ' active' : ''}`} onClick={() => { setActiveTab('memberships'); setSearch(''); setDateFilter('custom'); setCustomStart(''); setCustomEnd(''); }}>
+            <CreditCard size={14} /> Memberships
+          </button>
+        )}
       </div>
 
       {activeTab === 'overview' && <OverviewTab />}
 
+      {/* Filter bar: search + count */}
       <div className="admin-table-toolbar" style={{ display: activeTab === 'overview' ? 'none' : undefined }}>
         <div className="admin-search-container">
           <Search size={15} className="search-icon" />
@@ -796,43 +849,60 @@ const DataReports = () => {
         <span className="dr-count">{activeCount} transaction{activeCount !== 1 ? 's' : ''}</span>
       </div>
 
-      {/* Date filter row — right-aligned above the table */}
-      <div style={{ display: activeTab === 'overview' ? 'none' : 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-        {dateFilter === 'custom' && (
-          <>
-            <AdminDatePicker
-              value={customStart}
-              onChange={setCustomStart}
-              placeholder="Start date"
-              maxDate={customEnd || TODAY}
-            />
-            <span style={{ color: 'var(--adm-text-secondary)', fontSize: '0.82rem' }}>to</span>
-            <AdminDatePicker
-              value={customEnd}
-              onChange={setCustomEnd}
-              placeholder="End date"
-              minDate={customStart || undefined}
-              maxDate={TODAY}
-            />
-          </>
-        )}
-        <AdminSelect
-          value={dateFilter}
-          onChange={v => { setDateFilter(v); setCustomStart(''); setCustomEnd(''); }}
-          width="148px"
-          options={[
-            { value: 'today', label: 'Today' },
-            { value: 'week', label: 'This Week' },
-            { value: 'month', label: 'This Month' },
-            { value: 'custom', label: 'Custom Range' },
-          ]}
-        />
+      {/* Advanced filter panel: presets + channel chips + date + revenue */}
+      <div style={{ display: activeTab === 'overview' ? 'none' : 'flex', flexDirection: 'column', gap: 8, marginBottom: 10 }}>
+        {/* Row 1: Date presets + date pickers + date select + reset */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Quick</span>
+          {[['30','Last 30 Days'],['90','Last 90 Days'],['180','Last 6 Months'],['year','This Year']].map(([val, lbl]) => (
+            <button key={val} onClick={() => setPresetDates(val)}
+              style={{ padding: '3px 10px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', border: '1px solid var(--adm-border)', background: 'transparent', color: 'var(--adm-text-secondary)', transition: 'all 0.15s' }}
+              onMouseEnter={e => e.target.style.borderColor = 'var(--adm-accent)'}
+              onMouseLeave={e => e.target.style.borderColor = 'var(--adm-border)'}>
+              {lbl}
+            </button>
+          ))}
+          <div style={{ width: 1, height: 20, background: 'var(--adm-border)', margin: '0 4px' }} />
+          {dateFilter === 'custom' && (
+            <>
+              <AdminDatePicker value={customStart} onChange={setCustomStart} placeholder="Start date" maxDate={customEnd || TODAY} />
+              <span style={{ color: 'var(--adm-text-secondary)', fontSize: '0.82rem' }}>to</span>
+              <AdminDatePicker value={customEnd} onChange={setCustomEnd} placeholder="End date" minDate={customStart || undefined} maxDate={TODAY} />
+            </>
+          )}
+          <AdminSelect value={dateFilter} onChange={v => { setDateFilter(v); setCustomStart(''); setCustomEnd(''); }} width="148px"
+            options={[
+              { value: 'today', label: 'Today' },
+              { value: 'week', label: 'This Week' },
+              { value: 'month', label: 'This Month' },
+              { value: 'custom', label: 'Custom Range' },
+            ]}
+          />
+          {activeSalesFilterCount > 0 && (
+            <button onClick={resetSalesFilters}
+              style={{ padding: '5px 12px', borderRadius: 6, border: '1px solid rgba(239,68,68,0.4)', background: 'rgba(239,68,68,0.08)', color: '#ef4444', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, marginLeft: 'auto' }}>
+              <X size={12} /> Reset
+              <span style={{ background: '#ef4444', color: '#fff', borderRadius: 10, padding: '0 6px', fontSize: '0.68rem', marginLeft: 2 }}>{activeSalesFilterCount}</span>
+            </button>
+          )}
+        </div>
+
+        {/* Row 2: Revenue range */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', padding: '8px 14px', background: 'var(--adm-bg-surface)', border: '1px solid var(--adm-border)', borderRadius: 8 }}>
+
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Revenue</span>
+          <input type="number" min="0" placeholder="Min $" value={revenueMin} onChange={e => setRevenueMin(e.target.value)}
+            style={{ width: 68, padding: '4px 7px', borderRadius: 6, border: '1px solid var(--adm-border)', background: 'var(--adm-bg)', color: 'var(--adm-text-primary)', fontSize: '0.78rem' }} />
+          <span style={{ color: 'var(--adm-text-muted)', fontSize: '0.75rem' }}>–</span>
+          <input type="number" min="0" placeholder="Max $" value={revenueMax} onChange={e => setRevenueMax(e.target.value)}
+            style={{ width: 68, padding: '4px 7px', borderRadius: 6, border: '1px solid var(--adm-border)', background: 'var(--adm-bg)', color: 'var(--adm-text-primary)', fontSize: '0.78rem' }} />
+        </div>
       </div>
 
       {activeTab !== 'overview' && (
         activeTab === 'shop' ? (
           <ReportTable
-            data={orderRows}
+            data={applyRevFilter(orderRows)}
             columns={shopColumns}
             sorting={ordersSorting}
             setSorting={setOrdersSorting}
@@ -844,7 +914,7 @@ const DataReports = () => {
           />
         ) : activeTab === 'events' ? (
           <ReportTable
-            data={eventRows}
+            data={applyRevFilter(eventRows)}
             columns={eventColumns}
             sorting={eventsSorting}
             setSorting={setEventsSorting}
@@ -856,7 +926,7 @@ const DataReports = () => {
           />
         ) : activeTab === 'tickets' ? (
           <ReportTable
-            data={ticketRows}
+            data={applyRevFilter(ticketRows)}
             columns={ticketColumns}
             sorting={ticketSorting}
             setSorting={setTicketSorting}
@@ -868,7 +938,7 @@ const DataReports = () => {
           />
         ) : (
           <ReportTable
-            data={membershipRows}
+            data={applyRevFilter(membershipRows)}
             columns={membershipColumns}
             sorting={membershipsSorting}
             setSorting={setMembershipsSorting}

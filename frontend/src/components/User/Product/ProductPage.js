@@ -71,6 +71,7 @@ const ProductPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [membershipDiscount, setMembershipDiscount] = useState(0);
+  const [sortBy, setSortBy] = useState('name-az');
 
   // Fetch the logged-in user's active membership discount
   useEffect(() => {
@@ -109,11 +110,23 @@ const ProductPage = () => {
     return [{ id: 'All Products', label: 'All Products' }, ...unique.map(c => ({ id: c, label: c }))];
   }, [products]);
 
-  const filteredProducts = products.filter((product) => {
-    const matchesSearch = (product.name || '').toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === "All Products" || product.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  const filteredProducts = (() => {
+    const filtered = products.filter((product) => {
+      const matchesSearch = (product.name || '').toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = selectedCategory === "All Products" || product.category === selectedCategory;
+      return matchesSearch && matchesCategory;
+    });
+    return [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case 'name-az':    return (a.name || '').localeCompare(b.name || '');
+        case 'name-za':    return (b.name || '').localeCompare(a.name || '');
+        case 'price-asc':  return Number(a.price || 0) - Number(b.price || 0);
+        case 'price-desc': return Number(b.price || 0) - Number(a.price || 0);
+        case 'in-stock':   return (b.inStock ? 1 : 0) - (a.inStock ? 1 : 0);
+        default: return 0;
+      }
+    });
+  })();
 
   const addToCart = (product) => {
     const maxStock = product.stockQuantity || 0;
@@ -240,6 +253,20 @@ const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0
                   value={selectedCategory}
                   onChange={setSelectedCategory}
                   options={categories.map(cat => ({ value: cat.id, label: cat.label }))}
+                />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', minWidth: 180 }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--muted-foreground)' }}>Sort By</label>
+                <CustomDropdown
+                  value={sortBy}
+                  onChange={setSortBy}
+                  options={[
+                    { value: 'name-az',    label: 'Name A–Z' },
+                    { value: 'name-za',    label: 'Name Z–A' },
+                    { value: 'price-asc',  label: 'Price: Low → High' },
+                    { value: 'price-desc', label: 'Price: High → Low' },
+                    { value: 'in-stock',   label: 'In Stock First' },
+                  ]}
                 />
               </div>
             </div>

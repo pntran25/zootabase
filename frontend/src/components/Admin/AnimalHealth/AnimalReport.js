@@ -3,7 +3,8 @@ import '../AdminTable.css';
 import './AnimalReport.css';
 import {
   ClipboardList, ChevronDown, ChevronRight, PawPrint, HeartPulse,
-  UtensilsCrossed, Search, AlertTriangle, CheckCircle, Calendar
+  UtensilsCrossed, Search, AlertTriangle, CheckCircle, Calendar, X,
+  ChevronUp, ChevronsUpDown
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Download } from 'lucide-react';
@@ -69,6 +70,15 @@ const AnimalReport = () => {
   const [dateFilter, setDateFilter] = useState('custom');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
+  const [sortCol, setSortCol] = useState('health');
+  const [sortDir, setSortDir] = useState('asc');
+  // Extended filters
+  const [filterHealth, setFilterHealth] = useState([]);
+  const [filterGroups, setFilterGroups] = useState([]);
+  const [filterExhibit, setFilterExhibit] = useState('');
+  const [filterSex, setFilterSex] = useState('');
+  const [ageMin, setAgeMin] = useState('');
+  const [ageMax, setAgeMax] = useState('');
 
   const getYMD = (d) => {
     const y = d.getFullYear();
@@ -136,19 +146,45 @@ const AnimalReport = () => {
     return true;
   };
 
+  const allGroups = useMemo(() => [...new Set(animals.map(a => a.Species).filter(Boolean))].sort(), [animals]);
+  const allExhibits = useMemo(() => [...new Set(animals.map(a => a.ExhibitName).filter(Boolean))].sort(), [animals]);
+
   const filteredAnimals = useMemo(() => {
     return [...animals]
       .filter(an => {
-        if (!search) return true;
-        const q = search.toLowerCase();
-        return (
-          (an.AnimalCode || '').toLowerCase().includes(q) ||
-          (an.Name || '').toLowerCase().includes(q) ||
-          (an.Species || '').toLowerCase().includes(q)
-        );
+        if (search) {
+          const q = search.toLowerCase();
+          if (!((an.AnimalCode||'').toLowerCase().includes(q) || (an.Name||'').toLowerCase().includes(q) || (an.Species||'').toLowerCase().includes(q))) return false;
+        }
+        if (filterHealth.length > 0 && !filterHealth.includes(an.HealthStatus)) return false;
+        if (filterGroups.length > 0 && !filterGroups.includes(an.Species)) return false;
+        if (filterExhibit === '__unassigned__') { if (an.ExhibitName) return false; }
+        else if (filterExhibit && an.ExhibitName !== filterExhibit) return false;
+        if (filterSex && an.Gender !== filterSex) return false;
+        if (ageMin !== '' && (an.Age == null || Number(an.Age) < Number(ageMin))) return false;
+        if (ageMax !== '' && (an.Age == null || Number(an.Age) > Number(ageMax))) return false;
+        if ((dateFrom || dateTo) && !inDateRange(an.DateArrived)) return false;
+        return true;
       })
-      .sort((a, b) => (healthPriority[a.HealthStatus] ?? 99) - (healthPriority[b.HealthStatus] ?? 99));
-  }, [animals, search]);
+      .sort((a, b) => {
+        const dir = sortDir === 'asc' ? 1 : -1;
+        if (sortCol === 'date') {
+          const da = a.DateArrived ? new Date(a.DateArrived).getTime() : 0;
+          const db = b.DateArrived ? new Date(b.DateArrived).getTime() : 0;
+          return dir * (da - db);
+        }
+        // fallback to health priority if sortCol is 'health'
+        return dir * ((healthPriority[a.HealthStatus] ?? 99) - (healthPriority[b.HealthStatus] ?? 99));
+      });
+  }, [animals, search, filterHealth, filterGroups, filterExhibit, filterSex, ageMin, ageMax, dateFrom, dateTo, sortCol, sortDir]);
+
+  const activeAnimalFilterCount = [search, filterHealth.length > 0, filterGroups.length > 0, filterExhibit, filterSex, ageMin !== '', ageMax !== '', dateFrom, dateTo].filter(Boolean).length;
+  const resetAnimalFilters = () => { setSearch(''); setFilterHealth([]); setFilterGroups([]); setFilterExhibit(''); setFilterSex(''); setAgeMin(''); setAgeMax(''); setDateFilter('custom'); setCustomStart(''); setCustomEnd(''); setSortCol('health'); setSortDir('asc'); };
+
+  const toggleSort = (col) => {
+    if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortCol(col); setSortDir('asc'); }
+  };
 
   return (
     <div className="admin-page">
@@ -206,9 +242,9 @@ const AnimalReport = () => {
         </button>
       </div>
 
-      {/* ── Filters ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
-        <div className="admin-search-container" style={{ maxWidth: 340, flex: 1, margin: 0 }}>
+      {/* ── Filters Row 1: search + date ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
+        <div className="admin-search-container" style={{ maxWidth: 320, flex: 1, margin: 0 }}>
           <Search size={15} className="search-icon" />
           <input
             type="text"
@@ -218,23 +254,21 @@ const AnimalReport = () => {
             onChange={e => setSearch(e.target.value)}
           />
         </div>
+        {activeAnimalFilterCount > 0 && (
+          <button
+            onClick={resetAnimalFilters}
+            style={{ padding: '5px 12px', borderRadius: 6, border: '1px solid rgba(239,68,68,0.4)', background: 'rgba(239,68,68,0.08)', color: '#ef4444', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 5 }}
+          >
+            <X size={12} /> Reset Filters
+            <span style={{ background: '#ef4444', color: '#fff', borderRadius: 10, padding: '0 6px', fontSize: '0.68rem', marginLeft: 2 }}>{activeAnimalFilterCount}</span>
+          </button>
+        )}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
           {dateFilter === 'custom' && (
             <>
-              <AdminDatePicker
-                value={customStart}
-                onChange={setCustomStart}
-                placeholder="Start date"
-                maxDate={customEnd || TODAY}
-              />
+              <AdminDatePicker value={customStart} onChange={setCustomStart} placeholder="Start date" maxDate={customEnd || TODAY} />
               <span style={{ color: 'var(--adm-text-secondary)', fontSize: '0.82rem' }}>to</span>
-              <AdminDatePicker
-                value={customEnd}
-                onChange={setCustomEnd}
-                placeholder="End date"
-                minDate={customStart || undefined}
-                maxDate={TODAY}
-              />
+              <AdminDatePicker value={customEnd} onChange={setCustomEnd} placeholder="End date" minDate={customStart || undefined} maxDate={TODAY} />
             </>
           )}
           <AdminSelect
@@ -248,6 +282,81 @@ const AnimalReport = () => {
               { value: 'custom', label: 'Custom Range' },
             ]}
           />
+        </div>
+      </div>
+
+      {/* ── Filters Row 2: advanced filters ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap', padding: '10px 14px', background: 'var(--adm-bg-surface)', border: '1px solid var(--adm-border)', borderRadius: 8 }}>
+        {/* Health Status chips */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: 2 }}>Health</span>
+          {['Critical','Fair','Good','Excellent'].map(h => {
+            const col = healthColor[h] || '#6b7280';
+            const active = filterHealth.includes(h);
+            return (
+              <button key={h} onClick={() => setFilterHealth(prev => prev.includes(h) ? prev.filter(x => x !== h) : [...prev, h])}
+                style={{ padding: '3px 10px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', border: `1px solid ${active ? col : 'var(--adm-border)'}`, background: active ? col + '22' : 'transparent', color: active ? col : 'var(--adm-text-secondary)', transition: 'all 0.15s' }}>
+                {h}
+              </button>
+            );
+          })}
+        </div>
+
+        <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+
+        {/* Animal Group multi-select */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Group</span>
+          <AdminSelect
+            value={filterGroups[0] || ''}
+            onChange={v => setFilterGroups(v ? [v] : [])}
+            width="130px"
+            options={[{ value: '', label: 'All Groups' }, ...allGroups.map(g => ({ value: g, label: g }))]}
+          />
+          {filterGroups.length > 0 && <span style={{ fontSize: '0.7rem', color: 'var(--adm-accent)', fontWeight: 600 }}>{filterGroups[0]}</span>}
+        </div>
+
+        <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+
+        {/* Exhibit */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Exhibit</span>
+          <AdminSelect
+            value={filterExhibit}
+            onChange={setFilterExhibit}
+            width="150px"
+            options={[
+              { value: '', label: 'All Exhibits' },
+              { value: '__unassigned__', label: 'Unassigned' },
+              ...allExhibits.map(e => ({ value: e, label: e }))
+            ]}
+          />
+        </div>
+
+        <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+
+        {/* Sex toggle */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Sex</span>
+          {['','Male','Female'].map(s => (
+            <button key={s || 'all'} onClick={() => setFilterSex(s)}
+              style={{ padding: '3px 10px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', border: `1px solid ${filterSex === s ? 'var(--adm-accent)' : 'var(--adm-border)'}`, background: filterSex === s ? 'var(--adm-accent-dim)' : 'transparent', color: filterSex === s ? 'var(--adm-accent)' : 'var(--adm-text-secondary)', transition: 'all 0.15s' }}>
+              {s || 'All'}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+
+        {/* Age range */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Age</span>
+          <input type="number" min="0" placeholder="Min" value={ageMin} onChange={e => setAgeMin(e.target.value)}
+            style={{ width: 52, padding: '4px 7px', borderRadius: 6, border: '1px solid var(--adm-border)', background: 'var(--adm-bg)', color: 'var(--adm-text-primary)', fontSize: '0.78rem' }} />
+          <span style={{ color: 'var(--adm-text-muted)', fontSize: '0.75rem' }}>–</span>
+          <input type="number" min="0" placeholder="Max" value={ageMax} onChange={e => setAgeMax(e.target.value)}
+            style={{ width: 52, padding: '4px 7px', borderRadius: 6, border: '1px solid var(--adm-border)', background: 'var(--adm-bg)', color: 'var(--adm-text-primary)', fontSize: '0.78rem' }} />
+          <span style={{ fontSize: '0.72rem', color: 'var(--adm-text-muted)' }}>yrs</span>
         </div>
       </div>
 
@@ -266,6 +375,13 @@ const AnimalReport = () => {
                 <tr>
                   <th style={{ width: 36 }}></th>
                   <th>Animal ID</th>
+                  <th onClick={() => toggleSort('date')} style={{ cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none' }}>
+                    DATE ARRIVED
+                    {' '}
+                    {sortCol === 'date'
+                      ? (sortDir === 'asc' ? <ChevronUp size={12} className="sort-icon" /> : <ChevronDown size={12} className="sort-icon" />)
+                      : <ChevronsUpDown size={12} className="sort-icon" />}
+                  </th>
                   <th>Name</th>
                   <th>Animal Group</th>
                   <th>Exhibit</th>
@@ -315,6 +431,9 @@ const AnimalReport = () => {
                             {an.AnimalCode || '—'}
                           </span>
                         </td>
+                        <td style={{ color: 'var(--adm-text-secondary)', fontSize: '0.85rem' }}>
+                          {an.DateArrived ? new Date(an.DateArrived).toLocaleDateString('en-US', { timeZone: 'UTC' }) : '—'}
+                        </td>
                         <td style={{ fontWeight: 600 }}>
                           {an.Name || <span style={{ color: 'var(--adm-text-muted)', fontStyle: 'italic' }}>Unnamed</span>}
                         </td>
@@ -341,7 +460,7 @@ const AnimalReport = () => {
                       /* ── Expanded detail panel ── */
                       isExpanded && (
                         <tr key={`${an.AnimalID}-detail`} className="no-hover">
-                          <td colSpan={7} style={{ padding: 0, background: 'var(--adm-bg-surface)' }}>
+                          <td colSpan={8} style={{ padding: 0, background: 'var(--adm-bg-surface)' }}>
                             <div style={{ padding: '14px 20px 18px 44px' }}>
                               {isLoading && (
                                 <div className="admin-table-empty" style={{ padding: 24 }}>Loading report...</div>

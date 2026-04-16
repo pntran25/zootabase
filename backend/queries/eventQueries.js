@@ -30,7 +30,7 @@ const createExhibit = `
 
 const getAll = `
   SELECT e.*, ex.ExhibitName,
-    ISNULL((SELECT SUM(Quantity) FROM EventBookings WHERE EventID = e.EventID), 0) AS SpotsBooked
+    ISNULL((SELECT SUM(Quantity) FROM EventBookings WHERE EventID = e.EventID AND BookingDate = CAST(GETDATE() AS DATE)), 0) AS SpotsBooked
   FROM Event e
   LEFT JOIN Exhibit ex ON e.ExhibitID = ex.ExhibitID
   WHERE e.DeletedAt IS NULL
@@ -66,8 +66,14 @@ const updateImage = `
 
 const validateEvent = `
   SELECT EventDate, EndDate, Price, Capacity,
-    ISNULL((SELECT SUM(Quantity) FROM EventBookings WHERE EventID = @evId), 0) AS SpotsBooked
+    ISNULL((SELECT SUM(Quantity) FROM EventBookings WHERE EventID = @evId AND BookingDate = @bookDate), 0) AS SpotsBooked
   FROM Event WHERE EventID = @evId AND DeletedAt IS NULL
+`;
+
+const spotsForDate = `
+  SELECT e.Capacity,
+    ISNULL((SELECT SUM(Quantity) FROM EventBookings WHERE EventID = @evId AND BookingDate = @bookDate), 0) AS SpotsBooked
+  FROM Event e WHERE e.EventID = @evId AND e.DeletedAt IS NULL
 `;
 
 const insertBooking = `
@@ -117,6 +123,7 @@ module.exports = {
   softDelete,
   updateImage,
   validateEvent,
+  spotsForDate,
   insertBooking,
   listBookings,
   countBookings,
