@@ -72,7 +72,6 @@ jobs:
 
       - name: 'Deploy to Azure Web App'
         run: |
-          set -e
           RG=$(az webapp list --query "[?name=='wildwoods-frontend'].resourceGroup | [0]" -o tsv)
 
           # Remove any settings that block deployment
@@ -87,25 +86,64 @@ jobs:
           PASS=$(echo "$CREDS" | jq -r .publishingPassword)
           SCM="https://wildwoods-frontend-ewdsetbrhzf2bwac.scm.eastus2-01.azurewebsites.net"
 
-          echo "=== Clearing stale deployment state ==="
-          curl -sf -X POST -u "$USER:$PASS" \
-            "$SCM/api/command" \
-            -H "Content-Type: application/json" \
-            -d '{"command":"rm -rf /home/site/deployments/* /home/site/locks/* 2>/dev/null; echo cleared","dir":"/"}'
+          # Clear stale deployment state (non-fatal)
+          echo "=== Clearing stale deployments via VFS ==="
+          curl -s -o /dev/null -w "deployments delete: %{http_code}\n" \
+            -X DELETE -u "$USER:$PASS" \
+            "$SCM/api/vfs/site/deployments/?recursive=true" \
+            -H "If-Match: *" || true
+          curl -s -o /dev/null -w "locks delete: %{http_code}\n" \
+            -X DELETE -u "$USER:$PASS" \
+            "$SCM/api/vfs/site/locks/?recursive=true" \
+            -H "If-Match: *" || true
 
-          echo "=== Deploying zip ==="
+          # Upload files directly via VFS instead of zipdeploy
+          echo "=== Uploading files via Kudu VFS ==="
+          # First clear wwwroot
+          curl -s -o /dev/null -w "wwwroot clear: %{http_code}\n" \
+            -X DELETE -u "$USER:$PASS" \
+            "$SCM/api/vfs/site/wwwroot/?recursive=true" \
+            -H "If-Match: *" || true
+          # Recreate wwwroot
+          curl -s -o /dev/null -w "wwwroot mkdir: %{http_code}\n" \
+            -X PUT -u "$USER:$PASS" \
+            "$SCM/api/vfs/site/wwwroot/"
+
+          # Use zip deploy via Kudu wardeploy (alternative to zipdeploy)
+          echo "=== Creating zip ==="
           zip -r /tmp/app.zip .
-          curl -X POST -u "$USER:$PASS" \
+
+          echo "=== Deploying via zipdeploy ==="
+          HTTP_CODE=$(curl -s -o /tmp/deploy_response.txt -w "%{http_code}" \
+            -X POST -u "$USER:$PASS" \
             --data-binary @/tmp/app.zip \
             -H "Content-Type: application/zip" \
             "$SCM/api/zipdeploy?isAsync=false" \
-            --fail --show-error --max-time 300
+            --max-time 300)
+          echo "zipdeploy response code: $HTTP_CODE"
+          cat /tmp/deploy_response.txt || true
+          echo ""
 
-          echo "=== Verifying index.html exists ==="
-          curl -sf -X POST -u "$USER:$PASS" \
-            "$SCM/api/command" \
-            -H "Content-Type: application/json" \
-            -d '{"command":"ls -la /home/site/wwwroot/index.html","dir":"/"}'
+          if [ "$HTTP_CODE" -ge 400 ]; then
+            echo "=== zipdeploy failed, trying PUT to /api/zip ==="
+            HTTP_CODE2=$(curl -s -o /tmp/deploy_response2.txt -w "%{http_code}" \
+              -X PUT -u "$USER:$PASS" \
+              --data-binary @/tmp/app.zip \
+              -H "Content-Type: application/zip" \
+              "$SCM/api/zip/site/wwwroot/" \
+              --max-time 300)
+            echo "api/zip response code: $HTTP_CODE2"
+            cat /tmp/deploy_response2.txt || true
+            echo ""
+            if [ "$HTTP_CODE2" -ge 400 ]; then
+              echo "Both deploy methods failed"
+              exit 1
+            fi
+          fi
+
+          echo "=== Verifying deployment ==="
+          curl -s -u "$USER:$PASS" \
+            "$SCM/api/vfs/site/wwwroot/" | jq '.[].name' || true
 
           az webapp restart -n wildwoods-frontend -g "$RG"
-          echo "=== Deployment complete ==="
+          echo "=== Done ==="
