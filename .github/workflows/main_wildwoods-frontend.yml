@@ -147,5 +147,6 @@ jobs:
           curl -s -u "$USER:$PASS" "$SCM/api/vfs/site/wwwroot/" | \
             jq -r '.[].name' 2>/dev/null || echo "Could not list files"
 
-          az webapp restart -n wildwoods-frontend -g "$RG"
+          az webapp start -n wildwoods-frontend -g "$RG" || true
+          az webapp restart -n wildwoods-frontend -g "$RG" || true
           echo "=== Done ==="
