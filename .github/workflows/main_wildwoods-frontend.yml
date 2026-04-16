@@ -70,11 +70,6 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_F91F72F7806846A48E6D86D5B7A74E5E }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_351EA28B835449ADB9F1C4F5847DFC83 }}
 
-      - name: Set startup command for SPA
-        run: |
-          RG=$(az webapp list --query "[?name=='wildwoods-frontend'].resourceGroup | [0]" -o tsv)
-          az webapp config set --resource-group "$RG" --name wildwoods-frontend --startup-file "pm2 serve /home/site/wwwroot --no-daemon --spa"
-
       - name: 'Deploy to Azure Web App'
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3

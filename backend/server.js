@@ -83,16 +83,6 @@ app.use('/api/staff-schedules', staffSchedulesRouter);
 const uploadsRoot = process.env.UPLOADS_DIR || path.join(__dirname, 'uploads');
 app.use('/images', express.static(uploadsRoot));
 
-// Serve React frontend build
-const buildPath = path.join(__dirname, 'public');
-app.use(express.static(buildPath));
-
-// Client-side routing catch-all – must come after all API routes
-// Express 5 requires named wildcards: {*splat}
-app.get('{*splat}', (req, res) => {
-	res.sendFile(path.join(buildPath, 'index.html'));
-});
-
 async function runMigrations(pool) {
 	const steps = [
 		`IF NOT EXISTS(SELECT * FROM sys.columns WHERE Name=N'ImageUrl' AND Object_ID=Object_ID(N'Animal')) ALTER TABLE Animal ADD ImageUrl NVARCHAR(255) NULL`,
