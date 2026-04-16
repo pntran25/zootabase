@@ -70,34 +70,38 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_F91F72F7806846A48E6D86D5B7A74E5E }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_351EA28B835449ADB9F1C4F5847DFC83 }}
 
-      - name: Ensure app is running and clear locks
+      - name: Stabilize app and deploy
         run: |
           RG=$(az webapp list --query "[?name=='wildwoods-frontend'].resourceGroup | [0]" -o tsv)
-
-          echo "=== Starting app (in case it is stopped) ==="
-          az webapp start -n wildwoods-frontend -g "$RG"
+          SCM="https://wildwoods-frontend-ewdsetbrhzf2bwac.scm.eastus2-01.azurewebsites.net"
 
           echo "=== Enabling basic auth on SCM ==="
           az resource update \
-            --resource-group "$RG" \
-            --name scm \
+            --resource-group "$RG" --name scm \
             --namespace Microsoft.Web \
             --resource-type basicPublishingCredentialsPolicies \
             --parent sites/wildwoods-frontend \
             --set properties.allow=true
 
-          echo "=== Waiting for Kudu to come online ==="
+          echo "=== Clearing startup command to stop crash loop ==="
+          az webapp config set -n wildwoods-frontend -g "$RG" \
+            --startup-file ""
+
+          echo "=== Starting app ==="
+          az webapp start -n wildwoods-frontend -g "$RG" || true
+
+          echo "=== Waiting for Kudu ==="
           CREDS=$(az webapp deployment list-publishing-credentials \
             -n wildwoods-frontend -g "$RG" -o json)
           USER=$(echo "$CREDS" | jq -r .publishingUserName)
           PASS=$(echo "$CREDS" | jq -r .publishingPassword)
-          SCM="https://wildwoods-frontend-ewdsetbrhzf2bwac.scm.eastus2-01.azurewebsites.net"
 
-          for i in 1 2 3 4 5 6; do
-            HTTP=$(curl -s -o /dev/null -w "%{http_code}" -u "$USER:$PASS" "$SCM/api/settings")
+          for i in $(seq 1 12); do
+            HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
+              -u "$USER:$PASS" "$SCM/api/settings" --max-time 10)
             echo "  Kudu check $i: $HTTP"
             [ "$HTTP" = "200" ] && break
-            sleep 10
+            sleep 15
           done
 
           echo "=== Clearing deployment locks ==="
@@ -105,35 +109,22 @@ jobs:
             -X DELETE -u "$USER:$PASS" \
             "$SCM/api/vfs/site/locks/?recursive=true" \
             -H "If-Match: *" || true
-
           curl -s -u "$USER:$PASS" "$SCM/api/deployments" | \
             jq -r '.[].id' 2>/dev/null | while read -r id; do
               [ -z "$id" ] && continue
-              echo "Deleting deployment: $id"
-              curl -s -o /dev/null -w "  %{http_code}\n" \
-                -X DELETE -u "$USER:$PASS" "$SCM/api/deployments/$id" || true
+              curl -s -o /dev/null -X DELETE -u "$USER:$PASS" \
+                "$SCM/api/deployments/$id" || true
             done
-          echo "=== Ready ==="
-
-      - name: 'Deploy to Azure Web App'
-        run: |
-          RG=$(az webapp list --query "[?name=='wildwoods-frontend'].resourceGroup | [0]" -o tsv)
-          CREDS=$(az webapp deployment list-publishing-credentials \
-            -n wildwoods-frontend -g "$RG" -o json)
-          USER=$(echo "$CREDS" | jq -r .publishingUserName)
-          PASS=$(echo "$CREDS" | jq -r .publishingPassword)
-          SCM="https://wildwoods-frontend-ewdsetbrhzf2bwac.scm.eastus2-01.azurewebsites.net"
-
-          zip -r /tmp/app.zip .
 
           echo "=== Deploying via /api/zip ==="
+          zip -r /tmp/app.zip .
           HTTP_CODE=$(curl -s -o /tmp/deploy_out.txt -w "%{http_code}" \
             -X PUT -u "$USER:$PASS" \
             --data-binary @/tmp/app.zip \
             -H "Content-Type: application/zip" \
             "$SCM/api/zip/site/wwwroot/" \
             --max-time 300)
-          echo "Response: $HTTP_CODE"
+          echo "Deploy response: $HTTP_CODE"
           cat /tmp/deploy_out.txt 2>/dev/null; echo ""
 
           if [ "$HTTP_CODE" -ge 400 ]; then
@@ -143,7 +134,11 @@ jobs:
 
           echo "=== Verifying files ==="
           curl -s -u "$USER:$PASS" "$SCM/api/vfs/site/wwwroot/" | \
-            jq -r '.[].name' 2>/dev/null || echo "Could not list files"
+            jq -r '.[].name' 2>/dev/null || echo "Could not list"
+
+          echo "=== Restoring SPA startup command ==="
+          az webapp config set -n wildwoods-frontend -g "$RG" \
+            --startup-file "pm2 serve /home/site/wwwroot --no-daemon --spa"
 
           az webapp restart -n wildwoods-frontend -g "$RG"
           echo "=== Done ==="
