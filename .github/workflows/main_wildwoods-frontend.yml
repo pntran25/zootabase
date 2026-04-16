@@ -113,7 +113,7 @@ jobs:
             set ftp:ssl-protect-data true;
             set net:max-retries 3;
             set net:timeout 30;
-            mirror --reverse --delete --verbose --parallel=5 . /site/wwwroot/;
+            mirror --reverse --delete --no-perms --verbose --parallel=5 . /site/wwwroot/;
             quit
           "
 
