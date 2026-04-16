@@ -1,0 +1,37 @@
+[
+  {
+    "RecordID": 247,
+    "AnimalID": 20,
+    "CheckupDate": "2026-04-16T00:00:00.000Z",
+    "HealthScore": 100,
+    "Notes": null
+  },
+  {
+    "RecordID": 246,
+    "AnimalID": 36,
+    "CheckupDate": "2026-04-16T00:00:00.000Z",
+    "HealthScore": 85,
+    "Notes": null
+  },
+  {
+    "RecordID": 245,
+    "AnimalID": 39,
+    "CheckupDate": "2025-09-01T19:23:33.000Z",
+    "HealthScore": 28,
+    "Notes": "Hydration levels normal, activity patterns consistent."
+  },
+  {
+    "RecordID": 244,
+    "AnimalID": 39,
+    "CheckupDate": "2025-07-23T19:23:33.000Z",
+    "HealthScore": 58,
+    "Notes": "Annual wellness assessment — excellent condition."
+  },
+  {
+    "RecordID": 243,
+    "AnimalID": 39,
+    "CheckupDate": "2026-02-09T20:23:33.000Z",
+    "HealthScore": 28,
+    "Notes": "Annual wellness assessment — excellent condition."
+  }
+]

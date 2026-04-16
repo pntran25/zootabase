@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
-import { FileText, Search, X, ShoppingBag, Ticket, CreditCard, ChevronUp, ChevronDown, ChevronsUpDown, LayoutDashboard, CalendarCheck, Download } from 'lucide-react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { FileText, Search, X, ShoppingBag, Ticket, CreditCard, ChevronUp, ChevronDown, ChevronsUpDown, LayoutDashboard, CalendarCheck, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import OverviewTab from './OverviewTab';
 import { useReactTable, getCoreRowModel, getSortedRowModel, flexRender } from '@tanstack/react-table';
 import { toast } from 'sonner';
@@ -9,6 +9,23 @@ import AdminDatePicker from '../AdminDatePicker';
 import '../AdminTable.css';
 import './DataReports.css';
 import { exportSectionsToSingleSheet } from '../../../utils/exportExcel';
+
+// Stable pseudo-random display ID from a real ID (deterministic hash)
+const randomDisplayId = (() => {
+  const cache = {};
+  return (realId) => {
+    if (cache[realId] != null) return cache[realId];
+    let h = 0;
+    const s = String(realId);
+    for (let i = 0; i < s.length; i++) {
+      h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+    }
+    // Produce a 5-digit positive number (10000–99999)
+    const display = 10000 + (Math.abs(h) % 90000);
+    cache[realId] = display;
+    return display;
+  };
+})();
 
 const SortIcon = ({ column }) => {
   if (!column.getCanSort()) return null;
@@ -60,7 +77,7 @@ const OrderDetailModal = ({ orderId, onClose }) => {
           <div className="dr-modal-title-group">
             <ShoppingBag size={18} />
             <div>
-              <h2 className="dr-modal-title">Order #{order.OrderID}</h2>
+              <h2 className="dr-modal-title">Order #{randomDisplayId(order.OrderID)}</h2>
               <p className="dr-modal-subtitle">{date} at {time}</p>
             </div>
           </div>
@@ -140,7 +157,7 @@ const TicketDetailModal = ({ ticketOrderId, onClose }) => {
           <div className="dr-modal-title-group">
             <Ticket size={18} />
             <div>
-              <h2 className="dr-modal-title">Ticket Order #{order.TicketOrderID}</h2>
+              <h2 className="dr-modal-title">Ticket Order #{randomDisplayId(order.TicketOrderID)}</h2>
               <p className="dr-modal-subtitle">{date} at {time}</p>
             </div>
           </div>
@@ -243,7 +260,7 @@ const MembershipDetailModal = ({ subId, onClose }) => {
           <div className="dr-modal-title-group">
             <CreditCard size={18} />
             <div>
-              <h2 className="dr-modal-title">Membership #{sub.SubID}</h2>
+              <h2 className="dr-modal-title">Membership #{randomDisplayId(sub.SubID)}</h2>
               <p className="dr-modal-subtitle">{date} at {time}</p>
             </div>
           </div>
@@ -319,7 +336,7 @@ const EventDetailModal = ({ bookingId, onClose }) => {
           <div className="dr-modal-title-group">
             <CalendarCheck size={18} />
             <div>
-              <h2 className="dr-modal-title">Event Booking #{booking.EventBookingID}</h2>
+              <h2 className="dr-modal-title">Event Booking #{randomDisplayId(booking.EventBookingID)}</h2>
               <p className="dr-modal-subtitle">{date} at {time}</p>
             </div>
           </div>
@@ -370,13 +387,53 @@ const EventDetailModal = ({ bookingId, onClose }) => {
 };
 
 // ── Shared table renderer ──────────────────────────────────────────
-const ReportTable = ({ data, columns, sorting, setSorting, loading, emptyText, visibleCount, onLoadMore, serverTotal }) => {
-  const isServer = serverTotal !== undefined;
-  const visibleData = isServer ? data : data.slice(0, visibleCount);
-  const remaining = isServer ? serverTotal - data.length : data.length - visibleCount;
+const PaginationControls = ({ totalCount, pageIndex, setPageIndex }) => {
+  const pageSize = 15;
+  const pageCount = Math.ceil(totalCount / pageSize);
+  if (totalCount === 0 || pageCount <= 1) return null;
 
+  let pages = [];
+  if (pageCount <= 6) {
+    pages = Array.from({ length: pageCount }, (_, i) => i);
+  } else {
+    if (pageIndex <= 2) {
+      pages = [0, 1, 2, 3, 4, '...', pageCount - 1];
+    } else if (pageIndex >= pageCount - 3) {
+      pages = [0, '...', pageCount - 5, pageCount - 4, pageCount - 3, pageCount - 2, pageCount - 1];
+    } else {
+      pages = [0, '...', pageIndex - 1, pageIndex, pageIndex + 1, '...', pageCount - 1];
+    }
+  }
+
+  return (
+    <div className="admin-table-pagination" style={{ borderTop: '1px solid var(--adm-border)' }}>
+      <span className="admin-pagination-info">
+        Page {pageIndex + 1} of {pageCount} · {totalCount} records
+      </span>
+      <div className="admin-pagination-controls">
+        <button className="admin-pagination-btn" onClick={() => setPageIndex(pageIndex - 1)} disabled={pageIndex === 0}>
+          <ChevronLeft size={14} />
+        </button>
+        {pages.map((p, idx) => (
+          p === '...' ? (
+            <span key={`ellipsis-${idx}`} style={{ padding: '0 8px', color: 'var(--adm-text-secondary)' }}>...</span>
+          ) : (
+            <button key={p} className={`admin-pagination-btn${pageIndex === p ? ' active' : ''}`} onClick={() => setPageIndex(p)}>
+              {p + 1}
+            </button>
+          )
+        ))}
+        <button className="admin-pagination-btn" onClick={() => setPageIndex(pageIndex + 1)} disabled={pageIndex >= pageCount - 1}>
+          <ChevronRight size={14} />
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const ReportTable = ({ data, columns, sorting, setSorting, loading, emptyText, serverTotal, currentPage, onPageChange }) => {
   const table = useReactTable({
-    data: visibleData,
+    data,
     columns,
     state: { sorting },
     onSortingChange: setSorting,
@@ -386,7 +443,7 @@ const ReportTable = ({ data, columns, sorting, setSorting, loading, emptyText, v
 
   return (
     <div className="admin-table-container">
-        {loading ? (
+        {loading && data.length === 0 ? (
           <div className="admin-table-empty">Loading transactions...</div>
         ) : data.length === 0 ? (
           <div className="admin-table-empty">{emptyText}</div>
@@ -419,20 +476,11 @@ const ReportTable = ({ data, columns, sorting, setSorting, loading, emptyText, v
                 ))}
               </tbody>
             </table>
-            {remaining > 0 && (
-              <div style={{ padding: '18px 0', textAlign: 'center', borderTop: '1px solid var(--adm-border)' }}>
-                <button
-                  onClick={onLoadMore}
-                  style={{
-                    padding: '9px 24px', borderRadius: 8, fontSize: '0.875rem', fontWeight: 600,
-                    background: 'var(--adm-bg-surface-2)', color: 'var(--adm-text-primary)',
-                    border: '1px solid var(--adm-border)', cursor: 'pointer',
-                  }}
-                >
-                  Load More — {remaining} remaining
-                </button>
-              </div>
-            )}
+            <PaginationControls
+              totalCount={serverTotal}
+              pageIndex={currentPage - 1}
+              setPageIndex={idx => onPageChange(idx + 1)}
+            />
           </>
         )}
     </div>
@@ -477,7 +525,7 @@ const DataReports = () => {
   // Gift shop — server-side paginated
   const [orderRows, setOrderRows] = useState([]);
   const [orderTotal, setOrderTotal] = useState(0);
-  const [orderOffset, setOrderOffset] = useState(0);
+  const [orderPage, setOrderPage] = useState(1);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState(null);
   const [ordersSorting, setOrdersSorting] = useState([{ id: 'PlacedAt', desc: true }]);
@@ -485,7 +533,7 @@ const DataReports = () => {
   // Ticket sales — server-side paginated
   const [ticketRows, setTicketRows] = useState([]);
   const [ticketTotal, setTicketTotal] = useState(0);
-  const [ticketOffset, setTicketOffset] = useState(0);
+  const [ticketPage, setTicketPage] = useState(1);
   const [ticketLoading, setTicketLoading] = useState(false);
   const [selectedTicketOrderId, setSelectedTicketOrderId] = useState(null);
   const [ticketSorting, setTicketSorting] = useState([{ id: 'PlacedAt', desc: true }]);
@@ -493,7 +541,7 @@ const DataReports = () => {
   // Memberships — server-side paginated
   const [membershipRows, setMembershipRows] = useState([]);
   const [membershipTotal, setMembershipTotal] = useState(0);
-  const [membershipOffset, setMembershipOffset] = useState(0);
+  const [membershipPage, setMembershipPage] = useState(1);
   const [membershipsLoading, setMembershipsLoading] = useState(false);
   const [selectedSubId, setSelectedSubId] = useState(null);
   const [membershipsSorting, setMembershipsSorting] = useState([{ id: 'PlacedAt', desc: true }]);
@@ -501,59 +549,64 @@ const DataReports = () => {
   // Event bookings — server-side paginated
   const [eventRows, setEventRows] = useState([]);
   const [eventTotal, setEventTotal] = useState(0);
-  const [eventOffset, setEventOffset] = useState(0);
+  const [eventPage, setEventPage] = useState(1);
   const [eventsLoading, setEventsLoading] = useState(false);
   const [selectedEventBookingId, setSelectedEventBookingId] = useState(null);
   const [eventsSorting, setEventsSorting] = useState([{ id: 'PlacedAt', desc: true }]);
 
   // Generic server-side fetch helper
-  const fetchPage = (endpoint, offset, append, setRows, setTotal, setOffset, setLoading, errMsg) => {
+  const fetchPageData = (endpoint, page, setRows, setTotal, setLoading, errMsg) => {
     const { dateFrom, dateTo } = computeDateRange(dateFilter, customStart, customEnd);
-    const p = new URLSearchParams({ limit: 100, offset });
+    const limit = 15;
+    const offset = (page - 1) * limit;
+    const p = new URLSearchParams({ limit, offset });
     if (debouncedSearch) p.set('search', debouncedSearch);
     if (dateFrom) p.set('dateFrom', dateFrom);
     if (dateTo)   p.set('dateTo', dateTo);
     setLoading(true);
     apiGet(`${endpoint}?${p}`)
       .then(data => {
-        if (append) setRows(prev => [...prev, ...data.rows]);
-        else        setRows(data.rows);
+        setRows(data.rows);
         setTotal(data.total);
-        setOffset(offset + data.rows.length);
       })
       .catch(err => toast.error(err.message || errMsg))
       .finally(() => setLoading(false));
   };
 
-  // Lazy-load each tab only when active; re-fetch on filter/search change
+  // Reset pagination automatically when filters or searches change
+  useEffect(() => {
+    setOrderPage(1); setTicketPage(1); setMembershipPage(1); setEventPage(1);
+  }, [debouncedSearch, dateFilter, customStart, customEnd]);
+
+  // Lazy-load each tab only when active; re-fetch on filter/search change or page change
   useEffect(() => {
     if (activeTab !== 'shop') return;
-    fetchPage('/api/orders', 0, false, setOrderRows, setOrderTotal, setOrderOffset, setOrdersLoading, 'Failed to load shop orders.');
+    fetchPageData('/api/orders', orderPage, setOrderRows, setOrderTotal, setOrdersLoading, 'Failed to load shop orders.');
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, debouncedSearch, dateFilter, customStart, customEnd]);
+  }, [activeTab, debouncedSearch, dateFilter, customStart, customEnd, orderPage]);
 
   useEffect(() => {
     if (activeTab !== 'tickets') return;
-    fetchPage('/api/ticket-orders', 0, false, setTicketRows, setTicketTotal, setTicketOffset, setTicketLoading, 'Failed to load ticket orders.');
+    fetchPageData('/api/ticket-orders', ticketPage, setTicketRows, setTicketTotal, setTicketLoading, 'Failed to load ticket orders.');
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, debouncedSearch, dateFilter, customStart, customEnd]);
+  }, [activeTab, debouncedSearch, dateFilter, customStart, customEnd, ticketPage]);
 
   useEffect(() => {
     if (activeTab !== 'memberships') return;
-    fetchPage('/api/membership-subscriptions', 0, false, setMembershipRows, setMembershipTotal, setMembershipOffset, setMembershipsLoading, 'Failed to load memberships.');
+    fetchPageData('/api/membership-subscriptions', membershipPage, setMembershipRows, setMembershipTotal, setMembershipsLoading, 'Failed to load memberships.');
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, debouncedSearch, dateFilter, customStart, customEnd]);
+  }, [activeTab, debouncedSearch, dateFilter, customStart, customEnd, membershipPage]);
 
   useEffect(() => {
     if (activeTab !== 'events') return;
-    fetchPage('/api/event-bookings', 0, false, setEventRows, setEventTotal, setEventOffset, setEventsLoading, 'Failed to load event bookings.');
+    fetchPageData('/api/event-bookings', eventPage, setEventRows, setEventTotal, setEventsLoading, 'Failed to load event bookings.');
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, debouncedSearch, dateFilter, customStart, customEnd]);
+  }, [activeTab, debouncedSearch, dateFilter, customStart, customEnd, eventPage]);
 
   // All tabs are filtered server-side — no client filtering needed
 
   const shopColumns = useMemo(() => [
-    { accessorKey: 'OrderID', header: 'Order #', size: 80, cell: info => <span className="dr-order-id">#{info.getValue()}</span> },
+    { accessorKey: 'OrderID', header: 'Order #', size: 80, cell: info => <span className="dr-order-id">#{randomDisplayId(info.getValue())}</span> },
     { accessorKey: 'FullName', header: 'Customer', cell: info => <span style={{ fontWeight: 600 }}>{info.getValue()}</span> },
     { accessorKey: 'Email', header: 'Email', cell: info => <span style={{ color: 'var(--adm-text-secondary)', fontSize: '0.82rem' }}>{info.getValue()}</span> },
     { accessorKey: 'PlacedAt', header: 'Date', cell: info => <span>{fmtPlaced(info.getValue()).date}</span> },
@@ -563,7 +616,7 @@ const DataReports = () => {
   ], []);
 
   const ticketColumns = useMemo(() => [
-    { accessorKey: 'TicketOrderID', header: 'Order #', size: 80, cell: info => <span className="dr-order-id">#{info.getValue()}</span> },
+    { accessorKey: 'TicketOrderID', header: 'Order #', size: 80, cell: info => <span className="dr-order-id">#{randomDisplayId(info.getValue())}</span> },
     { accessorKey: 'FullName', header: 'Customer', cell: info => <span style={{ fontWeight: 600 }}>{info.getValue()}</span> },
     { accessorKey: 'Email', header: 'Email', cell: info => <span style={{ color: 'var(--adm-text-secondary)', fontSize: '0.82rem' }}>{info.getValue()}</span> },
     { accessorKey: 'TicketType', header: 'Ticket Type', cell: info => <span style={{ fontSize: '0.82rem' }}>{info.getValue()}</span> },
@@ -578,7 +631,7 @@ const DataReports = () => {
   ], []);
 
   const membershipColumns = useMemo(() => [
-    { accessorKey: 'SubID', header: 'Sub #', size: 80, cell: info => <span className="dr-order-id">#{info.getValue()}</span> },
+    { accessorKey: 'SubID', header: 'Sub #', size: 80, cell: info => <span className="dr-order-id">#{randomDisplayId(info.getValue())}</span> },
     { accessorKey: 'FullName', header: 'Member', cell: info => <span style={{ fontWeight: 600 }}>{info.getValue()}</span> },
     { accessorKey: 'Email', header: 'Email', cell: info => <span style={{ color: 'var(--adm-text-secondary)', fontSize: '0.82rem' }}>{info.getValue()}</span> },
     { accessorKey: 'PlanName', header: 'Plan', cell: info => <span style={{ fontWeight: 600, color: 'var(--adm-accent)' }}>{info.getValue()}</span> },
@@ -598,7 +651,7 @@ const DataReports = () => {
   ], []);
 
   const eventColumns = useMemo(() => [
-    { accessorKey: 'EventBookingID', header: 'Booking #', size: 90, cell: info => <span className="dr-order-id">#{info.getValue()}</span> },
+    { accessorKey: 'EventBookingID', header: 'Booking #', size: 90, cell: info => <span className="dr-order-id">#{randomDisplayId(info.getValue())}</span> },
     { accessorKey: 'FullName', header: 'Customer', cell: info => <span style={{ fontWeight: 600 }}>{info.getValue()}</span> },
     { accessorKey: 'Email', header: 'Email', cell: info => <span style={{ color: 'var(--adm-text-secondary)', fontSize: '0.82rem' }}>{info.getValue()}</span> },
     { accessorKey: 'EventName', header: 'Event', cell: info => <span style={{ fontSize: '0.82rem' }}>{info.getValue()}</span> },
@@ -651,7 +704,7 @@ const DataReports = () => {
                 apiGet(`/api/membership-subscriptions?${buildParams()}`),
               ]);
               const shopData = (shopAll.rows || []).map(r => ({
-                'Order #': r.OrderID, 'Customer': r.FullName || '', 'Email': r.Email || '',
+                'Order #': randomDisplayId(r.OrderID), 'Customer': r.FullName || '', 'Email': r.Email || '',
                 'Phone': r.Phone || '', 'City': r.City || '', 'State': r.StateProvince || '',
                 'Zip': r.ZipCode || '', 'Card Last Four': r.CardLastFour || '',
                 'Subtotal': r.Subtotal != null ? Number(r.Subtotal).toFixed(2) : '',
@@ -662,7 +715,7 @@ const DataReports = () => {
                 'Time': r.PlacedAt ? new Date(r.PlacedAt).toLocaleTimeString() : '',
               }));
               const ticketData = (ticketAll.rows || []).map(r => ({
-                'Order #': r.TicketOrderID, 'Customer': r.FullName || '', 'Email': r.Email || '',
+                'Order #': randomDisplayId(r.TicketOrderID), 'Customer': r.FullName || '', 'Email': r.Email || '',
                 'Ticket Type': r.TicketType || '',
                 'Adult Qty': r.AdultQty ?? '', 'Child Qty': r.ChildQty ?? '', 'Senior Qty': r.SeniorQty ?? '',
                 'Visit Date': r.VisitDate ? new Date(r.VisitDate).toLocaleDateString() : '',
@@ -672,7 +725,7 @@ const DataReports = () => {
                 'Time': r.PlacedAt ? new Date(r.PlacedAt).toLocaleTimeString() : '',
               }));
               const eventData = (eventAll.rows || []).map(r => ({
-                'Booking #': r.EventBookingID, 'Customer': `${r.FirstName || ''} ${r.LastName || ''}`.trim(),
+                'Booking #': randomDisplayId(r.EventBookingID), 'Customer': `${r.FirstName || ''} ${r.LastName || ''}`.trim(),
                 'Email': r.Email || '', 'Event': r.EventName || '', 'Category': r.Category || '',
                 'Visit Date': r.BookingDate ? new Date(r.BookingDate).toLocaleDateString() : '',
                 'Guests': r.Quantity || '',
@@ -681,7 +734,7 @@ const DataReports = () => {
                 'Time': r.PlacedAt ? new Date(r.PlacedAt).toLocaleTimeString() : '',
               }));
               const memberData = (memberAll.rows || []).map(r => ({
-                'Sub #': r.SubID, 'Member': r.FullName || '', 'Email': r.Email || '',
+                'Sub #': randomDisplayId(r.SubID), 'Member': r.FullName || '', 'Email': r.Email || '',
                 'Plan': r.PlanName || '', 'Billing': r.BillingPeriod || '',
                 'Start Date': r.StartDate ? new Date(r.StartDate).toLocaleDateString() : '',
                 'End Date': r.EndDate ? new Date(r.EndDate).toLocaleDateString() : '',
@@ -786,7 +839,8 @@ const DataReports = () => {
             loading={ordersLoading}
             emptyText={search ? 'No orders match your search.' : 'No shop orders today.'}
             serverTotal={orderTotal}
-            onLoadMore={() => fetchPage('/api/orders', orderOffset, true, setOrderRows, setOrderTotal, setOrderOffset, setOrdersLoading, 'Failed to load shop orders.')}
+            currentPage={orderPage}
+            onPageChange={setOrderPage}
           />
         ) : activeTab === 'events' ? (
           <ReportTable
@@ -797,7 +851,8 @@ const DataReports = () => {
             loading={eventsLoading}
             emptyText={search ? 'No event bookings match your search.' : 'No event bookings today.'}
             serverTotal={eventTotal}
-            onLoadMore={() => fetchPage('/api/event-bookings', eventOffset, true, setEventRows, setEventTotal, setEventOffset, setEventsLoading, 'Failed to load event bookings.')}
+            currentPage={eventPage}
+            onPageChange={setEventPage}
           />
         ) : activeTab === 'tickets' ? (
           <ReportTable
@@ -808,7 +863,8 @@ const DataReports = () => {
             loading={ticketLoading}
             emptyText={search ? 'No ticket orders match your search.' : 'No ticket sales today.'}
             serverTotal={ticketTotal}
-            onLoadMore={() => fetchPage('/api/ticket-orders', ticketOffset, true, setTicketRows, setTicketTotal, setTicketOffset, setTicketLoading, 'Failed to load ticket orders.')}
+            currentPage={ticketPage}
+            onPageChange={setTicketPage}
           />
         ) : (
           <ReportTable
@@ -819,7 +875,8 @@ const DataReports = () => {
             loading={membershipsLoading}
             emptyText={search ? 'No memberships match your search.' : 'No memberships today.'}
             serverTotal={membershipTotal}
-            onLoadMore={() => fetchPage('/api/membership-subscriptions', membershipOffset, true, setMembershipRows, setMembershipTotal, setMembershipOffset, setMembershipsLoading, 'Failed to load memberships.')}
+            currentPage={membershipPage}
+            onPageChange={setMembershipPage}
           />
         )
       )}

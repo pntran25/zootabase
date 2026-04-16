@@ -1,7 +1,7 @@
 // ── Analytics & Reporting Queries ────────────────────────────────────
 
 const staffLogins = `
-  SELECT TOP 500 s.LogID, s.LoginTime, st.FirstName, st.LastName, st.Role, st.Email, st.StaffID
+  SELECT s.LogID, s.LoginTime, st.FirstName, st.LastName, st.Role, st.Email, st.StaffID
   FROM StaffLoginAudit s
   JOIN Staff st ON s.StaffID = st.StaffID
   WHERE CAST(s.LoginTime AS DATE) >= @start AND CAST(s.LoginTime AS DATE) <= @end
@@ -9,7 +9,7 @@ const staffLogins = `
 `;
 
 const customerLogins = `
-  SELECT TOP 500 c.LogID, c.LoginTime, cu.FullName, cu.Email, cu.CustomerID
+  SELECT c.LogID, c.LoginTime, cu.FullName, cu.Email, cu.CustomerID
   FROM CustomerLoginAudit c
   JOIN Customer cu ON c.CustomerID = cu.CustomerID
   WHERE CAST(c.LoginTime AS DATE) >= @start AND CAST(c.LoginTime AS DATE) <= @end

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { LineChart as LineChartIcon, Users, UserCheck, ShieldCheck, TrendingUp } from 'lucide-react';
+import { LineChart as LineChartIcon, Users, UserCheck, ShieldCheck, TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '../../../services/apiClient';
 import AdminSelect from '../AdminSelect';
@@ -90,6 +90,8 @@ const LoginAnalytics = () => {
   const [range, setRange] = useState('month');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
+  const [staffPage, setStaffPage] = useState(0);
+  const [custPage, setCustPage] = useState(0);
   const today = new Date().toISOString().split('T')[0];
 
   const fetchAnalytics = useCallback(async (start, end) => {
@@ -113,6 +115,8 @@ const LoginAnalytics = () => {
   }, []);
 
   useEffect(() => {
+    setStaffPage(0);
+    setCustPage(0);
     if (range !== 'custom') {
       const { start, end } = getDateRange(range);
       fetchAnalytics(start, end);
@@ -254,6 +258,51 @@ const LoginAnalytics = () => {
       <div style={{ overflowY: 'auto', flex: 1 }}>{children}</div>
     </div>
   );
+
+  const PaginationControls = ({ totalCount, pageIndex, setPageIndex }) => {
+    const pageSize = 15;
+    const pageCount = Math.ceil(totalCount / pageSize);
+    if (totalCount === 0 || pageCount <= 1) return null;
+
+    // Smart ellipsis generation (e.g. 1, 2, 3 ... 500)
+    let pages = [];
+    if (pageCount <= 6) {
+      pages = Array.from({ length: pageCount }, (_, i) => i);
+    } else {
+      if (pageIndex <= 2) {
+        pages = [0, 1, 2, 3, 4, '...', pageCount - 1];
+      } else if (pageIndex >= pageCount - 3) {
+        pages = [0, '...', pageCount - 5, pageCount - 4, pageCount - 3, pageCount - 2, pageCount - 1];
+      } else {
+        pages = [0, '...', pageIndex - 1, pageIndex, pageIndex + 1, '...', pageCount - 1];
+      }
+    }
+
+    return (
+      <div className="admin-table-pagination" style={{ borderTop: '1px solid var(--adm-border)' }}>
+        <span className="admin-pagination-info">
+          Page {pageIndex + 1} of {pageCount} · {totalCount} records
+        </span>
+        <div className="admin-pagination-controls">
+          <button className="admin-pagination-btn" onClick={() => setPageIndex(pageIndex - 1)} disabled={pageIndex === 0}>
+            <ChevronLeft size={14} />
+          </button>
+          {pages.map((p, idx) => (
+            p === '...' ? (
+              <span key={`ellipsis-${idx}`} style={{ padding: '0 8px', color: 'var(--adm-text-secondary)' }}>...</span>
+            ) : (
+              <button key={p} className={`admin-pagination-btn${pageIndex === p ? ' active' : ''}`} onClick={() => setPageIndex(p)}>
+                {p + 1}
+              </button>
+            )
+          ))}
+          <button className="admin-pagination-btn" onClick={() => setPageIndex(pageIndex + 1)} disabled={pageIndex >= pageCount - 1}>
+            <ChevronRight size={14} />
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   /* ══════════════════════════════════════════════════════ */
   return (
@@ -456,7 +505,7 @@ const LoginAnalytics = () => {
                   {staffCount === 0 && (
                     <tr><td colSpan="3" className="admin-table-empty" style={{ padding: '24px', textAlign: 'center' }}>No logins in this period.</td></tr>
                   )}
-                  {(stats.staffLogins || []).map(log => (
+                  {(stats.staffLogins || []).slice(staffPage * 15, (staffPage + 1) * 15).map(log => (
                     <tr key={log.LogID}>
                       <td style={{ color: 'var(--adm-text-primary)', fontWeight: 500 }}>{log.FirstName} {log.LastName}</td>
                       <td>
@@ -471,6 +520,7 @@ const LoginAnalytics = () => {
                   ))}
                 </tbody>
               </table>
+              <PaginationControls totalCount={staffCount} pageIndex={staffPage} setPageIndex={setStaffPage} />
             </Panel>
 
             <Panel title="Recent Public User Logins" count={custCount}>
@@ -486,7 +536,7 @@ const LoginAnalytics = () => {
                   {custCount === 0 && (
                     <tr><td colSpan="3" className="admin-table-empty" style={{ padding: '24px', textAlign: 'center' }}>No logins in this period.</td></tr>
                   )}
-                  {(stats.customerLogins || []).map(log => (
+                  {(stats.customerLogins || []).slice(custPage * 15, (custPage + 1) * 15).map(log => (
                     <tr key={log.LogID}>
                       <td style={{ color: 'var(--adm-text-primary)', fontWeight: 500 }}>{log.FullName}</td>
                       <td style={{ color: 'var(--adm-text-secondary)' }}>{log.Email}</td>
@@ -495,6 +545,7 @@ const LoginAnalytics = () => {
                   ))}
                 </tbody>
               </table>
+              <PaginationControls totalCount={custCount} pageIndex={custPage} setPageIndex={setCustPage} />
             </Panel>
           </div>
         </>

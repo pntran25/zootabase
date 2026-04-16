@@ -42,7 +42,7 @@ const TABS = [
 ];
 
 /* ── Sort helper ──────────────────────────────────────── */
-const useSortable = (data) => {
+const useSortable = (data, tiebreakerKey) => {
   const [sortKey, setSortKey] = useState(null);
   const [sortDir, setSortDir] = useState('asc');
 
@@ -65,9 +65,13 @@ const useSortable = (data) => {
       if (typeof bVal === 'string') bVal = bVal.toLowerCase();
       if (aVal < bVal) return sortDir === 'asc' ? -1 : 1;
       if (aVal > bVal) return sortDir === 'asc' ? 1 : -1;
+      // Tiebreaker: sort by ID descending so newest entries appear first
+      if (tiebreakerKey && a[tiebreakerKey] != null && b[tiebreakerKey] != null) {
+        return b[tiebreakerKey] - a[tiebreakerKey];
+      }
       return 0;
     });
-  }, [data, sortKey, sortDir]);
+  }, [data, sortKey, sortDir, tiebreakerKey]);
 
   const SortIcon = ({ col }) => {
     if (sortKey !== col) return <ChevronDown size={12} className="hr-sort-icon hr-sort-inactive" />;
@@ -159,9 +163,9 @@ const HealthReport = () => {
   const stats = data?.stats;
 
   /* ── Sort hooks for each tab ───────────────────────── */
-  const alertSort = useSortable(filteredAlerts);
-  const recordSort = useSortable(filteredRecords);
-  const metricSort = useSortable(filteredMetrics);
+  const alertSort = useSortable(filteredAlerts, 'AlertID');
+  const recordSort = useSortable(filteredRecords, 'RecordID');
+  const metricSort = useSortable(filteredMetrics, 'MetricID');
 
 
   return (
