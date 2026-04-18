@@ -176,7 +176,19 @@ const AnimalReport = () => {
           const db = b.DateArrived ? new Date(b.DateArrived).getTime() : 0;
           return dir * (da - db);
         }
-        // fallback to health priority if sortCol is 'health'
+        if (sortCol === 'name') {
+          return dir * (a.Name || '').localeCompare(b.Name || '');
+        }
+        if (sortCol === 'group') {
+          return dir * (a.Species || '').localeCompare(b.Species || '');
+        }
+        if (sortCol === 'exhibit') {
+          return dir * (a.ExhibitName || '').localeCompare(b.ExhibitName || '');
+        }
+        if (sortCol === 'age') {
+          return dir * ((a.Age ?? -1) - (b.Age ?? -1));
+        }
+        // health: Critical(0) → Fair(1) → Good(2) → Excellent(3)
         return dir * ((healthPriority[a.HealthStatus] ?? 99) - (healthPriority[b.HealthStatus] ?? 99));
       });
   }, [animals, search, filterHealth, filterGroups, filterExhibit, filterSex, ageMin, ageMax, dateFrom, dateTo, sortCol, sortDir]);
@@ -229,12 +241,14 @@ const AnimalReport = () => {
                 'Date': a.CreatedAt ? new Date(a.CreatedAt).toLocaleDateString() : '',
                 'Status': a.IsResolved ? 'Resolved' : 'Active',
               }));
+              const now = new Date();
+              const stamp = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}-${String(now.getMinutes()).padStart(2,'0')}`;
               exportSectionsToSingleSheet([
                 { name: 'Animals Summary', data: summaryRows },
                 { name: 'Health Records', data: recordRows },
                 { name: 'Feeding Schedules', data: feedingRows },
                 { name: 'Health Alerts', data: alertRows },
-              ], 'Animal_Report', { reportName: 'Animal Data Report', dateFrom, dateTo });
+              ], `Animal Data Report Snapshot ${stamp}`, { reportName: 'Animal Data Report', dateFrom, dateTo });
               toast.success('Animal report downloaded.');
             } catch (err) {
               toast.error('Failed to generate report.');
@@ -392,17 +406,41 @@ const AnimalReport = () => {
                   <th style={{ width: 36 }}></th>
                   <th>Animal ID</th>
                   <th onClick={() => toggleSort('date')} style={{ cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none' }}>
-                    DATE ARRIVED
-                    {' '}
+                    DATE ARRIVED{' '}
                     {sortCol === 'date'
                       ? (sortDir === 'asc' ? <ChevronUp size={12} className="sort-icon" /> : <ChevronDown size={12} className="sort-icon" />)
                       : <ChevronsUpDown size={12} className="sort-icon" />}
                   </th>
-                  <th>Name</th>
-                  <th>Animal Group</th>
-                  <th>Exhibit</th>
-                  <th>Age / Sex</th>
-                  <th>Health</th>
+                  <th onClick={() => toggleSort('name')} style={{ cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none' }}>
+                    NAME{' '}
+                    {sortCol === 'name'
+                      ? (sortDir === 'asc' ? <ChevronUp size={12} className="sort-icon" /> : <ChevronDown size={12} className="sort-icon" />)
+                      : <ChevronsUpDown size={12} className="sort-icon" />}
+                  </th>
+                  <th onClick={() => toggleSort('group')} style={{ cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none' }}>
+                    ANIMAL GROUP{' '}
+                    {sortCol === 'group'
+                      ? (sortDir === 'asc' ? <ChevronUp size={12} className="sort-icon" /> : <ChevronDown size={12} className="sort-icon" />)
+                      : <ChevronsUpDown size={12} className="sort-icon" />}
+                  </th>
+                  <th onClick={() => toggleSort('exhibit')} style={{ cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none' }}>
+                    EXHIBIT{' '}
+                    {sortCol === 'exhibit'
+                      ? (sortDir === 'asc' ? <ChevronUp size={12} className="sort-icon" /> : <ChevronDown size={12} className="sort-icon" />)
+                      : <ChevronsUpDown size={12} className="sort-icon" />}
+                  </th>
+                  <th onClick={() => toggleSort('age')} style={{ cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none' }}>
+                    AGE / SEX{' '}
+                    {sortCol === 'age'
+                      ? (sortDir === 'asc' ? <ChevronUp size={12} className="sort-icon" /> : <ChevronDown size={12} className="sort-icon" />)
+                      : <ChevronsUpDown size={12} className="sort-icon" />}
+                  </th>
+                  <th onClick={() => toggleSort('health')} style={{ cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none' }}>
+                    HEALTH{' '}
+                    {sortCol === 'health'
+                      ? (sortDir === 'asc' ? <ChevronUp size={12} className="sort-icon" /> : <ChevronDown size={12} className="sort-icon" />)
+                      : <ChevronsUpDown size={12} className="sort-icon" />}
+                  </th>
                 </tr>
               </thead>
               <tbody>
