@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import '../AdminTable.css';
+import '../DataReports/DataReports.css';
 import './AnimalReport.css';
 import {
   ClipboardList, ChevronDown, ChevronRight, PawPrint, HeartPulse,
   UtensilsCrossed, Search, AlertTriangle, CheckCircle, Calendar, X,
-  ChevronUp, ChevronsUpDown
+  ChevronUp, ChevronsUpDown, LayoutDashboard, Table2, Bell
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Download } from 'lucide-react';
@@ -12,6 +13,7 @@ import AdminSelect from '../AdminSelect';
 import AdminDatePicker from '../AdminDatePicker';
 import { getAnimalReport, getAnimalsForDropdown, getHealthReport } from '../../../services/animalHealthService';
 import { exportSectionsToSingleSheet } from '../../../utils/exportExcel';
+import AnimalReportOverview from './AnimalReportOverview';
 
 const fmtDate = (d) => {
   if (!d) return '—';
@@ -62,6 +64,7 @@ const Section = ({ icon, title, count, defaultOpen = true, children }) => {
 };
 
 const AnimalReport = () => {
+  const [activeTab, setActiveTab] = useState('overview');
   const [animals, setAnimals] = useState([]);
   const [expandedRows, setExpandedRows] = useState({});
   const [reports, setReports] = useState({});
@@ -242,8 +245,21 @@ const AnimalReport = () => {
         </button>
       </div>
 
-      {/* ── Filters Row 1: search + date ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
+      {/* ── Tab Navigation ── */}
+      <div className="dr-tabs">
+        <button className={`dr-tab${activeTab === 'overview' ? ' active' : ''}`} onClick={() => setActiveTab('overview')}>
+          <LayoutDashboard size={14} /> Overview
+        </button>
+        <button className={`dr-tab${activeTab === 'animals' ? ' active' : ''}`} onClick={() => setActiveTab('animals')}>
+          <PawPrint size={14} /> Animals Table
+        </button>
+      </div>
+
+      {activeTab === 'overview' && <AnimalReportOverview />}
+
+
+      {/* ── Filters Row 1: search + date (Animals tab only) ── */}
+      <div style={{ display: activeTab === 'animals' ? 'flex' : 'none', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
         <div className="admin-search-container" style={{ maxWidth: 320, flex: 1, margin: 0 }}>
           <Search size={15} className="search-icon" />
           <input
@@ -285,8 +301,8 @@ const AnimalReport = () => {
         </div>
       </div>
 
-      {/* ── Filters Row 2: advanced filters ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap', padding: '10px 14px', background: 'var(--adm-bg-surface)', border: '1px solid var(--adm-border)', borderRadius: 8 }}>
+      {/* ── Filters Row 2: advanced filters (Animals tab only) ── */}
+      <div style={{ display: activeTab === 'animals' ? 'flex' : 'none', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap', padding: '10px 14px', background: 'var(--adm-bg-surface)', border: '1px solid var(--adm-border)', borderRadius: 8 }}>
         {/* Health Status chips */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
           <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: 2 }}>Health</span>
@@ -360,12 +376,12 @@ const AnimalReport = () => {
         </div>
       </div>
 
-      <p style={{ fontSize: '0.75rem', color: 'var(--adm-text-muted)', margin: '0 0 10px 2px' }}>
+      <p style={{ fontSize: '0.75rem', color: 'var(--adm-text-muted)', margin: '0 0 10px 2px', display: activeTab === 'animals' ? undefined : 'none' }}>
         Click any row to expand and see the full animal report including health records, alerts, and feeding schedules.
       </p>
 
-      {/* ── Animal table ── */}
-      <div className="admin-table-container">
+      {/* ── Animal table (Animals tab only) ── */}
+      <div className="admin-table-container" style={{ display: activeTab === 'animals' ? undefined : 'none' }}>
         <div className="admin-table-scroll-inner" style={{ maxHeight: 700 }}>
           {animals.length === 0 ? (
             <div className="admin-table-empty">Loading animals...</div>

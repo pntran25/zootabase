@@ -233,6 +233,42 @@ router.put('/alerts/:id/resolve', verifyToken, async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════
+// ANIMAL REPORT SUMMARY (distributions for overview charts)
+// ═══════════════════════════════════════════════════════════════════
+router.get('/animal-report-summary', async (req, res) => {
+    try {
+        const pool = await connectToDb();
+
+        const [stats, healthDist, speciesDist, exhibitDist, genderDist, endangeredDist, ageDist, recentAlerts, alertStatusDist] = await Promise.all([
+            pool.request().query(Q.healthReportStats),
+            pool.request().query(Q.summaryHealthDistribution),
+            pool.request().query(Q.summarySpeciesDistribution),
+            pool.request().query(Q.summaryExhibitDistribution),
+            pool.request().query(Q.summaryGenderDistribution),
+            pool.request().query(Q.summaryEndangeredDistribution),
+            pool.request().query(Q.summaryAgeDistribution),
+            pool.request().query(Q.summaryRecentAlerts),
+            pool.request().query(Q.summaryAlertStatusDistribution),
+        ]);
+
+        res.json({
+            stats: stats.recordset[0],
+            healthDistribution: healthDist.recordset,
+            speciesDistribution: speciesDist.recordset,
+            exhibitDistribution: exhibitDist.recordset,
+            genderDistribution: genderDist.recordset,
+            endangeredDistribution: endangeredDist.recordset[0],
+            ageDistribution: ageDist.recordset,
+            recentAlerts: recentAlerts.recordset,
+            alertStatusDistribution: alertStatusDist.recordset[0],
+        });
+    } catch (error) {
+        console.error('Error building animal report summary:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ═══════════════════════════════════════════════════════════════════
 // AGGREGATE HEALTH REPORT (all animals, for the Health Report page)
 // ═══════════════════════════════════════════════════════════════════
 router.get('/health-report', async (req, res) => {
