@@ -205,13 +205,6 @@ const ManageStaff = () => {
                   className="admin-search-input"
                 />
               </div>
-              <AdminSelect
-                value={filterRole}
-                onChange={val => setFilterRole(val)}
-                options={[{ value: '', label: 'All Roles' }, ...ROLES]}
-                placeholder="All Roles"
-                width={140}
-              />
               <button className="admin-btn-primary" onClick={() => handleOpenModal()}>
                 <Plus size={16} /> Add Staff
               </button>
@@ -251,6 +244,27 @@ const ManageStaff = () => {
         <StaffScheduling />
       ) : (
       <>
+
+      {/* ── Filter Row ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap', padding: '10px 14px', background: 'var(--adm-bg-surface)', border: '1px solid var(--adm-border)', borderRadius: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: 2 }}>Role</span>
+          <button onClick={() => setFilterRole('')}
+            style={{ padding: '3px 10px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', border: `1px solid ${!filterRole ? 'var(--adm-accent)' : 'var(--adm-border)'}`, background: !filterRole ? 'var(--adm-accent-dim, rgba(34,107,64,0.1))' : 'transparent', color: !filterRole ? 'var(--adm-accent)' : 'var(--adm-text-secondary)', transition: 'all 0.15s' }}>
+            All
+          </button>
+          {ROLES.map(r => {
+            const rc = roleColors[r] || {};
+            const active = filterRole === r;
+            return (
+              <button key={r} onClick={() => setFilterRole(active ? '' : r)}
+                style={{ padding: '3px 10px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', border: `1px solid ${active ? (rc.color || 'var(--adm-accent)') : 'var(--adm-border)'}`, background: active ? (rc.bg || 'var(--adm-accent-dim)') : 'transparent', color: active ? (rc.color || 'var(--adm-accent)') : 'var(--adm-text-secondary)', transition: 'all 0.15s' }}>
+                {r}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Table */}
       <div className="admin-table-container">

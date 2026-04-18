@@ -36,6 +36,11 @@ const ManageAnimals = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [sorting, setSorting] = useState([]);
   const [filterEndangered, setFilterEndangered] = useState(false);
+  const [filterExhibit, setFilterExhibit] = useState('');
+  const [filterSpecies, setFilterSpecies] = useState('');
+  const [filterDiet, setFilterDiet] = useState('');
+  const [filterSex, setFilterSex] = useState('');
+  const [filterHealth, setFilterHealth] = useState('');
   const [formData, setFormData] = useState({
     name: '', species: '', speciesDetail: '', exhibit: '', age: '', gender: 'Unknown',
     diet: '', health: 'Good', dateArrived: '', lifespan: '', weight: '', region: '', funFact: '',
@@ -121,24 +126,33 @@ const ManageAnimals = () => {
     }
   }, [suffixConflict]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const allSpeciesGroups = useMemo(() => [...new Set(animals.map(a => a.species).filter(Boolean))].sort(), [animals]);
+  const allDiets = useMemo(() => [...new Set(animals.map(a => a.diet).filter(Boolean))].sort(), [animals]);
+  const allExhibitNames = useMemo(() => [...new Set(animals.map(a => a.exhibit).filter(Boolean))].sort(), [animals]);
+
+  const matchesFilters = (animal) => {
+    const matchesSearch =
+      animal.name.toLowerCase().includes(search.toLowerCase()) ||
+      animal.species.toLowerCase().includes(search.toLowerCase()) ||
+      (animal.animalCode || '').toLowerCase().includes(search.toLowerCase());
+    const matchesEndangered = !filterEndangered ||
+      animal.isEndangered === true || animal.isEndangered === 1;
+    const matchesExhibit = !filterExhibit ||
+      (filterExhibit === '__unassigned__' ? !animal.exhibit : animal.exhibit === filterExhibit);
+    const matchesSpecies = !filterSpecies || animal.species === filterSpecies;
+    const matchesDiet = !filterDiet || animal.diet === filterDiet;
+    const matchesSex = !filterSex || animal.gender === filterSex;
+    const matchesHealth = !filterHealth || animal.health === filterHealth;
+    return matchesSearch && matchesEndangered && matchesExhibit && matchesSpecies && matchesDiet && matchesSex && matchesHealth;
+  };
+
   const displayAnimals = useMemo(() =>
-    animals.filter(a => a.isDisplay === true || a.isDisplay === 1).filter(animal => {
-      const matchesSearch =
-        animal.name.toLowerCase().includes(search.toLowerCase()) ||
-        animal.species.toLowerCase().includes(search.toLowerCase()) ||
-        (animal.animalCode || '').toLowerCase().includes(search.toLowerCase());
-      const matchesEndangered = !filterEndangered ||
-        animal.isEndangered === true || animal.isEndangered === 1;
-      return matchesSearch && matchesEndangered;
-    }), [animals, search, filterEndangered]);
+    animals.filter(a => a.isDisplay === true || a.isDisplay === 1).filter(matchesFilters),
+    [animals, search, filterEndangered, filterExhibit, filterSpecies, filterDiet, filterSex, filterHealth]);
 
   const groupedAnimals = useMemo(() => {
     const nonDisplay = animals.filter(a => !(a.isDisplay === true || a.isDisplay === 1));
-    const filtered = nonDisplay.filter(a =>
-      a.name.toLowerCase().includes(search.toLowerCase()) ||
-      a.species.toLowerCase().includes(search.toLowerCase()) ||
-      (a.animalCode || '').toLowerCase().includes(search.toLowerCase())
-    );
+    const filtered = nonDisplay.filter(matchesFilters);
     const groups = {};
     for (const animal of filtered) {
       const prefix = (animal.animalCode || '').split('-')[0] || 'other';
@@ -148,7 +162,7 @@ const ManageAnimals = () => {
     for (const g of Object.values(groups))
       g.animals.sort((a, b) => (a.animalCode || '').localeCompare(b.animalCode || ''));
     return Object.values(groups).sort((a, b) => a.prefix.localeCompare(b.prefix));
-  }, [animals, search]);
+  }, [animals, search, filterEndangered, filterExhibit, filterSpecies, filterDiet, filterSex, filterHealth]);
 
   const handleOpenModal = (animal = null) => {
     if (animal) {
@@ -483,6 +497,56 @@ const ManageAnimals = () => {
           <button className="admin-btn-primary" onClick={() => handleOpenModal()}>
             <Plus size={16} /> Add Animal
           </button>
+        </div>
+      </div>
+
+      {/* ── Filter Row ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap', padding: '10px 14px', background: 'var(--adm-bg-surface)', border: '1px solid var(--adm-border)', borderRadius: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Group</span>
+          <AdminSelect value={filterSpecies} onChange={setFilterSpecies} width="140px" options={[{ value: '', label: 'All Groups' }, ...allSpeciesGroups.map(s => ({ value: s, label: s }))]} />
+        </div>
+
+        <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Exhibit</span>
+          <AdminSelect value={filterExhibit} onChange={setFilterExhibit} width="150px" options={[{ value: '', label: 'All Exhibits' }, { value: '__unassigned__', label: 'Unassigned' }, ...allExhibitNames.map(e => ({ value: e, label: e }))]} />
+        </div>
+
+        <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Diet</span>
+          <AdminSelect value={filterDiet} onChange={setFilterDiet} width="120px" options={[{ value: '', label: 'All Diets' }, ...allDiets.map(d => ({ value: d, label: d }))]} />
+        </div>
+
+        <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Sex</span>
+          {['', 'Male', 'Female'].map(s => (
+            <button key={s || 'all'} onClick={() => setFilterSex(s)}
+              style={{ padding: '3px 10px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', border: `1px solid ${filterSex === s ? 'var(--adm-accent)' : 'var(--adm-border)'}`, background: filterSex === s ? 'var(--adm-accent-dim, rgba(34,107,64,0.1))' : 'transparent', color: filterSex === s ? 'var(--adm-accent)' : 'var(--adm-text-secondary)', transition: 'all 0.15s' }}>
+              {s || 'All'}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Health</span>
+          {['', 'Excellent', 'Good', 'Fair', 'Critical'].map(h => {
+            const colors = { Critical: '#ef4444', Fair: '#f59e0b', Good: '#10b981', Excellent: '#3b82f6' };
+            const col = colors[h] || 'var(--adm-text-secondary)';
+            return (
+              <button key={h || 'all'} onClick={() => setFilterHealth(h)}
+                style={{ padding: '3px 10px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', border: `1px solid ${filterHealth === h ? col : 'var(--adm-border)'}`, background: filterHealth === h ? col + '22' : 'transparent', color: filterHealth === h ? col : 'var(--adm-text-secondary)', transition: 'all 0.15s' }}>
+                {h || 'All'}
+              </button>
+            );
+          })}
         </div>
       </div>
 

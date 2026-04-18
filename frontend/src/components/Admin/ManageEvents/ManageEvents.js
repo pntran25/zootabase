@@ -47,6 +47,9 @@ const ManageEvents = () => {
   const [events, setEvents] = useState([]);
   const [search, setSearch] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
+  const [filterExhibit, setFilterExhibit] = useState('');
+  const [filterFeatured, setFilterFeatured] = useState('');
+  const [filterPrice, setFilterPrice] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -77,8 +80,11 @@ const ManageEvents = () => {
       const matchesSearch = event.name.toLowerCase().includes(search.toLowerCase()) ||
         event.exhibit.toLowerCase().includes(search.toLowerCase());
       const matchesCategory = !filterCategory || event.category === filterCategory;
-      return matchesSearch && matchesCategory;
-    }), [events, search, filterCategory]);
+      const matchesExhibit = !filterExhibit || event.exhibit === filterExhibit;
+      const matchesFeatured = filterFeatured === '' || (filterFeatured === 'yes' ? event.isFeatured : !event.isFeatured);
+      const matchesPrice = filterPrice === '' || (filterPrice === 'free' ? Number(event.price) === 0 : Number(event.price) > 0);
+      return matchesSearch && matchesCategory && matchesExhibit && matchesFeatured && matchesPrice;
+    }), [events, search, filterCategory, filterExhibit, filterFeatured, filterPrice]);
 
   const handleOpenModal = (event = null) => {
     setImageFile(null);
@@ -272,19 +278,48 @@ const ManageEvents = () => {
             <Search className="search-icon" size={16} />
             <input type="text" placeholder="Search events..." className="admin-search-input" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          <select
-            value={filterCategory}
-            onChange={e => setFilterCategory(e.target.value)}
-            style={{ padding: '7px 12px', borderRadius: 8, border: '1px solid var(--adm-border)', background: 'var(--adm-bg-surface)', color: 'var(--adm-text-primary)', fontSize: '0.82rem', cursor: 'pointer', minWidth: 140 }}
-          >
-            <option value="">All Categories</option>
-            {EVENT_CATEGORIES.map(cat => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
-          </select>
           <button className="admin-btn-primary" onClick={() => handleOpenModal()}>
             <Plus size={16} /> Add Event
           </button>
+        </div>
+      </div>
+
+      {/* ── Filter Row ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap', padding: '10px 14px', background: 'var(--adm-bg-surface)', border: '1px solid var(--adm-border)', borderRadius: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Category</span>
+          <AdminSelect value={filterCategory} onChange={setFilterCategory} width="140px" options={[{ value: '', label: 'All Categories' }, ...EVENT_CATEGORIES.map(c => ({ value: c, label: c }))]} />
+        </div>
+
+        <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Exhibit</span>
+          <AdminSelect value={filterExhibit} onChange={setFilterExhibit} width="150px" options={[{ value: '', label: 'All Exhibits' }, ...exhibitsList]} />
+        </div>
+
+        <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Featured</span>
+          {[{ val: '', label: 'All' }, { val: 'yes', label: 'Featured' }, { val: 'no', label: 'Standard' }].map(f => (
+            <button key={f.val || 'all'} onClick={() => setFilterFeatured(f.val)}
+              style={{ padding: '3px 10px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', border: `1px solid ${filterFeatured === f.val ? 'var(--adm-accent)' : 'var(--adm-border)'}`, background: filterFeatured === f.val ? 'var(--adm-accent-dim, rgba(34,107,64,0.1))' : 'transparent', color: filterFeatured === f.val ? 'var(--adm-accent)' : 'var(--adm-text-secondary)', transition: 'all 0.15s' }}>
+              {f.label}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Price</span>
+          {[{ val: '', label: 'All' }, { val: 'free', label: 'Free' }, { val: 'paid', label: 'Paid' }].map(p => (
+            <button key={p.val || 'all'} onClick={() => setFilterPrice(p.val)}
+              style={{ padding: '3px 10px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', border: `1px solid ${filterPrice === p.val ? 'var(--adm-accent)' : 'var(--adm-border)'}`, background: filterPrice === p.val ? 'var(--adm-accent-dim, rgba(34,107,64,0.1))' : 'transparent', color: filterPrice === p.val ? 'var(--adm-accent)' : 'var(--adm-text-secondary)', transition: 'all 0.15s' }}>
+              {p.label}
+            </button>
+          ))}
         </div>
       </div>
 
