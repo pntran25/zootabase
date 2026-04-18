@@ -24,7 +24,7 @@ const getPresetRange = (preset) => {
   const today = now.toISOString().split('T')[0];
   if (preset === '90d') { const s = new Date(now); s.setDate(s.getDate() - 90); return { start: s.toISOString().split('T')[0], end: today }; }
   if (preset === '6m')  { const s = new Date(now); s.setMonth(s.getMonth() - 6); return { start: s.toISOString().split('T')[0], end: today }; }
-  if (preset === 'ytd') { return { start: `${now.getFullYear()}-01-01`, end: today }; }
+  if (preset === '1y')  { const s = new Date(now); s.setFullYear(s.getFullYear() - 1); return { start: s.toISOString().split('T')[0], end: today }; }
   // default: 30d
   const s = new Date(now); s.setDate(s.getDate() - 30);
   return { start: s.toISOString().split('T')[0], end: today };
@@ -74,11 +74,11 @@ const PRESETS = [
   { id: '30d', label: 'Last 30 Days' },
   { id: '90d', label: 'Last 90 Days' },
   { id: '6m',  label: 'Last 6 Months' },
-  { id: 'ytd', label: 'This Year' },
+  { id: '1y', label: 'Last 12 Months' },
   { id: 'custom', label: 'Custom' },
 ];
 
-const trendLabel = { '30d': 'Past 30 days', '90d': 'Past 90 days', '6m': 'Past 6 months', 'ytd': 'This year', 'custom': 'Custom range' };
+const trendLabel = { '30d': 'Past 30 days', '90d': 'Past 90 days', '6m': 'Past 6 months', '1y': 'Past 12 months', 'custom': 'Custom range' };
 
 const OverviewTab = () => {
   const [preset,      setPreset]      = useState('30d');
