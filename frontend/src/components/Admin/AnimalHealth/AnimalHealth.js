@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import '../AdminTable.css';
 import './AnimalHealth.css';
 import {
@@ -135,25 +136,45 @@ const DataTable = ({ data, columns, sorting, setSorting, loading, emptyText, ren
           </table>
         )}
       </div>
-      {!loading && data.length > 0 && table.getPageCount() > 1 && (
-        <div className="admin-table-pagination">
-          <span className="admin-pagination-info">
-            Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
-          </span>
-          <div className="admin-pagination-controls">
-            <button className="admin-pagination-btn" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
-              <ChevronLeft size={14} />
-            </button>
-            {Array.from({ length: table.getPageCount() }, (_, i) => (
-              <button key={i} className={`admin-pagination-btn${table.getState().pagination.pageIndex === i ? ' active' : ''}`}
-                onClick={() => table.setPageIndex(i)}>{i + 1}</button>
-            ))}
-            <button className="admin-pagination-btn" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
-              <ChevronRight size={14} />
-            </button>
+      {!loading && data.length > 0 && table.getPageCount() > 1 && (() => {
+        const pageCount = table.getPageCount();
+        const pi = table.getState().pagination.pageIndex;
+        let pages = [];
+        if (pageCount <= 6) {
+          pages = Array.from({ length: pageCount }, (_, i) => i);
+        } else {
+          if (pi <= 2) {
+            pages = [0, 1, 2, 3, 4, '...', pageCount - 1];
+          } else if (pi >= pageCount - 3) {
+            pages = [0, '...', pageCount - 5, pageCount - 4, pageCount - 3, pageCount - 2, pageCount - 1];
+          } else {
+            pages = [0, '...', pi - 1, pi, pi + 1, '...', pageCount - 1];
+          }
+        }
+        return (
+          <div className="admin-table-pagination" style={{ borderTop: '1px solid var(--adm-border)' }}>
+            <span className="admin-pagination-info">
+              Page {pi + 1} of {pageCount} · {data.length} records
+            </span>
+            <div className="admin-pagination-controls">
+              <button className="admin-pagination-btn" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
+                <ChevronLeft size={14} />
+              </button>
+              {pages.map((p, idx) => (
+                p === '...' ? (
+                  <span key={`ellipsis-${idx}`} style={{ padding: '0 8px', color: 'var(--adm-text-secondary)' }}>...</span>
+                ) : (
+                  <button key={p} className={`admin-pagination-btn${pi === p ? ' active' : ''}`}
+                    onClick={() => table.setPageIndex(p)}>{p + 1}</button>
+                )
+              ))}
+              <button className="admin-pagination-btn" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
+                <ChevronRight size={14} />
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </>
   );
 };
@@ -162,7 +183,8 @@ const DataTable = ({ data, columns, sorting, setSorting, loading, emptyText, ren
    MAIN COMPONENT
    ═══════════════════════════════════════════════════════════════ */
 const AnimalHealth = () => {
-  const [activeTab, setActiveTab] = useState('records');
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState(location.state?.tab || 'records');
   const [search, setSearch] = useState('');
 
   // Dropdowns
@@ -186,6 +208,7 @@ const AnimalHealth = () => {
   const [alerts, setAlerts] = useState([]);
   const [alertsLoading, setAlertsLoading] = useState(true);
   const [alertSubTab, setAlertSubTab] = useState('current');
+  const [alertPage, setAlertPage] = useState(0);
 
   // Resolve modal
   const [resolveModal, setResolveModal] = useState(false);
@@ -660,14 +683,14 @@ const AnimalHealth = () => {
           <>
             <div className="ah-alert-subtabs">
               <button className={`ah-alert-subtab${alertSubTab === 'current' ? ' active' : ''}`}
-                onClick={() => setAlertSubTab('current')}>
+                onClick={() => { setAlertSubTab('current'); setAlertPage(0); }}>
                 <AlertTriangle size={13} /> Current
                 {filteredAlerts.filter(a => !a.IsResolved).length > 0 && (
                   <span className="ah-subtab-count">{filteredAlerts.filter(a => !a.IsResolved).length}</span>
                 )}
               </button>
               <button className={`ah-alert-subtab${alertSubTab === 'resolved' ? ' active' : ''}`}
-                onClick={() => setAlertSubTab('resolved')}>
+                onClick={() => { setAlertSubTab('resolved'); setAlertPage(0); }}>
                 <CheckCircle size={13} /> Resolved
                 {filteredAlerts.filter(a => a.IsResolved).length > 0 && (
                   <span className="ah-subtab-count resolved">{filteredAlerts.filter(a => a.IsResolved).length}</span>
@@ -689,8 +712,9 @@ const AnimalHealth = () => {
                 );
               }
               return (
+                <>
                 <div className="ah-alert-list">
-                  {visibleAlerts.map(a => (
+                  {visibleAlerts.slice(alertPage * 10, (alertPage + 1) * 10).map(a => (
                     <div key={a.AlertID} className={`ah-alert-card ${a.IsResolved ? 'resolved' : 'unresolved'}`}>
                       <div className="ah-alert-icon">
                         {a.IsResolved ? <CheckCircle size={18} color="#22c55e" /> : <AlertTriangle size={18} color="#ef4444" />}
@@ -713,6 +737,48 @@ const AnimalHealth = () => {
                     </div>
                   ))}
                 </div>
+                {/* Alert pagination */}
+                {(() => {
+                  const pageCount = Math.ceil(visibleAlerts.length / 10);
+                  if (visibleAlerts.length === 0 || pageCount <= 1) return null;
+                  let pages = [];
+                  if (pageCount <= 6) {
+                    pages = Array.from({ length: pageCount }, (_, i) => i);
+                  } else {
+                    if (alertPage <= 2) {
+                      pages = [0, 1, 2, 3, 4, '...', pageCount - 1];
+                    } else if (alertPage >= pageCount - 3) {
+                      pages = [0, '...', pageCount - 5, pageCount - 4, pageCount - 3, pageCount - 2, pageCount - 1];
+                    } else {
+                      pages = [0, '...', alertPage - 1, alertPage, alertPage + 1, '...', pageCount - 1];
+                    }
+                  }
+                  return (
+                    <div className="admin-table-pagination" style={{ borderTop: '1px solid var(--adm-border)' }}>
+                      <span className="admin-pagination-info">
+                        Page {alertPage + 1} of {pageCount} · {visibleAlerts.length} alerts
+                      </span>
+                      <div className="admin-pagination-controls">
+                        <button className="admin-pagination-btn" onClick={() => setAlertPage(alertPage - 1)} disabled={alertPage === 0}>
+                          <ChevronLeft size={14} />
+                        </button>
+                        {pages.map((p, idx) => (
+                          p === '...' ? (
+                            <span key={`ellipsis-${idx}`} style={{ padding: '0 8px', color: 'var(--adm-text-secondary)' }}>...</span>
+                          ) : (
+                            <button key={p} className={`admin-pagination-btn${alertPage === p ? ' active' : ''}`} onClick={() => setAlertPage(p)}>
+                              {p + 1}
+                            </button>
+                          )
+                        ))}
+                        <button className="admin-pagination-btn" onClick={() => setAlertPage(alertPage + 1)} disabled={alertPage >= pageCount - 1}>
+                          <ChevronRight size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()}
+                </>
               );
             })()}
           </>

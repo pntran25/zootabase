@@ -252,6 +252,82 @@ const updateMealTime = `
   WHERE MealID = @id
 `;
 
+// ── Animal Report Summary (distributions for overview charts) ──
+
+const summaryHealthDistribution = `
+  SELECT HealthStatus, COUNT(*) AS Count
+  FROM Animal WHERE DeletedAt IS NULL AND HealthStatus IS NOT NULL
+  GROUP BY HealthStatus
+`;
+
+const summarySpeciesDistribution = `
+  SELECT Species, COUNT(*) AS Count
+  FROM Animal WHERE DeletedAt IS NULL AND Species IS NOT NULL
+  GROUP BY Species ORDER BY Count DESC
+`;
+
+const summaryExhibitDistribution = `
+  SELECT ISNULL(e.ExhibitName, 'Unassigned') AS ExhibitName, COUNT(*) AS Count
+  FROM Animal a
+  LEFT JOIN Habitat h ON a.HabitatID = h.HabitatID
+  LEFT JOIN Exhibit e ON h.ExhibitID = e.ExhibitID
+  WHERE a.DeletedAt IS NULL
+  GROUP BY e.ExhibitName ORDER BY Count DESC
+`;
+
+const summaryGenderDistribution = `
+  SELECT Gender, COUNT(*) AS Count
+  FROM Animal WHERE DeletedAt IS NULL AND Gender IS NOT NULL
+  GROUP BY Gender
+`;
+
+const summaryEndangeredDistribution = `
+  SELECT
+    SUM(CASE WHEN IsEndangered = 1 THEN 1 ELSE 0 END) AS Endangered,
+    SUM(CASE WHEN IsEndangered = 0 OR IsEndangered IS NULL THEN 1 ELSE 0 END) AS NotEndangered
+  FROM Animal WHERE DeletedAt IS NULL
+`;
+
+const summaryAgeDistribution = `
+  SELECT
+    CASE
+      WHEN Age <= 2 THEN '0-2'
+      WHEN Age <= 5 THEN '3-5'
+      WHEN Age <= 10 THEN '6-10'
+      WHEN Age <= 20 THEN '11-20'
+      ELSE '20+'
+    END AS AgeRange,
+    COUNT(*) AS Count
+  FROM Animal WHERE DeletedAt IS NULL AND Age IS NOT NULL
+  GROUP BY
+    CASE
+      WHEN Age <= 2 THEN '0-2'
+      WHEN Age <= 5 THEN '3-5'
+      WHEN Age <= 10 THEN '6-10'
+      WHEN Age <= 20 THEN '11-20'
+      ELSE '20+'
+    END
+  ORDER BY MIN(Age)
+`;
+
+const summaryRecentAlerts = `
+  SELECT TOP 5 ha.AlertID, ha.AlertType, ha.AlertMessage, ha.CreatedAt, ha.IsResolved,
+         a.Name AS AnimalName, a.Species
+  FROM HealthAlert ha
+  JOIN Animal a ON ha.AnimalID = a.AnimalID
+  WHERE a.DeletedAt IS NULL AND ha.IsResolved = 0
+  ORDER BY ha.CreatedAt DESC
+`;
+
+const summaryAlertStatusDistribution = `
+  SELECT
+    SUM(CASE WHEN IsResolved = 0 THEN 1 ELSE 0 END) AS Active,
+    SUM(CASE WHEN IsResolved = 1 THEN 1 ELSE 0 END) AS Resolved
+  FROM HealthAlert ha
+  JOIN Animal a ON ha.AnimalID = a.AnimalID
+  WHERE a.DeletedAt IS NULL
+`;
+
 module.exports = {
   getAllRecords,
   getRecordsByAnimal,
@@ -280,4 +356,12 @@ module.exports = {
   seedMealTimes,
   getMealTimes,
   updateMealTime,
+  summaryHealthDistribution,
+  summarySpeciesDistribution,
+  summaryExhibitDistribution,
+  summaryGenderDistribution,
+  summaryEndangeredDistribution,
+  summaryAgeDistribution,
+  summaryRecentAlerts,
+  summaryAlertStatusDistribution,
 };

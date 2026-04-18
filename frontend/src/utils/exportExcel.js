@@ -12,8 +12,7 @@ export function exportToExcel(data, sheetName, fileName) {
   const ws = XLSX.utils.json_to_sheet(data);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, sheetName.substring(0, 31));
-  const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-  saveAs(new Blob([buf], { type: 'application/octet-stream' }), `${fileName}.xlsx`);
+  XLSX.writeFile(wb, `${fileName}.xlsx`);
 }
 
 /**
@@ -28,8 +27,7 @@ export function exportMultiSheetExcel(sheets, fileName) {
     const ws = XLSX.utils.json_to_sheet(data);
     XLSX.utils.book_append_sheet(wb, ws, name.substring(0, 31));
   }
-  const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-  saveAs(new Blob([buf], { type: 'application/octet-stream' }), `${fileName}.xlsx`);
+  XLSX.writeFile(wb, `${fileName}.xlsx`);
 }
 
 /**
@@ -97,6 +95,5 @@ export function exportSectionsToSingleSheet(sections, fileName, meta) {
   const ws = XLSX.utils.json_to_sheet(rows);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Report');
-  const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-  saveAs(new Blob([buf], { type: 'application/octet-stream' }), `${fileName}.xlsx`);
+  XLSX.writeFile(wb, `${fileName}.xlsx`);
 }
