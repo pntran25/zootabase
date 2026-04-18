@@ -417,7 +417,7 @@
   justify-content: center;
   background: var(--adm-bg-surface);
   border: 1px solid var(--adm-border);
-  border-radius: var(--adm-radius-sm);
+  border-radius: 50%;
   cursor: pointer;
   color: var(--adm-text-secondary);
   font-size: 0.85rem;

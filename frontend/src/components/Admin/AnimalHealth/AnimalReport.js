@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import '../AdminTable.css';
+import '../DataReports/DataReports.css';
 import './AnimalReport.css';
 import {
-  ClipboardList, ChevronDown, ChevronRight, PawPrint, HeartPulse,
+  ClipboardList, ChevronDown, ChevronRight, ChevronLeft, PawPrint, HeartPulse,
   UtensilsCrossed, Search, AlertTriangle, CheckCircle, Calendar, X,
-  ChevronUp, ChevronsUpDown
+  ChevronUp, ChevronsUpDown, LayoutDashboard, Table2, Bell
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Download } from 'lucide-react';
@@ -12,6 +13,7 @@ import AdminSelect from '../AdminSelect';
 import AdminDatePicker from '../AdminDatePicker';
 import { getAnimalReport, getAnimalsForDropdown, getHealthReport } from '../../../services/animalHealthService';
 import { exportSectionsToSingleSheet } from '../../../utils/exportExcel';
+import AnimalReportOverview from './AnimalReportOverview';
 
 const fmtDate = (d) => {
   if (!d) return '—';
@@ -33,6 +35,7 @@ const scoreLabel = (s) => {
 };
 
 const healthPriority = { Critical: 0, Poor: 1, Fair: 2, Good: 3, Excellent: 4 };
+const PAGE_SIZE = 15;
 
 const healthColor = {
   Excellent: '#10b981',
@@ -62,6 +65,7 @@ const Section = ({ icon, title, count, defaultOpen = true, children }) => {
 };
 
 const AnimalReport = () => {
+  const [activeTab, setActiveTab] = useState('overview');
   const [animals, setAnimals] = useState([]);
   const [expandedRows, setExpandedRows] = useState({});
   const [reports, setReports] = useState({});
@@ -79,6 +83,7 @@ const AnimalReport = () => {
   const [filterSex, setFilterSex] = useState('');
   const [ageMin, setAgeMin] = useState('');
   const [ageMax, setAgeMax] = useState('');
+  const [animalPage, setAnimalPage] = useState(0);
 
   const getYMD = (d) => {
     const y = d.getFullYear();
@@ -173,7 +178,19 @@ const AnimalReport = () => {
           const db = b.DateArrived ? new Date(b.DateArrived).getTime() : 0;
           return dir * (da - db);
         }
-        // fallback to health priority if sortCol is 'health'
+        if (sortCol === 'name') {
+          return dir * (a.Name || '').localeCompare(b.Name || '');
+        }
+        if (sortCol === 'group') {
+          return dir * (a.Species || '').localeCompare(b.Species || '');
+        }
+        if (sortCol === 'exhibit') {
+          return dir * (a.ExhibitName || '').localeCompare(b.ExhibitName || '');
+        }
+        if (sortCol === 'age') {
+          return dir * ((a.Age ?? -1) - (b.Age ?? -1));
+        }
+        // health: Critical(0) → Fair(1) → Good(2) → Excellent(3)
         return dir * ((healthPriority[a.HealthStatus] ?? 99) - (healthPriority[b.HealthStatus] ?? 99));
       });
   }, [animals, search, filterHealth, filterGroups, filterExhibit, filterSex, ageMin, ageMax, dateFrom, dateTo, sortCol, sortDir]);
@@ -226,12 +243,14 @@ const AnimalReport = () => {
                 'Date': a.CreatedAt ? new Date(a.CreatedAt).toLocaleDateString() : '',
                 'Status': a.IsResolved ? 'Resolved' : 'Active',
               }));
+              const now = new Date();
+              const stamp = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}-${String(now.getMinutes()).padStart(2,'0')}`;
               exportSectionsToSingleSheet([
                 { name: 'Animals Summary', data: summaryRows },
                 { name: 'Health Records', data: recordRows },
                 { name: 'Feeding Schedules', data: feedingRows },
                 { name: 'Health Alerts', data: alertRows },
-              ], 'Animal_Report', { reportName: 'Animal Data Report', dateFrom, dateTo });
+              ], `Animal Data Report Snapshot ${stamp}`, { reportName: 'Animal Data Report', dateFrom, dateTo });
               toast.success('Animal report downloaded.');
             } catch (err) {
               toast.error('Failed to generate report.');
@@ -242,8 +261,21 @@ const AnimalReport = () => {
         </button>
       </div>
 
-      {/* ── Filters Row 1: search + date ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
+      {/* ── Tab Navigation ── */}
+      <div className="dr-tabs">
+        <button className={`dr-tab${activeTab === 'overview' ? ' active' : ''}`} onClick={() => setActiveTab('overview')}>
+          <LayoutDashboard size={14} /> Overview
+        </button>
+        <button className={`dr-tab${activeTab === 'animals' ? ' active' : ''}`} onClick={() => setActiveTab('animals')}>
+          <PawPrint size={14} /> Animals Table
+        </button>
+      </div>
+
+      {activeTab === 'overview' && <AnimalReportOverview />}
+
+
+      {/* ── Filters Row 1: search + date (Animals tab only) ── */}
+      <div style={{ display: activeTab === 'animals' ? 'flex' : 'none', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
         <div className="admin-search-container" style={{ maxWidth: 320, flex: 1, margin: 0 }}>
           <Search size={15} className="search-icon" />
           <input
@@ -285,8 +317,8 @@ const AnimalReport = () => {
         </div>
       </div>
 
-      {/* ── Filters Row 2: advanced filters ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap', padding: '10px 14px', background: 'var(--adm-bg-surface)', border: '1px solid var(--adm-border)', borderRadius: 8 }}>
+      {/* ── Filters Row 2: advanced filters (Animals tab only) ── */}
+      <div style={{ display: activeTab === 'animals' ? 'flex' : 'none', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap', padding: '10px 14px', background: 'var(--adm-bg-surface)', border: '1px solid var(--adm-border)', borderRadius: 8 }}>
         {/* Health Status chips */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
           <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: 2 }}>Health</span>
@@ -360,12 +392,12 @@ const AnimalReport = () => {
         </div>
       </div>
 
-      <p style={{ fontSize: '0.75rem', color: 'var(--adm-text-muted)', margin: '0 0 10px 2px' }}>
+      <p style={{ fontSize: '0.75rem', color: 'var(--adm-text-muted)', margin: '0 0 10px 2px', display: activeTab === 'animals' ? undefined : 'none' }}>
         Click any row to expand and see the full animal report including health records, alerts, and feeding schedules.
       </p>
 
-      {/* ── Animal table ── */}
-      <div className="admin-table-container">
+      {/* ── Animal table (Animals tab only) ── */}
+      <div className="admin-table-container" style={{ display: activeTab === 'animals' ? undefined : 'none' }}>
         <div className="admin-table-scroll-inner" style={{ maxHeight: 700 }}>
           {animals.length === 0 ? (
             <div className="admin-table-empty">Loading animals...</div>
@@ -376,17 +408,41 @@ const AnimalReport = () => {
                   <th style={{ width: 36 }}></th>
                   <th>Animal ID</th>
                   <th onClick={() => toggleSort('date')} style={{ cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none' }}>
-                    DATE ARRIVED
-                    {' '}
+                    DATE ARRIVED{' '}
                     {sortCol === 'date'
                       ? (sortDir === 'asc' ? <ChevronUp size={12} className="sort-icon" /> : <ChevronDown size={12} className="sort-icon" />)
                       : <ChevronsUpDown size={12} className="sort-icon" />}
                   </th>
-                  <th>Name</th>
-                  <th>Animal Group</th>
-                  <th>Exhibit</th>
-                  <th>Age / Sex</th>
-                  <th>Health</th>
+                  <th onClick={() => toggleSort('name')} style={{ cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none' }}>
+                    NAME{' '}
+                    {sortCol === 'name'
+                      ? (sortDir === 'asc' ? <ChevronUp size={12} className="sort-icon" /> : <ChevronDown size={12} className="sort-icon" />)
+                      : <ChevronsUpDown size={12} className="sort-icon" />}
+                  </th>
+                  <th onClick={() => toggleSort('group')} style={{ cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none' }}>
+                    ANIMAL GROUP{' '}
+                    {sortCol === 'group'
+                      ? (sortDir === 'asc' ? <ChevronUp size={12} className="sort-icon" /> : <ChevronDown size={12} className="sort-icon" />)
+                      : <ChevronsUpDown size={12} className="sort-icon" />}
+                  </th>
+                  <th onClick={() => toggleSort('exhibit')} style={{ cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none' }}>
+                    EXHIBIT{' '}
+                    {sortCol === 'exhibit'
+                      ? (sortDir === 'asc' ? <ChevronUp size={12} className="sort-icon" /> : <ChevronDown size={12} className="sort-icon" />)
+                      : <ChevronsUpDown size={12} className="sort-icon" />}
+                  </th>
+                  <th onClick={() => toggleSort('age')} style={{ cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none' }}>
+                    AGE / SEX{' '}
+                    {sortCol === 'age'
+                      ? (sortDir === 'asc' ? <ChevronUp size={12} className="sort-icon" /> : <ChevronDown size={12} className="sort-icon" />)
+                      : <ChevronsUpDown size={12} className="sort-icon" />}
+                  </th>
+                  <th onClick={() => toggleSort('health')} style={{ cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none' }}>
+                    HEALTH{' '}
+                    {sortCol === 'health'
+                      ? (sortDir === 'asc' ? <ChevronUp size={12} className="sort-icon" /> : <ChevronDown size={12} className="sort-icon" />)
+                      : <ChevronsUpDown size={12} className="sort-icon" />}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -397,7 +453,7 @@ const AnimalReport = () => {
                     </td>
                   </tr>
                 ) : (
-                  filteredAnimals.map(an => {
+                  filteredAnimals.slice(animalPage * PAGE_SIZE, (animalPage + 1) * PAGE_SIZE).map(an => {
                     const hc = healthColor[an.HealthStatus] || '#6b7280';
                     const id = String(an.AnimalID);
                     const isExpanded = !!expandedRows[id];
@@ -613,6 +669,47 @@ const AnimalReport = () => {
           )}
         </div>
       </div>
+      {/* Pagination controls */}
+      {activeTab === 'animals' && (() => {
+        const pageCount = Math.ceil(filteredAnimals.length / PAGE_SIZE);
+        if (filteredAnimals.length === 0 || pageCount <= 1) return null;
+        let pages = [];
+        if (pageCount <= 6) {
+          pages = Array.from({ length: pageCount }, (_, i) => i);
+        } else {
+          if (animalPage <= 2) {
+            pages = [0, 1, 2, 3, 4, '...', pageCount - 1];
+          } else if (animalPage >= pageCount - 3) {
+            pages = [0, '...', pageCount - 5, pageCount - 4, pageCount - 3, pageCount - 2, pageCount - 1];
+          } else {
+            pages = [0, '...', animalPage - 1, animalPage, animalPage + 1, '...', pageCount - 1];
+          }
+        }
+        return (
+          <div className="admin-table-pagination" style={{ borderTop: '1px solid var(--adm-border)' }}>
+            <span className="admin-pagination-info">
+              Page {animalPage + 1} of {pageCount} · {filteredAnimals.length} animals
+            </span>
+            <div className="admin-pagination-controls">
+              <button className="admin-pagination-btn" onClick={() => setAnimalPage(animalPage - 1)} disabled={animalPage === 0}>
+                <ChevronLeft size={14} />
+              </button>
+              {pages.map((p, idx) => (
+                p === '...' ? (
+                  <span key={`ellipsis-${idx}`} style={{ padding: '0 8px', color: 'var(--adm-text-secondary)' }}>...</span>
+                ) : (
+                  <button key={p} className={`admin-pagination-btn${animalPage === p ? ' active' : ''}`} onClick={() => setAnimalPage(p)}>
+                    {p + 1}
+                  </button>
+                )
+              ))}
+              <button className="admin-pagination-btn" onClick={() => setAnimalPage(animalPage + 1)} disabled={animalPage >= pageCount - 1}>
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };

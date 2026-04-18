@@ -523,8 +523,8 @@ const DataReports = () => {
     const now = new Date();
     const to = now.toISOString().split('T')[0];
     let from;
-    if (days === 'year') {
-      from = `${now.getFullYear()}-01-01`;
+    if (days === '365') {
+      const d = new Date(now); d.setFullYear(d.getFullYear() - 1); from = d.toISOString().split('T')[0];
     } else if (days === '180') {
       const d = new Date(now); d.setDate(d.getDate() - 180); from = d.toISOString().split('T')[0];
     } else {
@@ -854,7 +854,7 @@ const DataReports = () => {
         {/* Row 1: Date presets + date pickers + date select + reset */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
           <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Quick</span>
-          {[['30','Last 30 Days'],['90','Last 90 Days'],['180','Last 6 Months'],['year','This Year']].map(([val, lbl]) => (
+          {[['30','Last 30 Days'],['90','Last 90 Days'],['180','Last 6 Months'],['365','Last 12 Months']].map(([val, lbl]) => (
             <button key={val} onClick={() => setPresetDates(val)}
               style={{ padding: '3px 10px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', border: '1px solid var(--adm-border)', background: 'transparent', color: 'var(--adm-text-secondary)', transition: 'all 0.15s' }}
               onMouseEnter={e => e.target.style.borderColor = 'var(--adm-accent)'}
@@ -862,7 +862,7 @@ const DataReports = () => {
               {lbl}
             </button>
           ))}
-          <div style={{ width: 1, height: 20, background: 'var(--adm-border)', margin: '0 4px' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
           {dateFilter === 'custom' && (
             <>
               <AdminDatePicker value={customStart} onChange={setCustomStart} placeholder="Start date" maxDate={customEnd || TODAY} />
@@ -878,6 +878,7 @@ const DataReports = () => {
               { value: 'custom', label: 'Custom Range' },
             ]}
           />
+          </div>
           {activeSalesFilterCount > 0 && (
             <button onClick={resetSalesFilters}
               style={{ padding: '5px 12px', borderRadius: 6, border: '1px solid rgba(239,68,68,0.4)', background: 'rgba(239,68,68,0.08)', color: '#ef4444', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, marginLeft: 'auto' }}>
