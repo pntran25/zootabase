@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import '../AdminTable.css';
 import './AnimalHealth.css';
 import {
@@ -162,7 +163,8 @@ const DataTable = ({ data, columns, sorting, setSorting, loading, emptyText, ren
    MAIN COMPONENT
    ═══════════════════════════════════════════════════════════════ */
 const AnimalHealth = () => {
-  const [activeTab, setActiveTab] = useState('records');
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState(location.state?.tab || 'records');
   const [search, setSearch] = useState('');
 
   // Dropdowns
