@@ -518,6 +518,11 @@ const DataReports = () => {
   const [revenueMin, setRevenueMin] = useState('');
   const [revenueMax, setRevenueMax] = useState('');
   const [activeChannels, setActiveChannels] = useState(['shop','tickets','memberships','events']);
+  // Tab-specific filters (client-side, applied to current page)
+  const [filterTicketType, setFilterTicketType] = useState('');
+  const [filterEventCategory, setFilterEventCategory] = useState('');
+  const [filterMemPlan, setFilterMemPlan] = useState('');
+  const [filterMemBilling, setFilterMemBilling] = useState('');
 
   const setPresetDates = (days) => {
     const now = new Date();
@@ -693,7 +698,6 @@ const DataReports = () => {
 
   // Client-side revenue filter applied to current page rows
   const applyRevFilter = (rows) => {
-    if (revenueMin === '' && revenueMax === '') return rows;
     return rows.filter(r => {
       const t = Number(r.Total);
       if (revenueMin !== '' && t < Number(revenueMin)) return false;
@@ -701,6 +705,28 @@ const DataReports = () => {
       return true;
     });
   };
+
+  // Tab-specific client-side filters
+  const applyTicketFilter = (rows) => {
+    if (!filterTicketType) return applyRevFilter(rows);
+    return applyRevFilter(rows).filter(r => r.TicketType === filterTicketType);
+  };
+  const applyEventFilter = (rows) => {
+    if (!filterEventCategory) return applyRevFilter(rows);
+    return applyRevFilter(rows).filter(r => r.Category === filterEventCategory);
+  };
+  const applyMemberFilter = (rows) => {
+    let filtered = applyRevFilter(rows);
+    if (filterMemPlan) filtered = filtered.filter(r => r.PlanName === filterMemPlan);
+    if (filterMemBilling) filtered = filtered.filter(r => r.BillingPeriod === filterMemBilling);
+    return filtered;
+  };
+
+  // Unique values for tab filters (from current page data)
+  const uniqueTicketTypes = useMemo(() => [...new Set(ticketRows.map(r => r.TicketType).filter(Boolean))].sort(), [ticketRows]);
+  const uniqueEventCategories = useMemo(() => [...new Set(eventRows.map(r => r.Category).filter(Boolean))].sort(), [eventRows]);
+  const uniqueMemPlans = useMemo(() => [...new Set(membershipRows.map(r => r.PlanName).filter(Boolean))].sort(), [membershipRows]);
+  const uniqueMemBillings = useMemo(() => [...new Set(membershipRows.map(r => r.BillingPeriod).filter(Boolean))].sort(), [membershipRows]);
 
   const activeCount = activeTab === 'shop' ? orderTotal
     : activeTab === 'tickets' ? ticketTotal
@@ -711,10 +737,10 @@ const DataReports = () => {
   const channelColors = { shop: '#f59e0b', tickets: '#3b82f6', memberships: '#10b981', events: '#a855f7' };
 
   const activeSalesFilterCount = [
-    revenueMin !== '', revenueMax !== ''
+    revenueMin !== '', revenueMax !== '', !!filterTicketType, !!filterEventCategory, !!filterMemPlan, !!filterMemBilling
   ].filter(Boolean).length;
 
-  const resetSalesFilters = () => { setRevenueMin(''); setRevenueMax(''); setActiveChannels(['shop','tickets','memberships','events']); setSearch(''); setDateFilter('custom'); setCustomStart(''); setCustomEnd(''); };
+  const resetSalesFilters = () => { setRevenueMin(''); setRevenueMax(''); setActiveChannels(['shop','tickets','memberships','events']); setSearch(''); setDateFilter('custom'); setCustomStart(''); setCustomEnd(''); setFilterTicketType(''); setFilterEventCategory(''); setFilterMemPlan(''); setFilterMemBilling(''); };
 
   return (
     <div className="admin-page">
@@ -897,6 +923,30 @@ const DataReports = () => {
           <span style={{ color: 'var(--adm-text-muted)', fontSize: '0.75rem' }}>–</span>
           <input type="number" min="0" placeholder="Max $" value={revenueMax} onChange={e => setRevenueMax(e.target.value)}
             style={{ width: 68, padding: '4px 7px', borderRadius: 6, border: '1px solid var(--adm-border)', background: 'var(--adm-bg)', color: 'var(--adm-text-primary)', fontSize: '0.78rem' }} />
+
+          {/* Tab-specific filters */}
+          {activeTab === 'tickets' && (<>
+          <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ticket Type</span>
+          <AdminSelect value={filterTicketType} onChange={setFilterTicketType} width="140px"
+            options={[{ value: '', label: 'All Types' }, ...uniqueTicketTypes.map(t => ({ value: t, label: t }))]} />
+          </>)}
+          {activeTab === 'events' && (<>
+          <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Category</span>
+          <AdminSelect value={filterEventCategory} onChange={setFilterEventCategory} width="140px"
+            options={[{ value: '', label: 'All Categories' }, ...uniqueEventCategories.map(c => ({ value: c, label: c }))]} />
+          </>)}
+          {activeTab === 'memberships' && (<>
+          <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Plan</span>
+          <AdminSelect value={filterMemPlan} onChange={setFilterMemPlan} width="140px"
+            options={[{ value: '', label: 'All Plans' }, ...uniqueMemPlans.map(p => ({ value: p, label: p }))]} />
+          <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Billing</span>
+          <AdminSelect value={filterMemBilling} onChange={setFilterMemBilling} width="120px"
+            options={[{ value: '', label: 'All' }, ...uniqueMemBillings.map(b => ({ value: b, label: b.charAt(0).toUpperCase() + b.slice(1) }))]} />
+          </>)}
         </div>
       </div>
 
@@ -915,7 +965,7 @@ const DataReports = () => {
           />
         ) : activeTab === 'events' ? (
           <ReportTable
-            data={applyRevFilter(eventRows)}
+            data={applyEventFilter(eventRows)}
             columns={eventColumns}
             sorting={eventsSorting}
             setSorting={setEventsSorting}
@@ -927,7 +977,7 @@ const DataReports = () => {
           />
         ) : activeTab === 'tickets' ? (
           <ReportTable
-            data={applyRevFilter(ticketRows)}
+            data={applyTicketFilter(ticketRows)}
             columns={ticketColumns}
             sorting={ticketSorting}
             setSorting={setTicketSorting}
@@ -939,7 +989,7 @@ const DataReports = () => {
           />
         ) : (
           <ReportTable
-            data={applyRevFilter(membershipRows)}
+            data={applyMemberFilter(membershipRows)}
             columns={membershipColumns}
             sorting={membershipsSorting}
             setSorting={setMembershipsSorting}

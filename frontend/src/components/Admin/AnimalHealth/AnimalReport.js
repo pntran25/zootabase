@@ -1,17 +1,17 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import '../AdminTable.css';
 import '../DataReports/DataReports.css';
 import './AnimalReport.css';
 import {
   ClipboardList, ChevronDown, ChevronRight, ChevronLeft, PawPrint, HeartPulse,
   UtensilsCrossed, Search, AlertTriangle, CheckCircle, Calendar, X,
-  ChevronUp, ChevronsUpDown, LayoutDashboard, Table2, Bell
+  ChevronUp, ChevronsUpDown, LayoutDashboard, Bell
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Download } from 'lucide-react';
 import AdminSelect from '../AdminSelect';
 import AdminDatePicker from '../AdminDatePicker';
-import { getAnimalReport, getAnimalsForDropdown, getHealthReport } from '../../../services/animalHealthService';
+import { getAnimalsForDropdown, getHealthReport } from '../../../services/animalHealthService';
 import { exportSectionsToSingleSheet } from '../../../utils/exportExcel';
 import AnimalReportOverview from './AnimalReportOverview';
 
@@ -45,31 +45,11 @@ const healthColor = {
   Poor: '#ef4444',
 };
 
-const subTh = { padding: '6px 10px', textAlign: 'left', color: 'var(--adm-text-secondary)', fontWeight: 600, whiteSpace: 'nowrap', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.06em' };
-const subTd = { padding: '5px 10px', color: 'var(--adm-text-primary)', whiteSpace: 'nowrap', fontSize: '0.76rem' };
 
-/* ── Collapsible section (used inside expanded row) ── */
-const Section = ({ icon, title, count, defaultOpen = true, children }) => {
-  const [open, setOpen] = useState(defaultOpen);
-  return (
-    <div className="ar-section">
-      <div className="ar-section-header" onClick={() => setOpen(o => !o)}>
-        {icon}
-        <h3>{title}</h3>
-        {count != null && <span className="ar-section-count">{count}</span>}
-        {open ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-      </div>
-      {open && <div className="ar-section-body">{children}</div>}
-    </div>
-  );
-};
 
 const AnimalReport = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [animals, setAnimals] = useState([]);
-  const [expandedRows, setExpandedRows] = useState({});
-  const [reports, setReports] = useState({});
-  const [loadingReports, setLoadingReports] = useState({});
   const [search, setSearch] = useState('');
   const [dateFilter, setDateFilter] = useState('custom');
   const [customStart, setCustomStart] = useState('');
@@ -84,6 +64,25 @@ const AnimalReport = () => {
   const [ageMin, setAgeMin] = useState('');
   const [ageMax, setAgeMax] = useState('');
   const [animalPage, setAnimalPage] = useState(0);
+  // Health data for flat tables
+  const [healthData, setHealthData] = useState(null);
+  const [healthLoading, setHealthLoading] = useState(false);
+  const [recordsPage, setRecordsPage] = useState(0);
+  const [feedingsPage, setFeedingsPage] = useState(0);
+  const [alertsPage, setAlertsPage] = useState(0);
+  const [recordsSortCol, setRecordsSortCol] = useState('date');
+  const [recordsSortDir, setRecordsSortDir] = useState('desc');
+  const [alertsSortCol, setAlertsSortCol] = useState('date');
+  const [alertsSortDir, setAlertsSortDir] = useState('desc');
+  // Health Records tab filters
+  const [filterActivity, setFilterActivity] = useState('');
+  const [filterRecordStaff, setFilterRecordStaff] = useState('');
+  // Feeding Schedules tab filters
+  const [filterFoodType, setFilterFoodType] = useState('');
+  const [filterFrequency, setFilterFrequency] = useState('');
+  // Health Alerts tab filters
+  const [filterAlertType, setFilterAlertType] = useState('');
+  const [filterAlertResolved, setFilterAlertResolved] = useState('');
 
   const getYMD = (d) => {
     const y = d.getFullYear();
@@ -120,27 +119,17 @@ const AnimalReport = () => {
       .catch(() => { /* non-fatal */ });
   }, []);
 
-  const loadReport = useCallback(async (id) => {
-    if (reports[id] || loadingReports[id]) return;
-    setLoadingReports(prev => ({ ...prev, [id]: true }));
-    try {
-      const data = await getAnimalReport(id);
-      setReports(prev => ({ ...prev, [id]: data }));
-    } catch (err) {
-      toast.error(err.message || 'Failed to load animal report.');
-    } finally {
-      setLoadingReports(prev => ({ ...prev, [id]: false }));
-    }
-  }, [reports, loadingReports]);
-
-  const toggleExpand = (animalId) => {
-    const id = String(animalId);
-    setExpandedRows(prev => {
-      const next = { ...prev, [id]: !prev[id] };
-      if (next[id]) loadReport(id);
-      return next;
-    });
-  };
+  // Lazy load health data when switching to health/feeding/alert tabs
+  useEffect(() => {
+    if (!['records', 'feedings', 'alerts'].includes(activeTab)) return;
+    if (healthData || healthLoading) return;
+    setHealthLoading(true);
+    getHealthReport()
+      .then(data => setHealthData(data))
+      .catch(() => toast.error('Failed to load health data.'))
+      .finally(() => setHealthLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   const inDateRange = (dateStr) => {
     if (!dateFrom && !dateTo) return true;
@@ -153,6 +142,26 @@ const AnimalReport = () => {
 
   const allGroups = useMemo(() => [...new Set(animals.map(a => a.Species).filter(Boolean))].sort(), [animals]);
   const allExhibits = useMemo(() => [...new Set(animals.map(a => a.ExhibitName).filter(Boolean))].sort(), [animals]);
+  const allActivityLevels = useMemo(() => {
+    if (!healthData?.records) return [];
+    return [...new Set(healthData.records.map(r => r.ActivityLevel).filter(Boolean))].sort();
+  }, [healthData]);
+  const allRecordStaff = useMemo(() => {
+    if (!healthData?.records) return [];
+    return [...new Set(healthData.records.map(r => r.StaffName).filter(Boolean))].sort();
+  }, [healthData]);
+  const allFoodTypes = useMemo(() => {
+    if (!healthData?.feedings) return [];
+    return [...new Set(healthData.feedings.map(f => f.FoodType).filter(Boolean))].sort();
+  }, [healthData]);
+  const allFrequencies = useMemo(() => {
+    if (!healthData?.feedings) return [];
+    return [...new Set(healthData.feedings.map(f => f.Frequency).filter(Boolean))].sort();
+  }, [healthData]);
+  const allAlertTypes = useMemo(() => {
+    if (!healthData?.alerts) return [];
+    return [...new Set(healthData.alerts.map(a => a.AlertType).filter(Boolean))].sort();
+  }, [healthData]);
 
   const filteredAnimals = useMemo(() => {
     return [...animals]
@@ -195,12 +204,137 @@ const AnimalReport = () => {
       });
   }, [animals, search, filterHealth, filterGroups, filterExhibit, filterSex, ageMin, ageMax, dateFrom, dateTo, sortCol, sortDir]);
 
-  const activeAnimalFilterCount = [search, filterHealth.length > 0, filterGroups.length > 0, filterExhibit, filterSex, ageMin !== '', ageMax !== '', dateFrom, dateTo].filter(Boolean).length;
-  const resetAnimalFilters = () => { setSearch(''); setFilterHealth([]); setFilterGroups([]); setFilterExhibit(''); setFilterSex(''); setAgeMin(''); setAgeMax(''); setDateFilter('custom'); setCustomStart(''); setCustomEnd(''); setSortCol('health'); setSortDir('asc'); };
+  const activeAnimalFilterCount = [search, filterHealth.length > 0, filterGroups.length > 0, filterExhibit, filterSex, ageMin !== '', ageMax !== '', dateFrom, dateTo, !!filterActivity, !!filterRecordStaff, !!filterFoodType, !!filterFrequency, !!filterAlertType, !!filterAlertResolved].filter(Boolean).length;
+  const resetAnimalFilters = () => { setSearch(''); setFilterHealth([]); setFilterGroups([]); setFilterExhibit(''); setFilterSex(''); setAgeMin(''); setAgeMax(''); setDateFilter('custom'); setCustomStart(''); setCustomEnd(''); setSortCol('health'); setSortDir('asc'); setFilterActivity(''); setFilterRecordStaff(''); setFilterFoodType(''); setFilterFrequency(''); setFilterAlertType(''); setFilterAlertResolved(''); };
 
   const toggleSort = (col) => {
     if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
     else { setSortCol(col); setSortDir('asc'); }
+  };
+
+  // Filtered health records for Health Records tab
+  const filteredRecords = useMemo(() => {
+    if (!healthData?.records) return [];
+    return healthData.records
+      .filter(r => {
+        if (!inDateRange(r.CheckupDate)) return false;
+        if (search) {
+          const q = search.toLowerCase();
+          if (!((r.AnimalName || '').toLowerCase().includes(q) || (r.AnimalCode || '').toLowerCase().includes(q) || (r.Species || '').toLowerCase().includes(q))) return false;
+        }
+        if (filterHealth.length > 0) {
+          const label = scoreLabel(r.HealthScore);
+          if (!filterHealth.includes(label)) return false;
+        }
+        if (filterGroups.length > 0 && !filterGroups.includes(r.Species)) return false;
+        if (filterActivity && r.ActivityLevel !== filterActivity) return false;
+        if (filterRecordStaff && r.StaffName !== filterRecordStaff) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        const dir = recordsSortDir === 'asc' ? 1 : -1;
+        if (recordsSortCol === 'date') return dir * ((a.CheckupDate || '').localeCompare(b.CheckupDate || ''));
+        if (recordsSortCol === 'animal') return dir * ((a.AnimalName || '').localeCompare(b.AnimalName || ''));
+        if (recordsSortCol === 'score') return dir * ((a.HealthScore ?? 0) - (b.HealthScore ?? 0));
+        if (recordsSortCol === 'staff') return dir * ((a.StaffName || '').localeCompare(b.StaffName || ''));
+        return 0;
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [healthData, search, filterHealth, filterGroups, filterActivity, filterRecordStaff, dateFrom, dateTo, recordsSortCol, recordsSortDir]);
+
+  // Filtered feedings for Feeding Schedules tab
+  const filteredFeedings = useMemo(() => {
+    if (!healthData?.feedings) return [];
+    return healthData.feedings.filter(f => {
+      if (search) {
+        const q = search.toLowerCase();
+        if (!((f.AnimalName || '').toLowerCase().includes(q) || (f.AnimalCode || '').toLowerCase().includes(q) || (f.Species || '').toLowerCase().includes(q))) return false;
+      }
+      if (filterGroups.length > 0 && !filterGroups.includes(f.Species)) return false;
+      if (filterFoodType && f.FoodType !== filterFoodType) return false;
+      if (filterFrequency && f.Frequency !== filterFrequency) return false;
+      return true;
+    });
+  }, [healthData, search, filterGroups, filterFoodType, filterFrequency]);
+
+  // Filtered alerts for Health Alerts tab
+  const filteredAlerts = useMemo(() => {
+    if (!healthData?.alerts) return [];
+    return healthData.alerts
+      .filter(a => {
+        if (!inDateRange(a.CreatedAt)) return false;
+        if (search) {
+          const q = search.toLowerCase();
+          if (!((a.AnimalName || '').toLowerCase().includes(q) || (a.AnimalCode || '').toLowerCase().includes(q) || (a.Species || '').toLowerCase().includes(q))) return false;
+        }
+        if (filterGroups.length > 0 && !filterGroups.includes(a.Species)) return false;
+        if (filterAlertType && a.AlertType !== filterAlertType) return false;
+        if (filterAlertResolved === 'active' && a.IsResolved) return false;
+        if (filterAlertResolved === 'resolved' && !a.IsResolved) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        const dir = alertsSortDir === 'asc' ? 1 : -1;
+        if (alertsSortCol === 'date') return dir * ((a.CreatedAt || '').localeCompare(b.CreatedAt || ''));
+        if (alertsSortCol === 'animal') return dir * ((a.AnimalName || '').localeCompare(b.AnimalName || ''));
+        if (alertsSortCol === 'type') return dir * ((a.AlertType || '').localeCompare(b.AlertType || ''));
+        return 0;
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [healthData, search, filterGroups, filterAlertType, filterAlertResolved, dateFrom, dateTo, alertsSortCol, alertsSortDir]);
+
+  const toggleRecordsSort = (col) => {
+    if (recordsSortCol === col) setRecordsSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setRecordsSortCol(col); setRecordsSortDir('asc'); }
+  };
+  const toggleAlertsSort = (col) => {
+    if (alertsSortCol === col) setAlertsSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setAlertsSortCol(col); setAlertsSortDir('asc'); }
+  };
+
+  const RecordsSortHeader = ({ col, children }) => (
+    <th onClick={() => toggleRecordsSort(col)} style={{ cursor: 'pointer', userSelect: 'none' }}>
+      {children}{' '}
+      {recordsSortCol === col
+        ? (recordsSortDir === 'asc' ? <ChevronUp size={12} className="sort-icon" /> : <ChevronDown size={12} className="sort-icon" />)
+        : <ChevronsUpDown size={12} className="sort-icon" />}
+    </th>
+  );
+
+  const AlertsSortHeader = ({ col, children }) => (
+    <th onClick={() => toggleAlertsSort(col)} style={{ cursor: 'pointer', userSelect: 'none' }}>
+      {children}{' '}
+      {alertsSortCol === col
+        ? (alertsSortDir === 'asc' ? <ChevronUp size={12} className="sort-icon" /> : <ChevronDown size={12} className="sort-icon" />)
+        : <ChevronsUpDown size={12} className="sort-icon" />}
+    </th>
+  );
+
+  const renderPagination = (totalCount, currentPage, setPage, label) => {
+    const pageCount = Math.ceil(totalCount / PAGE_SIZE);
+    if (totalCount === 0 || pageCount <= 1) return null;
+    let pages = [];
+    if (pageCount <= 6) {
+      pages = Array.from({ length: pageCount }, (_, i) => i);
+    } else {
+      if (currentPage <= 2) pages = [0, 1, 2, 3, 4, '...', pageCount - 1];
+      else if (currentPage >= pageCount - 3) pages = [0, '...', pageCount - 5, pageCount - 4, pageCount - 3, pageCount - 2, pageCount - 1];
+      else pages = [0, '...', currentPage - 1, currentPage, currentPage + 1, '...', pageCount - 1];
+    }
+    return (
+      <div className="admin-table-pagination" style={{ borderTop: '1px solid var(--adm-border)' }}>
+        <span className="admin-pagination-info">Page {currentPage + 1} of {pageCount} · {totalCount} {label}</span>
+        <div className="admin-pagination-controls">
+          <button className="admin-pagination-btn" onClick={() => setPage(currentPage - 1)} disabled={currentPage === 0}><ChevronLeft size={14} /></button>
+          {pages.map((p, idx) => p === '...' ? (
+            <span key={`e-${idx}`} style={{ padding: '0 8px', color: 'var(--adm-text-secondary)' }}>...</span>
+          ) : (
+            <button key={p} className={`admin-pagination-btn${currentPage === p ? ' active' : ''}`} onClick={() => setPage(p)}>{p + 1}</button>
+          ))}
+          <button className="admin-pagination-btn" onClick={() => setPage(currentPage + 1)} disabled={currentPage >= pageCount - 1}><ChevronRight size={14} /></button>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -267,15 +401,24 @@ const AnimalReport = () => {
           <LayoutDashboard size={14} /> Overview
         </button>
         <button className={`dr-tab${activeTab === 'animals' ? ' active' : ''}`} onClick={() => setActiveTab('animals')}>
-          <PawPrint size={14} /> Animals Table
+          <PawPrint size={14} /> Animals
+        </button>
+        <button className={`dr-tab${activeTab === 'records' ? ' active' : ''}`} onClick={() => setActiveTab('records')}>
+          <HeartPulse size={14} /> Health Records
+        </button>
+        <button className={`dr-tab${activeTab === 'feedings' ? ' active' : ''}`} onClick={() => setActiveTab('feedings')}>
+          <UtensilsCrossed size={14} /> Feeding Schedules
+        </button>
+        <button className={`dr-tab${activeTab === 'alerts' ? ' active' : ''}`} onClick={() => setActiveTab('alerts')}>
+          <Bell size={14} /> Health Alerts
         </button>
       </div>
 
       {activeTab === 'overview' && <AnimalReportOverview />}
 
 
-      {/* ── Filters Row 1: search + date (Animals tab only) ── */}
-      <div style={{ display: activeTab === 'animals' ? 'flex' : 'none', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
+      {/* ── Filters Row 1: search + date ── */}
+      <div style={{ display: activeTab === 'overview' ? 'none' : 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
         <div className="admin-search-container" style={{ maxWidth: 320, flex: 1, margin: 0 }}>
           <Search size={15} className="search-icon" />
           <input
@@ -295,6 +438,8 @@ const AnimalReport = () => {
             <span style={{ background: '#ef4444', color: '#fff', borderRadius: 10, padding: '0 6px', fontSize: '0.68rem', marginLeft: 2 }}>{activeAnimalFilterCount}</span>
           </button>
         )}
+        {/* Date range — relevant for animals (dateArrived), records (checkupDate), alerts (createdAt), not feedings */}
+        {activeTab !== 'feedings' && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
           {dateFilter === 'custom' && (
             <>
@@ -315,11 +460,13 @@ const AnimalReport = () => {
             ]}
           />
         </div>
+        )}
       </div>
 
-      {/* ── Filters Row 2: advanced filters (Animals tab only) ── */}
-      <div style={{ display: activeTab === 'animals' ? 'flex' : 'none', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap', padding: '10px 14px', background: 'var(--adm-bg-surface)', border: '1px solid var(--adm-border)', borderRadius: 8 }}>
-        {/* Health Status chips */}
+      {/* ── Filters Row 2: advanced filters (tab-specific) ── */}
+      {activeTab !== 'overview' && (activeTab === 'animals' || activeTab === 'records') && (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap', padding: '10px 14px', background: 'var(--adm-bg-surface)', border: '1px solid var(--adm-border)', borderRadius: 8 }}>
+        {/* Health Status chips — Animals + Health Records */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
           <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: 2 }}>Health</span>
           {['Critical','Fair','Good','Excellent'].map(h => {
@@ -348,6 +495,7 @@ const AnimalReport = () => {
           {filterGroups.length > 0 && <span style={{ fontSize: '0.7rem', color: 'var(--adm-accent)', fontWeight: 600 }}>{filterGroups[0]}</span>}
         </div>
 
+        {activeTab === 'animals' && (<>
         <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
 
         {/* Exhibit */}
@@ -390,22 +538,131 @@ const AnimalReport = () => {
             style={{ width: 52, padding: '4px 7px', borderRadius: 6, border: '1px solid var(--adm-border)', background: 'var(--adm-bg)', color: 'var(--adm-text-primary)', fontSize: '0.78rem' }} />
           <span style={{ fontSize: '0.72rem', color: 'var(--adm-text-muted)' }}>yrs</span>
         </div>
+        </>)}
+
+        {/* Activity + Staff — Health Records only */}
+        {activeTab === 'records' && (<>
+        <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Activity</span>
+          <AdminSelect
+            value={filterActivity}
+            onChange={setFilterActivity}
+            width="130px"
+            options={[{ value: '', label: 'All Levels' }, ...allActivityLevels.map(a => ({ value: a, label: a }))]}
+          />
+        </div>
+        <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Staff</span>
+          <AdminSelect
+            value={filterRecordStaff}
+            onChange={setFilterRecordStaff}
+            width="160px"
+            searchable
+            options={[{ value: '', label: 'All Staff' }, ...allRecordStaff.map(s => ({ value: s, label: s }))]}
+          />
+        </div>
+        </>)}
       </div>
+      )}
 
-      <p style={{ fontSize: '0.75rem', color: 'var(--adm-text-muted)', margin: '0 0 10px 2px', display: activeTab === 'animals' ? undefined : 'none' }}>
-        Click any row to expand and see the full animal report including health records, alerts, and feeding schedules.
-      </p>
+      {/* ── Filters Row 2b: Group + tab-specific for feedings/alerts ── */}
+      {(activeTab === 'feedings' || activeTab === 'alerts') && (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap', padding: '10px 14px', background: 'var(--adm-bg-surface)', border: '1px solid var(--adm-border)', borderRadius: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Group</span>
+          <AdminSelect
+            value={filterGroups[0] || ''}
+            onChange={v => setFilterGroups(v ? [v] : [])}
+            width="130px"
+            options={[{ value: '', label: 'All Groups' }, ...allGroups.map(g => ({ value: g, label: g }))]}
+          />
+          {filterGroups.length > 0 && <span style={{ fontSize: '0.7rem', color: 'var(--adm-accent)', fontWeight: 600 }}>{filterGroups[0]}</span>}
+        </div>
 
-      {/* ── Animal table (Animals tab only) ── */}
-      <div className="admin-table-container" style={{ display: activeTab === 'animals' ? undefined : 'none' }}>
-        <div className="admin-table-scroll-inner" style={{ maxHeight: 700 }}>
+        {/* Food Type + Frequency — Feeding Schedules only */}
+        {activeTab === 'feedings' && (<>
+        <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Food Type</span>
+          <AdminSelect
+            value={filterFoodType}
+            onChange={setFilterFoodType}
+            width="140px"
+            options={[{ value: '', label: 'All Types' }, ...allFoodTypes.map(t => ({ value: t, label: t }))]}
+          />
+        </div>
+        <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Frequency</span>
+          <AdminSelect
+            value={filterFrequency}
+            onChange={setFilterFrequency}
+            width="130px"
+            options={[{ value: '', label: 'All' }, ...allFrequencies.map(f => ({ value: f, label: f }))]}
+          />
+        </div>
+        </>)}
+
+        {/* Alert Type + Resolved Status — Health Alerts only */}
+        {activeTab === 'alerts' && (<>
+        <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Alert Type</span>
+          <AdminSelect
+            value={filterAlertType}
+            onChange={setFilterAlertType}
+            width="150px"
+            options={[{ value: '', label: 'All Types' }, ...allAlertTypes.map(t => ({ value: t, label: t }))]}
+          />
+        </div>
+        <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</span>
+          {[['','All'],['active','Active'],['resolved','Resolved']].map(([val, lbl]) => (
+            <button key={val} onClick={() => setFilterAlertResolved(val)}
+              style={{ padding: '3px 10px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', border: `1px solid ${filterAlertResolved === val ? (val === 'active' ? '#ef4444' : val === 'resolved' ? '#10b981' : 'var(--adm-accent)') : 'var(--adm-border)'}`, background: filterAlertResolved === val ? (val === 'active' ? 'rgba(239,68,68,0.12)' : val === 'resolved' ? 'rgba(16,185,129,0.15)' : 'var(--adm-accent-dim)') : 'transparent', color: filterAlertResolved === val ? (val === 'active' ? '#ef4444' : val === 'resolved' ? '#10b981' : 'var(--adm-accent)') : 'var(--adm-text-secondary)', transition: 'all 0.15s' }}>
+              {lbl}
+            </button>
+          ))}
+        </div>
+        </>)}
+      </div>
+      )}
+
+      {/* ── Summary bars ── */}
+      {activeTab === 'animals' && (
+        <div style={{ display: 'flex', gap: 20, marginBottom: 14, padding: '10px 16px', background: 'var(--adm-bg-surface)', border: '1px solid var(--adm-border)', borderRadius: 8, fontSize: '0.8rem', color: 'var(--adm-text-secondary)', alignItems: 'center', flexWrap: 'wrap' }}>
+          <span>Showing <strong style={{ margin: '0 3px' }}>{filteredAnimals.length}</strong> of {animals.length} animals</span>
+        </div>
+      )}
+      {activeTab === 'records' && (
+        <div style={{ display: 'flex', gap: 20, marginBottom: 14, padding: '10px 16px', background: 'var(--adm-bg-surface)', border: '1px solid var(--adm-border)', borderRadius: 8, fontSize: '0.8rem', color: 'var(--adm-text-secondary)', alignItems: 'center', flexWrap: 'wrap' }}>
+          {healthLoading ? <span>Loading health records...</span> : <span>Showing <strong style={{ margin: '0 3px' }}>{filteredRecords.length}</strong> health records</span>}
+        </div>
+      )}
+      {activeTab === 'feedings' && (
+        <div style={{ display: 'flex', gap: 20, marginBottom: 14, padding: '10px 16px', background: 'var(--adm-bg-surface)', border: '1px solid var(--adm-border)', borderRadius: 8, fontSize: '0.8rem', color: 'var(--adm-text-secondary)', alignItems: 'center', flexWrap: 'wrap' }}>
+          {healthLoading ? <span>Loading feeding schedules...</span> : <span>Showing <strong style={{ margin: '0 3px' }}>{filteredFeedings.length}</strong> feeding schedules</span>}
+        </div>
+      )}
+      {activeTab === 'alerts' && (
+        <div style={{ display: 'flex', gap: 20, marginBottom: 14, padding: '10px 16px', background: 'var(--adm-bg-surface)', border: '1px solid var(--adm-border)', borderRadius: 8, fontSize: '0.8rem', color: 'var(--adm-text-secondary)', alignItems: 'center', flexWrap: 'wrap' }}>
+          {healthLoading ? <span>Loading health alerts...</span> : <span>Showing <strong style={{ margin: '0 3px' }}>{filteredAlerts.length}</strong> health alerts</span>}
+        </div>
+      )}
+
+      {/* ── Animals Table ── */}
+      {activeTab === 'animals' && (
+      <>
+      <div className="admin-table-container">
           {animals.length === 0 ? (
             <div className="admin-table-empty">Loading animals...</div>
           ) : (
             <table className="admin-table">
               <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
                 <tr>
-                  <th style={{ width: 36 }}></th>
                   <th>Animal ID</th>
                   <th onClick={() => toggleSort('date')} style={{ cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none' }}>
                     DATE ARRIVED{' '}
@@ -449,267 +706,163 @@ const AnimalReport = () => {
                 {filteredAnimals.length === 0 ? (
                   <tr className="no-hover">
                     <td colSpan={7} style={{ textAlign: 'center', padding: 32, color: 'var(--adm-text-muted)' }}>
-                      No animals found matching your search.
+                      No animals found matching your filters.
                     </td>
                   </tr>
                 ) : (
                   filteredAnimals.slice(animalPage * PAGE_SIZE, (animalPage + 1) * PAGE_SIZE).map(an => {
                     const hc = healthColor[an.HealthStatus] || '#6b7280';
-                    const id = String(an.AnimalID);
-                    const isExpanded = !!expandedRows[id];
-                    const report = reports[id];
-                    const isLoading = !!loadingReports[id];
-                    const a = report?.animal;
-
-                    const filteredHealthRecords = (report?.healthRecords?.filter(r => inDateRange(r.CheckupDate)) || [])
-                      .sort((a, b) => new Date(b.CheckupDate || 0) - new Date(a.CheckupDate || 0));
-                    const filteredAlerts = (report?.alerts?.filter(al => inDateRange(al.CreatedAt)) || [])
-                      .sort((a, b) => new Date(b.CreatedAt || 0) - new Date(a.CreatedAt || 0));
-
-                    return [
-                      <tr
-                        key={an.AnimalID}
-                        onClick={() => toggleExpand(an.AnimalID)}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        <td style={{ textAlign: 'center', padding: '0 4px' }}>
-                          <ChevronRight
-                            size={14}
-                            style={{
-                              transition: 'transform 0.2s',
-                              transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
-                              color: 'var(--adm-text-muted)',
-                            }}
-                          />
-                        </td>
-                        <td>
-                          <span style={{ fontFamily: 'monospace', color: 'var(--adm-accent)', fontSize: '0.82rem' }}>
-                            {an.AnimalCode || '—'}
-                          </span>
-                        </td>
-                        <td style={{ color: 'var(--adm-text-secondary)', fontSize: '0.85rem' }}>
-                          {an.DateArrived ? new Date(an.DateArrived).toLocaleDateString('en-US', { timeZone: 'UTC' }) : '—'}
-                        </td>
-                        <td style={{ fontWeight: 600 }}>
-                          {an.Name || <span style={{ color: 'var(--adm-text-muted)', fontStyle: 'italic' }}>Unnamed</span>}
-                        </td>
+                    return (
+                      <tr key={an.AnimalID}>
+                        <td><span style={{ fontFamily: 'monospace', color: 'var(--adm-accent)', fontSize: '0.82rem' }}>{an.AnimalCode || '—'}</span></td>
+                        <td style={{ color: 'var(--adm-text-secondary)', fontSize: '0.85rem' }}>{an.DateArrived ? new Date(an.DateArrived).toLocaleDateString('en-US', { timeZone: 'UTC' }) : '—'}</td>
+                        <td style={{ fontWeight: 600 }}>{an.Name || <span style={{ color: 'var(--adm-text-muted)', fontStyle: 'italic' }}>Unnamed</span>}</td>
                         <td>{an.Species}</td>
-                        <td style={{ color: 'var(--adm-text-secondary)' }}>
-                          {an.ExhibitName || <span style={{ color: 'var(--adm-text-muted)', fontStyle: 'italic' }}>Unassigned</span>}
-                        </td>
-                        <td style={{ color: 'var(--adm-text-secondary)' }}>
-                          {an.Age ? `${an.Age} yrs` : '—'}{an.Gender ? ` · ${an.Gender}` : ''}
-                        </td>
-                        <td>
-                          {an.HealthStatus && (
-                            <span style={{
-                              display: 'inline-block', padding: '2px 10px', borderRadius: 20,
-                              fontSize: '0.75rem', fontWeight: 600,
-                              background: hc + '22', color: hc
-                            }}>
-                              {an.HealthStatus}
-                            </span>
-                          )}
-                        </td>
-                      </tr>,
-
-                      /* ── Expanded detail panel ── */
-                      isExpanded && (
-                        <tr key={`${an.AnimalID}-detail`} className="no-hover">
-                          <td colSpan={8} style={{ padding: 0, background: 'var(--adm-bg-surface)' }}>
-                            <div style={{ padding: '14px 20px 18px 44px' }}>
-                              {isLoading && (
-                                <div className="admin-table-empty" style={{ padding: 24 }}>Loading report...</div>
-                              )}
-
-                              {!isLoading && !report && (
-                                <div className="admin-table-empty" style={{ padding: 24 }}>No data found for this animal.</div>
-                              )}
-
-                              {!isLoading && report && a && (
-                                <>
-                                  {/* ── Animal Profile ── */}
-                                  <Section icon={<PawPrint size={16} color="var(--adm-accent)" />} title="Animal Profile" defaultOpen={true}>
-                                    <div className="ar-profile">
-                                      <div className="ar-profile-item"><span className="ar-profile-label">Name</span><span className="ar-profile-value">{a.Name || '—'}</span></div>
-                                      <div className="ar-profile-item"><span className="ar-profile-label">Animal Group</span><span className="ar-profile-value">{a.Species}</span></div>
-                                      <div className="ar-profile-item"><span className="ar-profile-label">Age</span><span className="ar-profile-value">{a.Age} years</span></div>
-                                      <div className="ar-profile-item"><span className="ar-profile-label">Gender</span><span className="ar-profile-value">{a.Gender || '—'}</span></div>
-                                      <div className="ar-profile-item"><span className="ar-profile-label">Date Arrived</span><span className="ar-profile-value">{fmtDate(a.DateArrived)}</span></div>
-                                      <div className="ar-profile-item"><span className="ar-profile-label">Habitat</span><span className="ar-profile-value">{a.HabitatType || '—'}</span></div>
-                                      <div className="ar-profile-item"><span className="ar-profile-label">Exhibit</span><span className="ar-profile-value">{a.ExhibitName || '—'}</span></div>
-                                      <div className="ar-profile-item"><span className="ar-profile-label">Area</span><span className="ar-profile-value">{a.AreaName || '—'}</span></div>
-                                      {a.HealthStatus && <div className="ar-profile-item"><span className="ar-profile-label">Health Status</span><span className="ar-profile-value">{a.HealthStatus}</span></div>}
-                                      {a.Diet && <div className="ar-profile-item"><span className="ar-profile-label">Diet</span><span className="ar-profile-value">{a.Diet}</span></div>}
-                                      {a.Weight && <div className="ar-profile-item"><span className="ar-profile-label">Weight</span><span className="ar-profile-value">{a.Weight}</span></div>}
-                                      {a.Region && <div className="ar-profile-item"><span className="ar-profile-label">Region</span><span className="ar-profile-value">{a.Region}</span></div>}
-                                      {a.Lifespan && <div className="ar-profile-item"><span className="ar-profile-label">Lifespan</span><span className="ar-profile-value">{a.Lifespan}</span></div>}
-                                      {a.FunFact && <div className="ar-profile-item"><span className="ar-profile-label">Fun Fact</span><span className="ar-profile-value">{a.FunFact}</span></div>}
-                                      {a.IsEndangered != null && <div className="ar-profile-item"><span className="ar-profile-label">Endangered</span><span className="ar-profile-value">{a.IsEndangered ? 'Yes' : 'No'}</span></div>}
-                                    </div>
-                                  </Section>
-
-                                  {/* ── Health Records + Feeding Schedules (side by side) ── */}
-                                  <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'flex-start', marginTop: 8 }}>
-
-                                    {/* Health Records (left) */}
-                                    <div style={{ flex: '1 1 480px', minWidth: 360 }}>
-                                      <h4 style={{ margin: '0 0 8px', fontSize: '0.82rem', color: 'var(--adm-text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                        <HeartPulse size={14} color="#ef4444" /> Health Records
-                                        <span style={{ fontWeight: 400, color: 'var(--adm-text-muted)', fontSize: '0.75rem', marginLeft: 4 }}>
-                                          ({filteredHealthRecords.length} record{filteredHealthRecords.length !== 1 ? 's' : ''})
-                                        </span>
-                                      </h4>
-                                      {filteredHealthRecords.length === 0 ? (
-                                        <p style={{ color: 'var(--adm-text-muted)', fontSize: '0.78rem', margin: 0 }}>No health records {dateFrom || dateTo ? 'in the selected date range.' : 'on file.'}</p>
-                                      ) : (
-                                        <div style={{ border: '1px solid var(--adm-border)', borderRadius: 6, overflow: 'hidden', maxHeight: 260, overflowY: 'auto' }}>
-                                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.76rem' }}>
-                                            <thead>
-                                              <tr style={{ background: 'var(--adm-bg-surface-2)' }}>
-                                                <th style={subTh}>Date</th><th style={subTh}>Score</th><th style={subTh}>Weight</th>
-                                                <th style={subTh}>Activity</th><th style={subTh}>Staff</th>
-                                              </tr>
-                                            </thead>
-                                            <tbody>
-                                              {filteredHealthRecords.map(r => (
-                                                <tr key={r.RecordID} style={{ borderTop: '1px solid var(--adm-border)' }}>
-                                                  <td style={subTd}>{fmtDate(r.CheckupDate)}</td>
-                                                  <td style={subTd}><span className={`ah-score ${scoreClass(r.HealthScore)}`}><span className="ah-score-dot" />{r.HealthScore} — {scoreLabel(r.HealthScore)}</span></td>
-                                                  <td style={subTd}>{r.Weight != null ? `${Number(r.Weight).toFixed(1)} kg` : '—'}</td>
-                                                  <td style={subTd}>{r.ActivityLevel || '—'}</td>
-                                                  <td style={subTd}>{r.StaffName || '—'}</td>
-                                                </tr>
-                                              ))}
-                                            </tbody>
-                                          </table>
-                                        </div>
-                                      )}
-                                    </div>
-
-                                    {/* Feeding Schedules (right) */}
-                                    <div style={{ flex: '1 1 320px', minWidth: 280 }}>
-                                      <h4 style={{ margin: '0 0 8px', fontSize: '0.82rem', color: 'var(--adm-text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                        <UtensilsCrossed size={14} color="#f59e0b" /> Feeding Schedules
-                                        <span style={{ fontWeight: 400, color: 'var(--adm-text-muted)', fontSize: '0.75rem', marginLeft: 4 }}>
-                                          ({report.feedings.length} schedule{report.feedings.length !== 1 ? 's' : ''})
-                                        </span>
-                                      </h4>
-                                      {report.feedings.length === 0 ? (
-                                        <p style={{ color: 'var(--adm-text-muted)', fontSize: '0.78rem', margin: 0 }}>No feeding schedules found.</p>
-                                      ) : (
-                                        <div style={{ border: '1px solid var(--adm-border)', borderRadius: 6, overflow: 'hidden', maxHeight: 260, overflowY: 'auto' }}>
-                                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.76rem' }}>
-                                            <thead>
-                                              <tr style={{ background: 'var(--adm-bg-surface-2)' }}>
-                                                <th style={subTh}>Feed Time</th><th style={subTh}>Food Type</th><th style={subTh}>Staff</th>
-                                              </tr>
-                                            </thead>
-                                            <tbody>
-                                              {report.feedings.map(f => (
-                                                <tr key={f.ScheduleID} style={{ borderTop: '1px solid var(--adm-border)' }}>
-                                                  <td style={subTd}>{f.FeedTime ? new Date(f.FeedTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '—'}</td>
-                                                  <td style={subTd}>{f.FoodType || '—'}</td>
-                                                  <td style={subTd}>{f.StaffName || '—'}</td>
-                                                </tr>
-                                              ))}
-                                            </tbody>
-                                          </table>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-
-                                  {/* ── Health Alerts (full width, below) ── */}
-                                  <div style={{ marginTop: 12 }}>
-                                    <h4 style={{ margin: '0 0 8px', fontSize: '0.82rem', color: 'var(--adm-text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                      <AlertTriangle size={14} color="#f59e0b" /> Health Alerts
-                                      <span style={{ fontWeight: 400, color: 'var(--adm-text-muted)', fontSize: '0.75rem', marginLeft: 4 }}>
-                                        ({filteredAlerts.length} alert{filteredAlerts.length !== 1 ? 's' : ''})
-                                      </span>
-                                    </h4>
-                                    {filteredAlerts.length === 0 ? (
-                                      <p style={{ color: 'var(--adm-text-muted)', fontSize: '0.78rem', margin: 0 }}>No health alerts {dateFrom || dateTo ? 'in the selected date range.' : '.'}</p>
-                                    ) : (
-                                      <div style={{ border: '1px solid var(--adm-border)', borderRadius: 6, overflow: 'hidden', maxHeight: 260, overflowY: 'auto' }}>
-                                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.76rem' }}>
-                                          <thead>
-                                            <tr style={{ background: 'var(--adm-bg-surface-2)' }}>
-                                              <th style={subTh}>Date</th><th style={subTh}>Type</th><th style={subTh}>Message</th><th style={subTh}>Status</th>
-                                            </tr>
-                                          </thead>
-                                          <tbody>
-                                            {filteredAlerts.map(al => (
-                                              <tr key={al.AlertID} style={{ borderTop: '1px solid var(--adm-border)' }}>
-                                                <td style={subTd}>{fmtDate(al.CreatedAt)}</td>
-                                                <td style={subTd}>{al.AlertType}</td>
-                                                <td style={{ ...subTd, maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{al.AlertMessage}</td>
-                                                <td style={subTd}>{al.IsResolved
-                                                  ? <span style={{ color: '#10b981', fontWeight: 600, fontSize: '0.8rem' }}><CheckCircle size={13} style={{ verticalAlign: 'middle' }} /> Resolved</span>
-                                                  : <span style={{ color: '#ef4444', fontWeight: 600, fontSize: '0.8rem' }}><AlertTriangle size={13} style={{ verticalAlign: 'middle' }} /> Active</span>
-                                                }</td>
-                                              </tr>
-                                            ))}
-                                          </tbody>
-                                        </table>
-                                      </div>
-                                    )}
-                                  </div>
-                                </>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ),
-                    ];
-                  }).flat().filter(Boolean)
+                        <td style={{ color: 'var(--adm-text-secondary)' }}>{an.ExhibitName || <span style={{ color: 'var(--adm-text-muted)', fontStyle: 'italic' }}>Unassigned</span>}</td>
+                        <td style={{ color: 'var(--adm-text-secondary)' }}>{an.Age ? `${an.Age} yrs` : '—'}{an.Gender ? ` · ${an.Gender}` : ''}</td>
+                        <td>{an.HealthStatus && (<span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 600, background: hc + '22', color: hc }}>{an.HealthStatus}</span>)}</td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
           )}
-        </div>
       </div>
-      {/* Pagination controls */}
-      {activeTab === 'animals' && (() => {
-        const pageCount = Math.ceil(filteredAnimals.length / PAGE_SIZE);
-        if (filteredAnimals.length === 0 || pageCount <= 1) return null;
-        let pages = [];
-        if (pageCount <= 6) {
-          pages = Array.from({ length: pageCount }, (_, i) => i);
-        } else {
-          if (animalPage <= 2) {
-            pages = [0, 1, 2, 3, 4, '...', pageCount - 1];
-          } else if (animalPage >= pageCount - 3) {
-            pages = [0, '...', pageCount - 5, pageCount - 4, pageCount - 3, pageCount - 2, pageCount - 1];
-          } else {
-            pages = [0, '...', animalPage - 1, animalPage, animalPage + 1, '...', pageCount - 1];
-          }
-        }
-        return (
-          <div className="admin-table-pagination" style={{ borderTop: '1px solid var(--adm-border)' }}>
-            <span className="admin-pagination-info">
-              Page {animalPage + 1} of {pageCount} · {filteredAnimals.length} animals
-            </span>
-            <div className="admin-pagination-controls">
-              <button className="admin-pagination-btn" onClick={() => setAnimalPage(animalPage - 1)} disabled={animalPage === 0}>
-                <ChevronLeft size={14} />
-              </button>
-              {pages.map((p, idx) => (
-                p === '...' ? (
-                  <span key={`ellipsis-${idx}`} style={{ padding: '0 8px', color: 'var(--adm-text-secondary)' }}>...</span>
-                ) : (
-                  <button key={p} className={`admin-pagination-btn${animalPage === p ? ' active' : ''}`} onClick={() => setAnimalPage(p)}>
-                    {p + 1}
-                  </button>
-                )
-              ))}
-              <button className="admin-pagination-btn" onClick={() => setAnimalPage(animalPage + 1)} disabled={animalPage >= pageCount - 1}>
-                <ChevronRight size={14} />
-              </button>
-            </div>
-          </div>
-        );
-      })()}
+      {renderPagination(filteredAnimals.length, animalPage, setAnimalPage, 'animals')}
+      </>
+      )}
+
+      {/* ── Health Records Table ── */}
+      {activeTab === 'records' && (
+      <>
+      {healthLoading ? (
+        <div className="admin-table-empty" style={{ padding: 32 }}>Loading health records...</div>
+      ) : (
+        <div className="admin-table-container">
+          <table className="admin-table">
+            <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+              <tr>
+                <RecordsSortHeader col="animal">Animal</RecordsSortHeader>
+                <th>Code</th>
+                <th>Species</th>
+                <RecordsSortHeader col="date">Date</RecordsSortHeader>
+                <RecordsSortHeader col="score">Score</RecordsSortHeader>
+                <th>Weight</th>
+                <th>Activity</th>
+                <RecordsSortHeader col="staff">Staff</RecordsSortHeader>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredRecords.length === 0 ? (
+                <tr className="no-hover"><td colSpan={8} style={{ textAlign: 'center', padding: 32, color: 'var(--adm-text-muted)' }}>No health records found.</td></tr>
+              ) : (
+                filteredRecords.slice(recordsPage * PAGE_SIZE, (recordsPage + 1) * PAGE_SIZE).map((r, i) => (
+                  <tr key={r.RecordID || i}>
+                    <td style={{ fontWeight: 600 }}>{r.AnimalName || '—'}</td>
+                    <td><span style={{ fontFamily: 'monospace', color: 'var(--adm-accent)', fontSize: '0.82rem' }}>{r.AnimalCode || '—'}</span></td>
+                    <td>{r.Species || '—'}</td>
+                    <td>{fmtDate(r.CheckupDate)}</td>
+                    <td><span className={`ah-score ${scoreClass(r.HealthScore)}`}><span className="ah-score-dot" />{r.HealthScore} — {scoreLabel(r.HealthScore)}</span></td>
+                    <td>{r.Weight != null ? `${Number(r.Weight).toFixed(1)} kg` : '—'}</td>
+                    <td>{r.ActivityLevel || '—'}</td>
+                    <td>{r.StaffName || '—'}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {renderPagination(filteredRecords.length, recordsPage, setRecordsPage, 'health records')}
+      </>
+      )}
+
+      {/* ── Feeding Schedules Table ── */}
+      {activeTab === 'feedings' && (
+      <>
+      {healthLoading ? (
+        <div className="admin-table-empty" style={{ padding: 32 }}>Loading feeding schedules...</div>
+      ) : (
+        <div className="admin-table-container">
+          <table className="admin-table">
+            <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+              <tr>
+                <th>Animal</th><th>Code</th><th>Species</th>
+                <th>Food Type</th><th>Quantity</th><th>Frequency</th>
+                <th>Time</th><th>Special Instructions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredFeedings.length === 0 ? (
+                <tr className="no-hover"><td colSpan={8} style={{ textAlign: 'center', padding: 32, color: 'var(--adm-text-muted)' }}>No feeding schedules found.</td></tr>
+              ) : (
+                filteredFeedings.slice(feedingsPage * PAGE_SIZE, (feedingsPage + 1) * PAGE_SIZE).map((f, i) => (
+                  <tr key={f.ScheduleID || i}>
+                    <td style={{ fontWeight: 600 }}>{f.AnimalName || '—'}</td>
+                    <td><span style={{ fontFamily: 'monospace', color: 'var(--adm-accent)', fontSize: '0.82rem' }}>{f.AnimalCode || '—'}</span></td>
+                    <td>{f.Species || '—'}</td>
+                    <td>{f.FoodType || '—'}</td>
+                    <td>{f.Quantity != null ? `${f.Quantity} ${f.Unit || ''}`.trim() : '—'}</td>
+                    <td>{f.Frequency || '—'}</td>
+                    <td>{f.FeedingTime || '—'}</td>
+                    <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.SpecialInstructions || '—'}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {renderPagination(filteredFeedings.length, feedingsPage, setFeedingsPage, 'feeding schedules')}
+      </>
+      )}
+
+      {/* ── Health Alerts Table ── */}
+      {activeTab === 'alerts' && (
+      <>
+      {healthLoading ? (
+        <div className="admin-table-empty" style={{ padding: 32 }}>Loading health alerts...</div>
+      ) : (
+        <div className="admin-table-container">
+          <table className="admin-table">
+            <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+              <tr>
+                <AlertsSortHeader col="animal">Animal</AlertsSortHeader>
+                <th>Code</th>
+                <th>Species</th>
+                <AlertsSortHeader col="type">Alert Type</AlertsSortHeader>
+                <th>Message</th>
+                <AlertsSortHeader col="date">Date</AlertsSortHeader>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredAlerts.length === 0 ? (
+                <tr className="no-hover"><td colSpan={7} style={{ textAlign: 'center', padding: 32, color: 'var(--adm-text-muted)' }}>No health alerts found.</td></tr>
+              ) : (
+                filteredAlerts.slice(alertsPage * PAGE_SIZE, (alertsPage + 1) * PAGE_SIZE).map((a, i) => (
+                  <tr key={a.AlertID || i}>
+                    <td style={{ fontWeight: 600 }}>{a.AnimalName || '—'}</td>
+                    <td><span style={{ fontFamily: 'monospace', color: 'var(--adm-accent)', fontSize: '0.82rem' }}>{a.AnimalCode || '—'}</span></td>
+                    <td>{a.Species || '—'}</td>
+                    <td>{a.AlertType || '—'}</td>
+                    <td style={{ maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.AlertMessage || '—'}</td>
+                    <td>{fmtDate(a.CreatedAt)}</td>
+                    <td>{a.IsResolved
+                      ? <span style={{ color: '#10b981', fontWeight: 600, fontSize: '0.8rem' }}><CheckCircle size={13} style={{ verticalAlign: 'middle' }} /> Resolved</span>
+                      : <span style={{ color: '#ef4444', fontWeight: 600, fontSize: '0.8rem' }}><AlertTriangle size={13} style={{ verticalAlign: 'middle' }} /> Active</span>
+                    }</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {renderPagination(filteredAlerts.length, alertsPage, setAlertsPage, 'health alerts')}
+      </>
+      )}
     </div>
   );
 };

@@ -41,6 +41,8 @@ const ManageAttractions = () => {
   const [attractions, setAttractions] = useState([]);
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [filterPrice, setFilterPrice] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAttraction, setEditingAttraction] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -76,8 +78,10 @@ const ManageAttractions = () => {
       const matchesSearch = attr.name.toLowerCase().includes(search.toLowerCase()) ||
         attr.type.toLowerCase().includes(search.toLowerCase());
       const matchesType = !filterType || attr.type === filterType;
-      return matchesSearch && matchesType;
-    }), [attractions, search, filterType]);
+      const matchesStatus = filterStatus === '' || (filterStatus === 'open' ? attr.active : !attr.active);
+      const matchesPrice = filterPrice === '' || (filterPrice === 'free' ? Number(attr.price) === 0 : Number(attr.price) > 0);
+      return matchesSearch && matchesType && matchesStatus && matchesPrice;
+    }), [attractions, search, filterType, filterStatus, filterPrice]);
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -321,19 +325,41 @@ const ManageAttractions = () => {
             <Search className="search-icon" size={16} />
             <input type="text" placeholder="Search attractions..." className="admin-search-input" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          <select
-            value={filterType}
-            onChange={e => setFilterType(e.target.value)}
-            style={{ padding: '7px 12px', borderRadius: 8, border: '1px solid var(--adm-border)', background: 'var(--adm-bg-surface)', color: 'var(--adm-text-primary)', fontSize: '0.82rem', cursor: 'pointer', minWidth: 120 }}
-          >
-            <option value="">All Types</option>
-            {TYPES.map(t => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
           <button className="admin-btn-primary" onClick={() => handleOpenModal()}>
             <Plus size={16} /> Add Attraction
           </button>
+        </div>
+      </div>
+
+      {/* ── Filter Row ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap', padding: '10px 14px', background: 'var(--adm-bg-surface)', border: '1px solid var(--adm-border)', borderRadius: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Type</span>
+          <AdminSelect value={filterType} onChange={setFilterType} width="130px" options={[{ value: '', label: 'All Types' }, ...TYPES.map(t => ({ value: t, label: t }))]} />
+        </div>
+
+        <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</span>
+          {[{ val: '', label: 'All' }, { val: 'open', label: 'Open' }, { val: 'closed', label: 'Closed' }].map(s => (
+            <button key={s.val || 'all'} onClick={() => setFilterStatus(s.val)}
+              style={{ padding: '3px 10px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', border: `1px solid ${filterStatus === s.val ? (s.val === 'open' ? '#10b981' : s.val === 'closed' ? '#ef4444' : 'var(--adm-accent)') : 'var(--adm-border)'}`, background: filterStatus === s.val ? (s.val === 'open' ? '#10b98122' : s.val === 'closed' ? '#ef444422' : 'var(--adm-accent-dim, rgba(34,107,64,0.1))') : 'transparent', color: filterStatus === s.val ? (s.val === 'open' ? '#10b981' : s.val === 'closed' ? '#ef4444' : 'var(--adm-accent)') : 'var(--adm-text-secondary)', transition: 'all 0.15s' }}>
+              {s.label}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Price</span>
+          {[{ val: '', label: 'All' }, { val: 'free', label: 'Free' }, { val: 'paid', label: 'Paid' }].map(p => (
+            <button key={p.val || 'all'} onClick={() => setFilterPrice(p.val)}
+              style={{ padding: '3px 10px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', border: `1px solid ${filterPrice === p.val ? 'var(--adm-accent)' : 'var(--adm-border)'}`, background: filterPrice === p.val ? 'var(--adm-accent-dim, rgba(34,107,64,0.1))' : 'transparent', color: filterPrice === p.val ? 'var(--adm-accent)' : 'var(--adm-text-secondary)', transition: 'all 0.15s' }}>
+              {p.label}
+            </button>
+          ))}
         </div>
       </div>
 
