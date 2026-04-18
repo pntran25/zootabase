@@ -1,13 +1,16 @@
 import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
-import { Clock, PawPrint, ChevronUp, ChevronDown, ChevronsUpDown, Users, ChevronRight, Calendar, MapPin, Download, X } from 'lucide-react';
+import { Clock, PawPrint, ChevronUp, ChevronDown, ChevronsUpDown, Users, ChevronRight, ChevronLeft, Calendar, MapPin, Download, X, LayoutDashboard, Table2 } from 'lucide-react';
+import StaffReportOverview from './StaffReportOverview';
 import AdminSelect from '../AdminSelect';
 import AdminDatePicker from '../AdminDatePicker';
 import { API_BASE_URL } from '../../../services/apiClient';
 import '../AdminTable.css';
+import '../DataReports/DataReports.css';
 import { exportSectionsToSingleSheet } from '../../../utils/exportExcel';
 
 const ROLES = ['Super Admin', 'Zoo Manager', 'Caretaker', 'Event Coordinator', 'Ticket Staff', 'Shop Manager', 'Maintenance'];
+const PAGE_SIZE = 15;
 
 const roleColors = {
   'Super Admin':       { bg: 'rgba(16,185,129,0.15)',  color: '#10b981' },
@@ -57,6 +60,7 @@ function shiftDuration(start, end) {
 }
 
 const StaffReport = () => {
+  const [activeTab, setActiveTab] = useState('overview');
   const [staffList, setStaffList] = useState([]);
   const [schedules, setSchedules] = useState([]);
   const [assignments, setAssignments] = useState([]);
@@ -75,6 +79,7 @@ const StaffReport = () => {
   const [hoursMin, setHoursMin] = useState('');
   const [hoursMax, setHoursMax] = useState('');
   const [filterHasKeeper, setFilterHasKeeper] = useState(false);
+  const [pageIndex, setPageIndex] = useState(0);
   const [filterStatus, setFilterStatus] = useState(''); // '' | 'active' | 'inactive'
 
   const getYMD = (d) => {
@@ -247,7 +252,7 @@ const StaffReport = () => {
   }, [staffList, staffHoursMap, staffAssignmentsMap, staffSchedulesMap, filterRoles, filterStaff, sortCol, sortDir, shiftMin, shiftMax, hoursMin, hoursMax, filterHasKeeper, filterStatus, dateFrom, dateTo]);
 
   const activeStaffFilterCount = [filterRoles.length > 0, !!filterStaff, shiftMin !== '', shiftMax !== '', hoursMin !== '', hoursMax !== '', filterHasKeeper, !!filterStatus].filter(Boolean).length;
-  const resetStaffFilters = () => { setFilterRoles([]); setFilterStaff(''); setShiftMin(''); setShiftMax(''); setHoursMin(''); setHoursMax(''); setFilterHasKeeper(false); setFilterStatus(''); };
+  const resetStaffFilters = () => { setFilterRoles([]); setFilterStaff(''); setShiftMin(''); setShiftMax(''); setHoursMin(''); setHoursMax(''); setFilterHasKeeper(false); setFilterStatus(''); setPageIndex(0); };
 
   const toggleSort = (col) => {
     if (sortCol === col) {
@@ -324,11 +329,13 @@ const StaffReport = () => {
                 'Status': a.EndDate ? 'Ended' : 'Active',
               }))
             );
+            const now = new Date();
+            const stamp = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}-${String(now.getMinutes()).padStart(2,'0')}`;
             exportSectionsToSingleSheet([
               { name: 'Employee Summary', data: staffData },
               { name: 'Shift Details', data: shiftData },
               { name: 'Keeper Assignments', data: assignData },
-            ], 'Employee_Report', { reportName: 'Employee Report', dateFrom, dateTo });
+            ], `Employee Report Snapshot ${stamp}`, { reportName: 'Employee Report', dateFrom, dateTo });
             toast.success('Employee report downloaded.');
           }}
         >
@@ -336,7 +343,53 @@ const StaffReport = () => {
         </button>
       </div>
 
-      {/* Filters Row 1: role chips + staff select + reset + date filters */}
+      {/* ── Tab Navigation ── */}
+      <div className="dr-tabs">
+        <button className={`dr-tab${activeTab === 'overview' ? ' active' : ''}`} onClick={() => setActiveTab('overview')}>
+          <LayoutDashboard size={14} /> Overview
+        </button>
+        <button className={`dr-tab${activeTab === 'table' ? ' active' : ''}`} onClick={() => setActiveTab('table')}>
+          <Table2 size={14} /> Employee Table
+        </button>
+      </div>
+
+      {activeTab === 'overview' && (
+        <StaffReportOverview staffList={staffList} schedules={schedules} assignments={assignments} />
+      )}
+
+      {activeTab === 'table' && (<>
+      {/* Filters Row 1: date range filter */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
+          {dateFilter === 'custom' && (
+            <>
+              <AdminDatePicker value={customStart} onChange={setCustomStart} placeholder="Start date" maxDate={customEnd || TODAY} />
+              <span style={{ color: 'var(--adm-text-secondary)', fontSize: '0.82rem' }}>to</span>
+              <AdminDatePicker value={customEnd} onChange={setCustomEnd} placeholder="End date" minDate={customStart || undefined} maxDate={TODAY} />
+            </>
+          )}
+          <AdminSelect
+            value={dateFilter}
+            onChange={v => { setDateFilter(v); setCustomStart(''); setCustomEnd(''); }}
+            width="148px"
+            options={[
+              { value: 'today', label: 'Today' },
+              { value: 'week', label: 'This Week' },
+              { value: 'month', label: 'This Month' },
+              { value: 'custom', label: 'Custom Range' },
+            ]}
+          />
+        </div>
+        {activeStaffFilterCount > 0 && (
+          <button onClick={resetStaffFilters}
+            style={{ padding: '5px 12px', borderRadius: 6, border: '1px solid rgba(239,68,68,0.4)', background: 'rgba(239,68,68,0.08)', color: '#ef4444', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 5, marginLeft: 'auto' }}>
+            <X size={12} /> Reset
+            <span style={{ background: '#ef4444', color: '#fff', borderRadius: 10, padding: '0 6px', fontSize: '0.68rem', marginLeft: 2 }}>{activeStaffFilterCount}</span>
+          </button>
+        )}
+      </div>
+
+      {/* Filters Row 2: role chips + staff select */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
         {/* Role chips */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
@@ -361,33 +414,6 @@ const StaffReport = () => {
           searchable
           width={200}
         />
-        {activeStaffFilterCount > 0 && (
-          <button onClick={resetStaffFilters}
-            style={{ padding: '5px 12px', borderRadius: 6, border: '1px solid rgba(239,68,68,0.4)', background: 'rgba(239,68,68,0.08)', color: '#ef4444', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 5 }}>
-            <X size={12} /> Reset
-            <span style={{ background: '#ef4444', color: '#fff', borderRadius: 10, padding: '0 6px', fontSize: '0.68rem', marginLeft: 2 }}>{activeStaffFilterCount}</span>
-          </button>
-        )}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
-          {dateFilter === 'custom' && (
-            <>
-              <AdminDatePicker value={customStart} onChange={setCustomStart} placeholder="Start date" maxDate={customEnd || TODAY} />
-              <span style={{ color: 'var(--adm-text-secondary)', fontSize: '0.82rem' }}>to</span>
-              <AdminDatePicker value={customEnd} onChange={setCustomEnd} placeholder="End date" minDate={customStart || undefined} maxDate={TODAY} />
-            </>
-          )}
-          <AdminSelect
-            value={dateFilter}
-            onChange={v => { setDateFilter(v); setCustomStart(''); setCustomEnd(''); }}
-            width="148px"
-            options={[
-              { value: 'today', label: 'Today' },
-              { value: 'week', label: 'This Week' },
-              { value: 'month', label: 'This Month' },
-              { value: 'custom', label: 'Custom Range' },
-            ]}
-          />
-        </div>
       </div>
 
       {/* Filters Row 2: advanced range filters */}
@@ -487,7 +513,7 @@ const StaffReport = () => {
                   </td>
                 </tr>
               ) : (
-                reportRows.map(row => {
+                reportRows.slice(pageIndex * PAGE_SIZE, (pageIndex + 1) * PAGE_SIZE).map(row => {
                   const rc = roleColors[row.Role] || { bg: 'var(--adm-accent-dim)', color: 'var(--adm-accent)' };
                   const isExpanded = !!expandedRows[row.StaffID];
                   return [
@@ -508,7 +534,7 @@ const StaffReport = () => {
                       </td>
                       <td style={{ fontWeight: 600, color: 'var(--adm-text-primary)' }}>{row.name}</td>
                       <td>
-                        <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 600, background: rc.bg, color: rc.color }}>
+                        <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 600, background: rc.bg, color: rc.color, whiteSpace: 'nowrap' }}>
                           {row.Role}
                         </span>
                       </td>
@@ -679,6 +705,48 @@ const StaffReport = () => {
           </table>
         </div>
       </div>
+      {/* Pagination controls */}
+      {(() => {
+        const pageCount = Math.ceil(reportRows.length / PAGE_SIZE);
+        if (reportRows.length === 0 || pageCount <= 1) return null;
+        let pages = [];
+        if (pageCount <= 6) {
+          pages = Array.from({ length: pageCount }, (_, i) => i);
+        } else {
+          if (pageIndex <= 2) {
+            pages = [0, 1, 2, 3, 4, '...', pageCount - 1];
+          } else if (pageIndex >= pageCount - 3) {
+            pages = [0, '...', pageCount - 5, pageCount - 4, pageCount - 3, pageCount - 2, pageCount - 1];
+          } else {
+            pages = [0, '...', pageIndex - 1, pageIndex, pageIndex + 1, '...', pageCount - 1];
+          }
+        }
+        return (
+          <div className="admin-table-pagination" style={{ borderTop: '1px solid var(--adm-border)' }}>
+            <span className="admin-pagination-info">
+              Page {pageIndex + 1} of {pageCount} · {reportRows.length} employees
+            </span>
+            <div className="admin-pagination-controls">
+              <button className="admin-pagination-btn" onClick={() => setPageIndex(pageIndex - 1)} disabled={pageIndex === 0}>
+                <ChevronLeft size={14} />
+              </button>
+              {pages.map((p, idx) => (
+                p === '...' ? (
+                  <span key={`ellipsis-${idx}`} style={{ padding: '0 8px', color: 'var(--adm-text-secondary)' }}>...</span>
+                ) : (
+                  <button key={p} className={`admin-pagination-btn${pageIndex === p ? ' active' : ''}`} onClick={() => setPageIndex(p)}>
+                    {p + 1}
+                  </button>
+                )
+              ))}
+              <button className="admin-pagination-btn" onClick={() => setPageIndex(pageIndex + 1)} disabled={pageIndex >= pageCount - 1}>
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        );
+      })()}
+      </>)}
     </div>
   );
 };

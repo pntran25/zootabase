@@ -3,7 +3,7 @@ import '../AdminTable.css';
 import '../DataReports/DataReports.css';
 import './AnimalReport.css';
 import {
-  ClipboardList, ChevronDown, ChevronRight, PawPrint, HeartPulse,
+  ClipboardList, ChevronDown, ChevronRight, ChevronLeft, PawPrint, HeartPulse,
   UtensilsCrossed, Search, AlertTriangle, CheckCircle, Calendar, X,
   ChevronUp, ChevronsUpDown, LayoutDashboard, Table2, Bell
 } from 'lucide-react';
@@ -35,6 +35,7 @@ const scoreLabel = (s) => {
 };
 
 const healthPriority = { Critical: 0, Poor: 1, Fair: 2, Good: 3, Excellent: 4 };
+const PAGE_SIZE = 15;
 
 const healthColor = {
   Excellent: '#10b981',
@@ -82,6 +83,7 @@ const AnimalReport = () => {
   const [filterSex, setFilterSex] = useState('');
   const [ageMin, setAgeMin] = useState('');
   const [ageMax, setAgeMax] = useState('');
+  const [animalPage, setAnimalPage] = useState(0);
 
   const getYMD = (d) => {
     const y = d.getFullYear();
@@ -451,7 +453,7 @@ const AnimalReport = () => {
                     </td>
                   </tr>
                 ) : (
-                  filteredAnimals.map(an => {
+                  filteredAnimals.slice(animalPage * PAGE_SIZE, (animalPage + 1) * PAGE_SIZE).map(an => {
                     const hc = healthColor[an.HealthStatus] || '#6b7280';
                     const id = String(an.AnimalID);
                     const isExpanded = !!expandedRows[id];
@@ -667,6 +669,47 @@ const AnimalReport = () => {
           )}
         </div>
       </div>
+      {/* Pagination controls */}
+      {activeTab === 'animals' && (() => {
+        const pageCount = Math.ceil(filteredAnimals.length / PAGE_SIZE);
+        if (filteredAnimals.length === 0 || pageCount <= 1) return null;
+        let pages = [];
+        if (pageCount <= 6) {
+          pages = Array.from({ length: pageCount }, (_, i) => i);
+        } else {
+          if (animalPage <= 2) {
+            pages = [0, 1, 2, 3, 4, '...', pageCount - 1];
+          } else if (animalPage >= pageCount - 3) {
+            pages = [0, '...', pageCount - 5, pageCount - 4, pageCount - 3, pageCount - 2, pageCount - 1];
+          } else {
+            pages = [0, '...', animalPage - 1, animalPage, animalPage + 1, '...', pageCount - 1];
+          }
+        }
+        return (
+          <div className="admin-table-pagination" style={{ borderTop: '1px solid var(--adm-border)' }}>
+            <span className="admin-pagination-info">
+              Page {animalPage + 1} of {pageCount} · {filteredAnimals.length} animals
+            </span>
+            <div className="admin-pagination-controls">
+              <button className="admin-pagination-btn" onClick={() => setAnimalPage(animalPage - 1)} disabled={animalPage === 0}>
+                <ChevronLeft size={14} />
+              </button>
+              {pages.map((p, idx) => (
+                p === '...' ? (
+                  <span key={`ellipsis-${idx}`} style={{ padding: '0 8px', color: 'var(--adm-text-secondary)' }}>...</span>
+                ) : (
+                  <button key={p} className={`admin-pagination-btn${animalPage === p ? ' active' : ''}`} onClick={() => setAnimalPage(p)}>
+                    {p + 1}
+                  </button>
+                )
+              ))}
+              <button className="admin-pagination-btn" onClick={() => setAnimalPage(animalPage + 1)} disabled={animalPage >= pageCount - 1}>
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };

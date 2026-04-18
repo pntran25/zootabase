@@ -238,17 +238,77 @@ router.put('/alerts/:id/resolve', verifyToken, async (req, res) => {
 router.get('/animal-report-summary', async (req, res) => {
     try {
         const pool = await connectToDb();
+        const { startDate, endDate } = req.query;
+        const hasDateFilter = startDate && endDate;
+
+        // --- Date-filtered queries (health records, alerts) ---
+        let statsQuery, healthDistQuery, alertStatusQuery, recentAlertsQuery;
+
+        if (hasDateFilter) {
+            statsQuery = `
+              SELECT
+                (SELECT COUNT(*) FROM Animal WHERE DeletedAt IS NULL) AS TotalAnimals,
+                (SELECT COUNT(*) FROM HealthAlert WHERE IsResolved = 0 AND CreatedAt >= @startDate AND CreatedAt < DATEADD(DAY, 1, CAST(@endDate AS DATE))) AS UnresolvedAlerts,
+                (SELECT COUNT(*) FROM AnimalHealthRecord WHERE DeletedAt IS NULL AND CheckupDate >= @startDate AND CheckupDate < DATEADD(DAY, 1, CAST(@endDate AS DATE))) AS HealthCheckups,
+                (SELECT AVG(CAST(HealthScore AS FLOAT)) FROM AnimalHealthRecord WHERE DeletedAt IS NULL AND CheckupDate >= @startDate AND CheckupDate < DATEADD(DAY, 1, CAST(@endDate AS DATE))) AS AvgHealthScore
+            `;
+            healthDistQuery = `
+              SELECT
+                CASE
+                  WHEN HealthScore >= 90 THEN 'Excellent'
+                  WHEN HealthScore >= 70 THEN 'Good'
+                  WHEN HealthScore >= 50 THEN 'Fair'
+                  ELSE 'Critical'
+                END AS HealthStatus,
+                COUNT(*) AS Count
+              FROM AnimalHealthRecord
+              WHERE DeletedAt IS NULL AND CheckupDate >= @startDate AND CheckupDate < DATEADD(DAY, 1, CAST(@endDate AS DATE))
+              GROUP BY CASE
+                  WHEN HealthScore >= 90 THEN 'Excellent'
+                  WHEN HealthScore >= 70 THEN 'Good'
+                  WHEN HealthScore >= 50 THEN 'Fair'
+                  ELSE 'Critical'
+                END
+            `;
+            alertStatusQuery = `
+              SELECT
+                SUM(CASE WHEN IsResolved = 0 THEN 1 ELSE 0 END) AS Active,
+                SUM(CASE WHEN IsResolved = 1 THEN 1 ELSE 0 END) AS Resolved
+              FROM HealthAlert ha
+              JOIN Animal a ON ha.AnimalID = a.AnimalID
+              WHERE a.DeletedAt IS NULL AND ha.CreatedAt >= @startDate AND ha.CreatedAt < DATEADD(DAY, 1, CAST(@endDate AS DATE))
+            `;
+            recentAlertsQuery = `
+              SELECT TOP 10 ha.AlertID, ha.AlertType, ha.AlertMessage, ha.CreatedAt, ha.IsResolved,
+                     a.Name AS AnimalName, a.Species
+              FROM HealthAlert ha
+              JOIN Animal a ON ha.AnimalID = a.AnimalID
+              WHERE a.DeletedAt IS NULL AND ha.IsResolved = 0
+                AND ha.CreatedAt >= @startDate AND ha.CreatedAt < DATEADD(DAY, 1, CAST(@endDate AS DATE))
+              ORDER BY ha.CreatedAt DESC
+            `;
+        }
+
+        // Build requests
+        const makeReq = () => {
+            const r = pool.request();
+            if (hasDateFilter) {
+                r.input('startDate', sql.Date, startDate);
+                r.input('endDate', sql.Date, endDate);
+            }
+            return r;
+        };
 
         const [stats, healthDist, speciesDist, exhibitDist, genderDist, endangeredDist, ageDist, recentAlerts, alertStatusDist] = await Promise.all([
-            pool.request().query(Q.healthReportStats),
-            pool.request().query(Q.summaryHealthDistribution),
+            makeReq().query(hasDateFilter ? statsQuery : Q.healthReportStats),
+            makeReq().query(hasDateFilter ? healthDistQuery : Q.summaryHealthDistribution),
             pool.request().query(Q.summarySpeciesDistribution),
             pool.request().query(Q.summaryExhibitDistribution),
             pool.request().query(Q.summaryGenderDistribution),
             pool.request().query(Q.summaryEndangeredDistribution),
             pool.request().query(Q.summaryAgeDistribution),
-            pool.request().query(Q.summaryRecentAlerts),
-            pool.request().query(Q.summaryAlertStatusDistribution),
+            makeReq().query(hasDateFilter ? recentAlertsQuery : Q.summaryRecentAlerts),
+            makeReq().query(hasDateFilter ? alertStatusQuery : Q.summaryAlertStatusDistribution),
         ]);
 
         res.json({
@@ -267,6 +327,7 @@ router.get('/animal-report-summary', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
 
 // ═══════════════════════════════════════════════════════════════════
 // AGGREGATE HEALTH REPORT (all animals, for the Health Report page)

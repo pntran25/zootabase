@@ -18,7 +18,11 @@ export const getAnimalReport = (animalId) => apiGet(`/api/animal-health/report/$
 export const getHealthReport = () => apiGet('/api/animal-health/health-report');
 
 // ── Animal Report Summary (overview charts) ─────────────────────────
-export const getAnimalReportSummary = () => apiGet('/api/animal-health/animal-report-summary');
+export const getAnimalReportSummary = (startDate, endDate) => {
+  let url = '/api/animal-health/animal-report-summary';
+  if (startDate && endDate) url += `?startDate=${startDate}&endDate=${endDate}`;
+  return apiGet(url);
+};
 
 // ── Dropdown helpers ────────────────────────────────────────────────
 export const getAnimalsForDropdown = () => apiGet('/api/animal-health/animals-list');
