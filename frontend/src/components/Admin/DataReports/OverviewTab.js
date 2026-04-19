@@ -21,13 +21,13 @@ const fmtKpi      = (v) => `$${Math.round(Number(v)).toLocaleString()}`;
 
 const getPresetRange = (preset) => {
   const now   = new Date();
-  const today = now.toISOString().split('T')[0];
-  if (preset === '90d') { const s = new Date(now); s.setDate(s.getDate() - 90); return { start: s.toISOString().split('T')[0], end: today }; }
-  if (preset === '6m')  { const s = new Date(now); s.setMonth(s.getMonth() - 6); return { start: s.toISOString().split('T')[0], end: today }; }
-  if (preset === '1y')  { const s = new Date(now); s.setFullYear(s.getFullYear() - 1); return { start: s.toISOString().split('T')[0], end: today }; }
+  const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+  if (preset === '90d') { const s = new Date(now); s.setDate(s.getDate() - 90); return { start: new Date(s.getTime() - s.getTimezoneOffset() * 60000).toISOString().split('T')[0], end: today }; }
+  if (preset === '6m')  { const s = new Date(now); s.setMonth(s.getMonth() - 6); return { start: new Date(s.getTime() - s.getTimezoneOffset() * 60000).toISOString().split('T')[0], end: today }; }
+  if (preset === '1y')  { const s = new Date(now); s.setFullYear(s.getFullYear() - 1); return { start: new Date(s.getTime() - s.getTimezoneOffset() * 60000).toISOString().split('T')[0], end: today }; }
   // default: 30d
   const s = new Date(now); s.setDate(s.getDate() - 30);
-  return { start: s.toISOString().split('T')[0], end: today };
+  return { start: new Date(s.getTime() - s.getTimezoneOffset() * 60000).toISOString().split('T')[0], end: today };
 };
 
 const LineTooltip = ({ active, payload, label }) => {
@@ -68,7 +68,7 @@ const BarTooltip = ({ active, payload, label }) => {
   );
 };
 
-const TODAY = new Date().toISOString().split('T')[0];
+const TODAY = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
 
 const PRESETS = [
   { id: '30d', label: 'Last 30 Days' },
@@ -189,9 +189,11 @@ const OverviewTab = () => {
                     </Pie>
                     <Tooltip content={<PieTooltip total={data.kpis.totalRevenue} />} />
                     <Legend
+                      iconType="circle"
+                      iconSize={8}
                       formatter={(value, entry) => (
-                        <span style={{ color: 'var(--adm-text-secondary)', fontSize: '0.78rem' }}>
-                          {value} {data.kpis.totalRevenue > 0 ? Math.round((entry.payload.value / data.kpis.totalRevenue) * 100) : 0}%
+                        <span style={{ color: 'var(--adm-text-secondary)', fontSize: '0.75rem' }}>
+                          {value} <strong style={{ color: 'var(--adm-text-primary)' }}>{data.kpis.totalRevenue > 0 ? Math.round((entry.payload.value / data.kpis.totalRevenue) * 100) : 0}%</strong>
                         </span>
                       )}
                     />

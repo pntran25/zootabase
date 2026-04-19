@@ -395,6 +395,8 @@ async function runMigrations(pool) {
 		    DateSubmitted DATE NOT NULL DEFAULT CONVERT(DATE, GETUTCDATE()),
 		    CreatedAt     DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME()
 		  )`,
+		`IF COL_LENGTH('Orders','CustomerID') IS NULL ALTER TABLE Orders ADD CustomerID INT NULL`,
+		`IF COL_LENGTH('TicketOrders','CustomerID') IS NULL ALTER TABLE TicketOrders ADD CustomerID INT NULL`,
 	];
 
 	for (const sql of steps) {

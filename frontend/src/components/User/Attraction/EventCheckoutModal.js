@@ -88,7 +88,7 @@ const EventCheckoutModal = ({ isOpen, onClose, event, onOrderPlaced }) => {
   const fmtExpiry = v => { const d = v.replace(/\D/g,'').slice(0,4); return d.length > 2 ? `${d.slice(0,2)}/${d.slice(2)}` : d; };
   const fmtPhone  = v => { const d = v.replace(/\D/g,'').slice(0,10); if (d.length < 4) return d; if (d.length < 7) return `(${d.slice(0,3)}) ${d.slice(3)}`; return `(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`; };
 
-  const todayISO   = new Date().toISOString().split('T')[0];
+  const todayISO   = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
   const minDateISO = event?.date > todayISO ? event.date : todayISO;
   const spotsRemaining = dateSpots ? dateSpots.remaining : (event?.spotsLeft ?? 10);
   const isSoldOut = dateSpots !== null && spotsRemaining <= 0;

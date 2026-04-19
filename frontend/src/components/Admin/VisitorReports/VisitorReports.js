@@ -18,7 +18,7 @@ const VisitorReports = () => {
   };
 
   useEffect(() => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
     loadData(today, today);
   }, []);
 
@@ -29,21 +29,21 @@ const VisitorReports = () => {
     let start, end;
 
     if (preset === 'today') {
-      start = end = today.toISOString().split('T')[0];
+      start = end = new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString().split('T')[0];
     }
 
     if (preset === 'week') {
       const weekAgo = new Date(today);
       weekAgo.setDate(today.getDate() - 7);
-      start = weekAgo.toISOString().split('T')[0];
-      end = today.toISOString().split('T')[0];
+      start = new Date(weekAgo.getTime() - weekAgo.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+      end = new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString().split('T')[0];
     }
 
     if (preset === 'month') {
       const monthAgo = new Date(today);
       monthAgo.setDate(today.getDate() - 30);
-      start = monthAgo.toISOString().split('T')[0];
-      end = today.toISOString().split('T')[0];
+      start = new Date(monthAgo.getTime() - monthAgo.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+      end = new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString().split('T')[0];
     }
 
     loadData(start, end);

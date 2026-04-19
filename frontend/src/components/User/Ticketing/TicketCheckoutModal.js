@@ -128,7 +128,7 @@ const TicketCheckoutModal = ({
         total,
       });
 
-      toast.success('Your tickets have been booked! Check your email for confirmation.', { duration: 6000 });
+      toast.success(`Your tickets have been booked! Confirmation will be sent to ${contact.email}.`, { duration: 6000 });
       onOrderPlaced();
       onClose();
     } catch (err) {

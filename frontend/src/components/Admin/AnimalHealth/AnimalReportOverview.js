@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { PawPrint, HeartPulse, AlertTriangle, Stethoscope, ShieldAlert, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getAnimalReportSummary } from '../../../services/animalHealthService';
@@ -18,31 +18,20 @@ const PRESET_SUB = { '30d': 'last 30 days', '90d': 'last 90 days', '6m': 'last 6
 
 const getPresetRange = (preset) => {
   const now = new Date();
-  const today = now.toISOString().split('T')[0];
-  if (preset === '90d') { const s = new Date(now); s.setDate(s.getDate() - 90); return { start: s.toISOString().split('T')[0], end: today }; }
-  if (preset === '6m')  { const s = new Date(now); s.setMonth(s.getMonth() - 6); return { start: s.toISOString().split('T')[0], end: today }; }
-  if (preset === '1y')  { const s = new Date(now); s.setFullYear(s.getFullYear() - 1); return { start: s.toISOString().split('T')[0], end: today }; }
+  const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+  if (preset === '90d') { const s = new Date(now); s.setDate(s.getDate() - 90); return { start: new Date(s.getTime() - s.getTimezoneOffset() * 60000).toISOString().split('T')[0], end: today }; }
+  if (preset === '6m')  { const s = new Date(now); s.setMonth(s.getMonth() - 6); return { start: new Date(s.getTime() - s.getTimezoneOffset() * 60000).toISOString().split('T')[0], end: today }; }
+  if (preset === '1y')  { const s = new Date(now); s.setFullYear(s.getFullYear() - 1); return { start: new Date(s.getTime() - s.getTimezoneOffset() * 60000).toISOString().split('T')[0], end: today }; }
   const s = new Date(now); s.setDate(s.getDate() - 30);
-  return { start: s.toISOString().split('T')[0], end: today };
+  return { start: new Date(s.getTime() - s.getTimezoneOffset() * 60000).toISOString().split('T')[0], end: today };
 };
 
-const TODAY = new Date().toISOString().split('T')[0];
+const TODAY = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
 
 const HEALTH_COLORS = { Excellent: '#10b981', Good: '#3b82f6', Fair: '#f59e0b', Critical: '#ef4444' };
 const GENDER_COLORS = { Male: '#3b82f6', Female: '#ec4899' };
 
-const RADIAN = Math.PI / 180;
-const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, name, value }) => {
-  const radius = outerRadius + 28;
-  const x = cx + radius * Math.cos(-midAngle * RADIAN);
-  const y = cy + radius * Math.sin(-midAngle * RADIAN);
-  return (
-    <text x={x} y={y} fill="var(--adm-text-secondary)" textAnchor={x > cx ? 'start' : 'end'}
-      dominantBaseline="central" fontSize={14} fontWeight={600}>
-      {name} ({value})
-    </text>
-  );
-};
+
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
@@ -168,10 +157,19 @@ const AnimalReportOverview = () => {
               {healthData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={280}>
                   <PieChart>
-                    <Pie data={healthData} cx="50%" cy="50%" innerRadius={55} outerRadius={95} paddingAngle={3} dataKey="value" label={renderCustomLabel} labelLine={false} isAnimationActive={true}>
+                    <Pie data={healthData} cx="50%" cy="50%" innerRadius={55} outerRadius={95} paddingAngle={3} dataKey="value" isAnimationActive={true}>
                       {healthData.map((d, i) => <Cell key={i} fill={HEALTH_COLORS[d.name] || '#6b7280'} />)}
                     </Pie>
                     <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(136,136,136,0.15)' }} />
+                    <Legend
+                      iconType="circle"
+                      iconSize={8}
+                      formatter={(value, entry) => (
+                        <span style={{ color: 'var(--adm-text-secondary)', fontSize: '0.75rem' }}>
+                          {value} <strong style={{ color: 'var(--adm-text-primary)' }}>{entry.payload.value}</strong>
+                        </span>
+                      )}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               ) : <div className="ov-no-data">No health data for this period</div>}
@@ -201,10 +199,19 @@ const AnimalReportOverview = () => {
               {genderData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={280}>
                   <PieChart>
-                    <Pie data={genderData} cx="50%" cy="50%" innerRadius={55} outerRadius={95} paddingAngle={4} dataKey="value" label={renderCustomLabel} labelLine={false} isAnimationActive={true}>
+                    <Pie data={genderData} cx="50%" cy="50%" innerRadius={55} outerRadius={95} paddingAngle={4} dataKey="value" isAnimationActive={true}>
                       {genderData.map((d, i) => <Cell key={i} fill={GENDER_COLORS[d.name] || '#6b7280'} />)}
                     </Pie>
                     <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(136,136,136,0.15)' }} />
+                    <Legend
+                      iconType="circle"
+                      iconSize={8}
+                      formatter={(value, entry) => (
+                        <span style={{ color: 'var(--adm-text-secondary)', fontSize: '0.75rem' }}>
+                          {value} <strong style={{ color: 'var(--adm-text-primary)' }}>{entry.payload.value}</strong>
+                        </span>
+                      )}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               ) : <div className="ov-no-data">No gender data</div>}
@@ -216,11 +223,20 @@ const AnimalReportOverview = () => {
               {alertStatusData.length > 0 && (alertStatusData[0].value > 0 || alertStatusData[1].value > 0) ? (
                 <ResponsiveContainer width="100%" height={280}>
                   <PieChart>
-                    <Pie data={alertStatusData} cx="50%" cy="50%" innerRadius={55} outerRadius={95} paddingAngle={4} dataKey="value" label={renderCustomLabel} labelLine={false} isAnimationActive={true}>
+                    <Pie data={alertStatusData} cx="50%" cy="50%" innerRadius={55} outerRadius={95} paddingAngle={4} dataKey="value" isAnimationActive={true}>
                       <Cell fill="#ef4444" />
                       <Cell fill="#10b981" />
                     </Pie>
                     <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(136,136,136,0.15)' }} />
+                    <Legend
+                      iconType="circle"
+                      iconSize={8}
+                      formatter={(value, entry) => (
+                        <span style={{ color: 'var(--adm-text-secondary)', fontSize: '0.75rem' }}>
+                          {value} <strong style={{ color: 'var(--adm-text-primary)' }}>{entry.payload.value}</strong>
+                        </span>
+                      )}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               ) : <div className="ov-no-data">No alert data for this period</div>}
@@ -250,11 +266,20 @@ const AnimalReportOverview = () => {
               {endangeredData.length > 0 && (endangeredData[0].value > 0 || endangeredData[1].value > 0) ? (
                 <ResponsiveContainer width="100%" height={240}>
                   <PieChart>
-                    <Pie data={endangeredData} cx="50%" cy="50%" innerRadius={50} outerRadius={85} paddingAngle={4} dataKey="value" label={renderCustomLabel} labelLine={false} isAnimationActive={true}>
+                    <Pie data={endangeredData} cx="50%" cy="50%" innerRadius={50} outerRadius={85} paddingAngle={4} dataKey="value" isAnimationActive={true}>
                       <Cell fill="#ef4444" />
                       <Cell fill="#10b981" />
                     </Pie>
                     <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(136,136,136,0.15)' }} />
+                    <Legend
+                      iconType="circle"
+                      iconSize={8}
+                      formatter={(value, entry) => (
+                        <span style={{ color: 'var(--adm-text-secondary)', fontSize: '0.75rem' }}>
+                          {value} <strong style={{ color: 'var(--adm-text-primary)' }}>{entry.payload.value}</strong>
+                        </span>
+                      )}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               ) : <div className="ov-no-data">No endangered data</div>}

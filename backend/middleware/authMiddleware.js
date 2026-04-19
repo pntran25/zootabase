@@ -101,7 +101,15 @@ const optionalAuth = async (req, res, next) => {
             req.userProfile = staffResult.recordset[0];
             req.userProfile.isStaff = true;
         } else {
-            req.userProfile = { FirstName: decodedToken.name || decodedToken.email, LastName: '', isStaff: false };
+            const custResult = await pool.request()
+                .input('FirebaseUid', decodedToken.uid)
+                .query(`SELECT CustomerID, FullName, Email FROM Customer WHERE FirebaseUid = @FirebaseUid`);
+            if (custResult.recordset.length > 0) {
+                req.userProfile = custResult.recordset[0];
+                req.userProfile.isStaff = false;
+            } else {
+                req.userProfile = { FirstName: decodedToken.name || decodedToken.email, LastName: '', isStaff: false };
+            }
         }
     } catch {
         req.userProfile = null;

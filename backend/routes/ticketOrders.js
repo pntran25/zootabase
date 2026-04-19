@@ -3,9 +3,10 @@ const router = express.Router();
 const { connectToDb } = require('../services/admin');
 const sql = require('mssql');
 const Q = require('../queries/ticketQueries');
+const { optionalAuth } = require('../middleware/authMiddleware');
 
 // POST /api/ticket-orders — place a ticket order
-router.post('/', async (req, res) => {
+router.post('/', optionalAuth, async (req, res) => {
     const {
         firstName, lastName, email, phone,
         addressLine1, addressLine2, city, stateProvince, zipCode,
@@ -31,6 +32,7 @@ router.post('/', async (req, res) => {
     try {
         const pool = await connectToDb();
         const result = await pool.request()
+            .input('CustomerID',          sql.Int,               req.userProfile?.CustomerID || null)
             .input('FirstName',           sql.NVarChar(50),      firstName)
             .input('LastName',            sql.NVarChar(50),      lastName)
             .input('Email',               sql.NVarChar(200),     email)

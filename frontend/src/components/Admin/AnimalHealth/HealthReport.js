@@ -280,9 +280,9 @@ const HealthReport = () => {
             </div>
             <div className="hr-date-filters">
               <label className="hr-date-label">From</label>
-              <input type="date" className="hr-date-input" value={dateFrom} max={new Date().toISOString().split('T')[0]} onChange={e => setDateFrom(e.target.value)} />
+              <input type="date" className="hr-date-input" value={dateFrom} max={new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0]} onChange={e => setDateFrom(e.target.value)} />
               <label className="hr-date-label">To</label>
-              <input type="date" className="hr-date-input" value={dateTo} max={new Date().toISOString().split('T')[0]} onChange={e => setDateTo(e.target.value)} />
+              <input type="date" className="hr-date-input" value={dateTo} max={new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0]} onChange={e => setDateTo(e.target.value)} />
               {(dateFrom || dateTo) && (
                 <button className="hr-filter-btn hr-filter-clear" onClick={() => { setDateFrom(''); setDateTo(''); }}>Clear</button>
               )}

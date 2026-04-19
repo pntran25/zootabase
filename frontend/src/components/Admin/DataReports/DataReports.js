@@ -32,8 +32,8 @@ const SortIcon = ({ column }) => {
   return (
     <span className="sort-icon">
       {column.getIsSorted() === 'asc' ? <ChevronUp size={12} /> :
-       column.getIsSorted() === 'desc' ? <ChevronDown size={12} /> :
-       <ChevronsUpDown size={12} />}
+        column.getIsSorted() === 'desc' ? <ChevronDown size={12} /> :
+          <ChevronsUpDown size={12} />}
     </span>
   );
 };
@@ -189,8 +189,8 @@ const TicketDetailModal = ({ ticketOrderId, onClose }) => {
                 <span>Category</span><span>Qty</span><span>Subtotal</span>
               </div>
               {[
-                ['Adult',  order.AdultQty,  order.AdultUnitPrice],
-                ['Child',  order.ChildQty,  order.ChildUnitPrice],
+                ['Adult', order.AdultQty, order.AdultUnitPrice],
+                ['Child', order.ChildQty, order.ChildUnitPrice],
                 ['Senior', order.SeniorQty, order.SeniorUnitPrice],
               ].filter(([, qty]) => qty > 0).map(([cat, qty, unitPrice]) => {
                 const subtotal = unitPrice != null ? `$${(Number(unitPrice) * qty).toFixed(2)}` : '—';
@@ -443,52 +443,52 @@ const ReportTable = ({ data, columns, sorting, setSorting, loading, emptyText, s
 
   return (
     <div className="admin-table-container">
-        {loading && data.length === 0 ? (
-          <div className="admin-table-empty">Loading transactions...</div>
-        ) : data.length === 0 ? (
-          <div className="admin-table-empty">{emptyText}</div>
-        ) : (
-          <>
-            <table className="admin-table">
-              <thead>
-                {table.getHeaderGroups().map(hg => (
-                  <tr key={hg.id}>
-                    {hg.headers.map(h => (
-                      <th key={h.id}
-                        style={{ width: h.column.getSize() !== 150 ? h.column.getSize() : undefined, cursor: h.column.getCanSort() ? 'pointer' : 'default' }}
-                        onClick={h.column.getToggleSortingHandler()}>
-                        <div className="th-content">
-                          {flexRender(h.column.columnDef.header, h.getContext())}
-                          <SortIcon column={h.column} />
-                        </div>
-                      </th>
-                    ))}
-                  </tr>
-                ))}
-              </thead>
-              <tbody>
-                {table.getRowModel().rows.map(row => (
-                  <tr key={row.id}>
-                    {row.getVisibleCells().map(cell => (
-                      <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <PaginationControls
-              totalCount={serverTotal}
-              pageIndex={currentPage - 1}
-              setPageIndex={idx => onPageChange(idx + 1)}
-            />
-          </>
-        )}
+      {loading && data.length === 0 ? (
+        <div className="admin-table-empty">Loading transactions...</div>
+      ) : data.length === 0 ? (
+        <div className="admin-table-empty">{emptyText}</div>
+      ) : (
+        <>
+          <table className="admin-table">
+            <thead>
+              {table.getHeaderGroups().map(hg => (
+                <tr key={hg.id}>
+                  {hg.headers.map(h => (
+                    <th key={h.id}
+                      style={{ width: h.column.getSize() !== 150 ? h.column.getSize() : undefined, cursor: h.column.getCanSort() ? 'pointer' : 'default' }}
+                      onClick={h.column.getToggleSortingHandler()}>
+                      <div className="th-content">
+                        {flexRender(h.column.columnDef.header, h.getContext())}
+                        <SortIcon column={h.column} />
+                      </div>
+                    </th>
+                  ))}
+                </tr>
+              ))}
+            </thead>
+            <tbody>
+              {table.getRowModel().rows.map(row => (
+                <tr key={row.id}>
+                  {row.getVisibleCells().map(cell => (
+                    <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <PaginationControls
+            totalCount={serverTotal}
+            pageIndex={currentPage - 1}
+            setPageIndex={idx => onPageChange(idx + 1)}
+          />
+        </>
+      )}
     </div>
   );
 };
 
 // ── Date filter helpers ────────────────────────────────────────────
-const TODAY = new Date().toISOString().split('T')[0];
+const TODAY = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
 
 const computeDateRange = (dateFilter, customStart, customEnd) => {
   const now = new Date();
@@ -517,7 +517,7 @@ const DataReports = () => {
   // Extended filters
   const [revenueMin, setRevenueMin] = useState('');
   const [revenueMax, setRevenueMax] = useState('');
-  const [activeChannels, setActiveChannels] = useState(['shop','tickets','memberships','events']);
+  const [activeChannels, setActiveChannels] = useState(['shop', 'tickets', 'memberships', 'events']);
   // Tab-specific filters (client-side, applied to current page)
   const [filterTicketType, setFilterTicketType] = useState('');
   const [filterEventCategory, setFilterEventCategory] = useState('');
@@ -526,14 +526,14 @@ const DataReports = () => {
 
   const setPresetDates = (days) => {
     const now = new Date();
-    const to = now.toISOString().split('T')[0];
+    const to = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split('T')[0];
     let from;
     if (days === '365') {
-      const d = new Date(now); d.setFullYear(d.getFullYear() - 1); from = d.toISOString().split('T')[0];
+      const d = new Date(now); d.setFullYear(d.getFullYear() - 1); from = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split('T')[0];
     } else if (days === '180') {
-      const d = new Date(now); d.setDate(d.getDate() - 180); from = d.toISOString().split('T')[0];
+      const d = new Date(now); d.setDate(d.getDate() - 180); from = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split('T')[0];
     } else {
-      const d = new Date(now); d.setDate(d.getDate() - Number(days)); from = d.toISOString().split('T')[0];
+      const d = new Date(now); d.setDate(d.getDate() - Number(days)); from = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split('T')[0];
     }
     setDateFilter('custom');
     setCustomStart(from);
@@ -591,7 +591,7 @@ const DataReports = () => {
     const p = new URLSearchParams({ limit, offset });
     if (debouncedSearch) p.set('search', debouncedSearch);
     if (dateFrom) p.set('dateFrom', dateFrom);
-    if (dateTo)   p.set('dateTo', dateTo);
+    if (dateTo) p.set('dateTo', dateTo);
     setLoading(true);
     apiGet(`${endpoint}?${p}`)
       .then(data => {
@@ -611,25 +611,25 @@ const DataReports = () => {
   useEffect(() => {
     if (activeTab !== 'shop') return;
     fetchPageData('/api/orders', orderPage, setOrderRows, setOrderTotal, setOrdersLoading, 'Failed to load shop orders.');
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, debouncedSearch, dateFilter, customStart, customEnd, orderPage]);
 
   useEffect(() => {
     if (activeTab !== 'tickets') return;
     fetchPageData('/api/ticket-orders', ticketPage, setTicketRows, setTicketTotal, setTicketLoading, 'Failed to load ticket orders.');
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, debouncedSearch, dateFilter, customStart, customEnd, ticketPage]);
 
   useEffect(() => {
     if (activeTab !== 'memberships') return;
     fetchPageData('/api/membership-subscriptions', membershipPage, setMembershipRows, setMembershipTotal, setMembershipsLoading, 'Failed to load memberships.');
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, debouncedSearch, dateFilter, customStart, customEnd, membershipPage]);
 
   useEffect(() => {
     if (activeTab !== 'events') return;
     fetchPageData('/api/event-bookings', eventPage, setEventRows, setEventTotal, setEventsLoading, 'Failed to load event bookings.');
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, debouncedSearch, dateFilter, customStart, customEnd, eventPage]);
 
   // All tabs are filtered server-side — no client filtering needed
@@ -650,7 +650,8 @@ const DataReports = () => {
     { accessorKey: 'Email', header: 'Email', cell: info => <span style={{ color: 'var(--adm-text-secondary)', fontSize: '0.82rem' }}>{info.getValue()}</span> },
     { accessorKey: 'TicketType', header: 'Ticket Type', cell: info => <span style={{ fontSize: '0.82rem' }}>{info.getValue()}</span> },
     { accessorKey: 'VisitDate', header: 'Visit Date', cell: info => <span>{fmtVisit(info.getValue())}</span> },
-    { accessorKey: 'PlacedAt', header: 'Purchased', cell: info => {
+    {
+      accessorKey: 'PlacedAt', header: 'Purchased', cell: info => {
         const { date, time } = fmtPlaced(info.getValue());
         return <span style={{ fontSize: '0.82rem' }}>{date}<br /><span style={{ color: 'var(--adm-text-secondary)' }}>{time}</span></span>;
       }
@@ -664,13 +665,15 @@ const DataReports = () => {
     { accessorKey: 'FullName', header: 'Member', cell: info => <span style={{ fontWeight: 600 }}>{info.getValue()}</span> },
     { accessorKey: 'Email', header: 'Email', cell: info => <span style={{ color: 'var(--adm-text-secondary)', fontSize: '0.82rem' }}>{info.getValue()}</span> },
     { accessorKey: 'PlanName', header: 'Plan', cell: info => <span style={{ fontWeight: 600, color: 'var(--adm-accent)' }}>{info.getValue()}</span> },
-    { accessorKey: 'BillingPeriod', header: 'Billing', size: 90, cell: info => (
+    {
+      accessorKey: 'BillingPeriod', header: 'Billing', size: 90, cell: info => (
         <span style={{ background: info.getValue() === 'yearly' ? '#dcfce7' : '#dbeafe', color: info.getValue() === 'yearly' ? '#166534' : '#1e40af', padding: '2px 8px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 700, textTransform: 'capitalize' }}>
           {info.getValue()}
         </span>
       )
     },
-    { accessorKey: 'PlacedAt', header: 'Purchased', cell: info => {
+    {
+      accessorKey: 'PlacedAt', header: 'Purchased', cell: info => {
         const { date, time } = fmtPlaced(info.getValue());
         return <span style={{ fontSize: '0.82rem' }}>{date}<br /><span style={{ color: 'var(--adm-text-secondary)' }}>{time}</span></span>;
       }
@@ -687,7 +690,8 @@ const DataReports = () => {
     { accessorKey: 'Category', header: 'Category', size: 110, cell: info => <span style={{ fontSize: '0.82rem', color: 'var(--adm-text-secondary)' }}>{info.getValue() || '—'}</span> },
     { accessorKey: 'BookingDate', header: 'Visit Date', cell: info => <span>{fmtVisit(info.getValue())}</span> },
     { accessorKey: 'Quantity', header: 'Guests', size: 70, cell: info => <span style={{ textAlign: 'center', display: 'block' }}>{info.getValue()}</span> },
-    { accessorKey: 'PlacedAt', header: 'Booked', cell: info => {
+    {
+      accessorKey: 'PlacedAt', header: 'Booked', cell: info => {
         const { date, time } = fmtPlaced(info.getValue());
         return <span style={{ fontSize: '0.82rem' }}>{date}<br /><span style={{ color: 'var(--adm-text-secondary)' }}>{time}</span></span>;
       }
@@ -730,8 +734,8 @@ const DataReports = () => {
 
   const activeCount = activeTab === 'shop' ? orderTotal
     : activeTab === 'tickets' ? ticketTotal
-    : activeTab === 'events' ? eventTotal
-    : membershipTotal;
+      : activeTab === 'events' ? eventTotal
+        : membershipTotal;
 
   const channelLabels = { shop: 'Gift Shop', tickets: 'Ticket Sales', memberships: 'Memberships', events: 'Event Sales' };
   const channelColors = { shop: '#f59e0b', tickets: '#3b82f6', memberships: '#10b981', events: '#a855f7' };
@@ -740,7 +744,7 @@ const DataReports = () => {
     revenueMin !== '', revenueMax !== '', !!filterTicketType, !!filterEventCategory, !!filterMemPlan, !!filterMemBilling
   ].filter(Boolean).length;
 
-  const resetSalesFilters = () => { setRevenueMin(''); setRevenueMax(''); setActiveChannels(['shop','tickets','memberships','events']); setSearch(''); setDateFilter('custom'); setCustomStart(''); setCustomEnd(''); setFilterTicketType(''); setFilterEventCategory(''); setFilterMemPlan(''); setFilterMemBilling(''); };
+  const resetSalesFilters = () => { setRevenueMin(''); setRevenueMax(''); setActiveChannels(['shop', 'tickets', 'memberships', 'events']); setSearch(''); setDateFilter('custom'); setCustomStart(''); setCustomEnd(''); setFilterTicketType(''); setFilterEventCategory(''); setFilterMemPlan(''); setFilterMemBilling(''); };
 
   return (
     <div className="admin-page">
@@ -864,9 +868,9 @@ const DataReports = () => {
             className="admin-search-input"
             placeholder={
               activeTab === 'shop' ? 'Search by name, email, or order #...' :
-              activeTab === 'tickets' ? 'Search by name, email, or ticket type...' :
-              activeTab === 'events' ? 'Search by name, email, or event...' :
-              'Search by name, email, or plan...'
+                activeTab === 'tickets' ? 'Search by name, email, or ticket type...' :
+                  activeTab === 'events' ? 'Search by name, email, or event...' :
+                    'Search by name, email, or plan...'
             }
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -880,7 +884,7 @@ const DataReports = () => {
         {/* Row 1: Date presets + date pickers + date select + reset */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
           <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Quick</span>
-          {[['30','Last 30 Days'],['90','Last 90 Days'],['180','Last 6 Months'],['365','Last 12 Months']].map(([val, lbl]) => (
+          {[['30', 'Last 30 Days'], ['90', 'Last 90 Days'], ['180', 'Last 6 Months'], ['365', 'Last 12 Months']].map(([val, lbl]) => (
             <button key={val} onClick={() => setPresetDates(val)}
               style={{ padding: '3px 10px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', border: '1px solid var(--adm-border)', background: 'transparent', color: 'var(--adm-text-secondary)', transition: 'all 0.15s' }}
               onMouseEnter={e => e.target.style.borderColor = 'var(--adm-accent)'}
@@ -889,21 +893,21 @@ const DataReports = () => {
             </button>
           ))}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
-          {dateFilter === 'custom' && (
-            <>
-              <AdminDatePicker value={customStart} onChange={setCustomStart} placeholder="Start date" maxDate={customEnd || TODAY} />
-              <span style={{ color: 'var(--adm-text-secondary)', fontSize: '0.82rem' }}>to</span>
-              <AdminDatePicker value={customEnd} onChange={setCustomEnd} placeholder="End date" minDate={customStart || undefined} maxDate={TODAY} />
-            </>
-          )}
-          <AdminSelect value={dateFilter} onChange={v => { setDateFilter(v); setCustomStart(''); setCustomEnd(''); }} width="148px"
-            options={[
-              { value: 'today', label: 'Today' },
-              { value: 'week', label: 'This Week' },
-              { value: 'month', label: 'This Month' },
-              { value: 'custom', label: 'Custom Range' },
-            ]}
-          />
+            {dateFilter === 'custom' && (
+              <>
+                <AdminDatePicker value={customStart} onChange={setCustomStart} placeholder="Start date" maxDate={customEnd || TODAY} />
+                <span style={{ color: 'var(--adm-text-secondary)', fontSize: '0.82rem' }}>to</span>
+                <AdminDatePicker value={customEnd} onChange={setCustomEnd} placeholder="End date" minDate={customStart || undefined} maxDate={TODAY} />
+              </>
+            )}
+            <AdminSelect value={dateFilter} onChange={v => { setDateFilter(v); setCustomStart(''); setCustomEnd(''); }} width="148px"
+              options={[
+                { value: 'today', label: 'Today' },
+                { value: 'week', label: 'This Week' },
+                { value: 'month', label: 'This Month' },
+                { value: 'custom', label: 'Custom Range' },
+              ]}
+            />
           </div>
           {activeSalesFilterCount > 0 && (
             <button onClick={resetSalesFilters}
@@ -926,26 +930,26 @@ const DataReports = () => {
 
           {/* Tab-specific filters */}
           {activeTab === 'tickets' && (<>
-          <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
-          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ticket Type</span>
-          <AdminSelect value={filterTicketType} onChange={setFilterTicketType} width="140px"
-            options={[{ value: '', label: 'All Types' }, ...uniqueTicketTypes.map(t => ({ value: t, label: t }))]} />
+            <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+            <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ticket Type</span>
+            <AdminSelect value={filterTicketType} onChange={setFilterTicketType} width="140px"
+              options={[{ value: '', label: 'All Types' }, ...uniqueTicketTypes.map(t => ({ value: t, label: t }))]} />
           </>)}
           {activeTab === 'events' && (<>
-          <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
-          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Category</span>
-          <AdminSelect value={filterEventCategory} onChange={setFilterEventCategory} width="140px"
-            options={[{ value: '', label: 'All Categories' }, ...uniqueEventCategories.map(c => ({ value: c, label: c }))]} />
+            <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+            <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Category</span>
+            <AdminSelect value={filterEventCategory} onChange={setFilterEventCategory} width="140px"
+              options={[{ value: '', label: 'All Categories' }, ...uniqueEventCategories.map(c => ({ value: c, label: c }))]} />
           </>)}
           {activeTab === 'memberships' && (<>
-          <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
-          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Plan</span>
-          <AdminSelect value={filterMemPlan} onChange={setFilterMemPlan} width="140px"
-            options={[{ value: '', label: 'All Plans' }, ...uniqueMemPlans.map(p => ({ value: p, label: p }))]} />
-          <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
-          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Billing</span>
-          <AdminSelect value={filterMemBilling} onChange={setFilterMemBilling} width="120px"
-            options={[{ value: '', label: 'All' }, ...uniqueMemBillings.map(b => ({ value: b, label: b.charAt(0).toUpperCase() + b.slice(1) }))]} />
+            <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+            <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Plan</span>
+            <AdminSelect value={filterMemPlan} onChange={setFilterMemPlan} width="140px"
+              options={[{ value: '', label: 'All Plans' }, ...uniqueMemPlans.map(p => ({ value: p, label: p }))]} />
+            <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+            <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Billing</span>
+            <AdminSelect value={filterMemBilling} onChange={setFilterMemBilling} width="120px"
+              options={[{ value: '', label: 'All' }, ...uniqueMemBillings.map(b => ({ value: b, label: b.charAt(0).toUpperCase() + b.slice(1) }))]} />
           </>)}
         </div>
       </div>

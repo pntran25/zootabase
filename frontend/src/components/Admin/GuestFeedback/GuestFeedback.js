@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import '../AdminTable.css';
-import { MessageSquare, Plus, Trash2, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { MessageSquare, Plus, Trash2, ChevronUp, ChevronDown, ChevronsUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useReactTable, getCoreRowModel, getSortedRowModel, getPaginationRowModel, flexRender } from '@tanstack/react-table';
 import { toast } from 'sonner';
 import AdminModalForm from '../AdminModalForm';
@@ -31,7 +31,7 @@ const GuestFeedback = () => {
   const [sorting, setSorting] = useState([]);
   const [formData, setFormData] = useState({
     rating: 5, comment: '', location: '',
-    date: new Date().toISOString().split('T')[0]
+    date: new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0]
   });
 
   const loadData = async () => {
@@ -152,7 +152,7 @@ const GuestFeedback = () => {
             <option value="4">4 Stars</option>
             <option value="3">3 Stars & Below</option>
           </select>
-          <button className="admin-btn-primary" onClick={() => { setFormData({ rating: 5, comment: '', location: '', date: new Date().toISOString().split('T')[0] }); setIsModalOpen(true); }}>
+          <button className="admin-btn-primary" onClick={() => { setFormData({ rating: 5, comment: '', location: '', date: new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0] }); setIsModalOpen(true); }}>
             <Plus size={16} /> Add Feedback
           </button>
         </div>
@@ -215,17 +215,46 @@ const GuestFeedback = () => {
             )}
           </tbody>
         </table>
-        {!isLoading && table.getPageCount() > 1 && (
-          <div className="admin-table-pagination">
-            <span className="admin-pagination-info">
-              Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()} · {filteredFeedback.length} records
-            </span>
-            <div className="admin-pagination-controls">
-              <button className="admin-pagination-btn" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>←</button>
-              <button className="admin-pagination-btn" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>→</button>
+        {!isLoading && table.getPageCount() > 1 && (() => {
+          const pageCount = table.getPageCount();
+          const pi = table.getState().pagination.pageIndex;
+          let pages = [];
+          if (pageCount <= 6) {
+            pages = Array.from({ length: pageCount }, (_, i) => i);
+          } else {
+            if (pi <= 2) {
+              pages = [0, 1, 2, 3, 4, '...', pageCount - 1];
+            } else if (pi >= pageCount - 3) {
+              pages = [0, '...', pageCount - 5, pageCount - 4, pageCount - 3, pageCount - 2, pageCount - 1];
+            } else {
+              pages = [0, '...', pi - 1, pi, pi + 1, '...', pageCount - 1];
+            }
+          }
+          return (
+            <div className="admin-table-pagination" style={{ borderTop: '1px solid var(--adm-border)' }}>
+              <span className="admin-pagination-info">
+                Page {pi + 1} of {pageCount} · {filteredFeedback.length} records
+              </span>
+              <div className="admin-pagination-controls">
+                <button className="admin-pagination-btn" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
+                  <ChevronLeft size={14} />
+                </button>
+                {pages.map((p, idx) => (
+                  p === '...' ? (
+                    <span key={`ellipsis-${idx}`} style={{ padding: '0 8px', color: 'var(--adm-text-secondary)' }}>...</span>
+                  ) : (
+                    <button key={p} className={`admin-pagination-btn${pi === p ? ' active' : ''}`} onClick={() => table.setPageIndex(p)}>
+                      {p + 1}
+                    </button>
+                  )
+                ))}
+                <button className="admin-pagination-btn" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
+                  <ChevronRight size={14} />
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
 
       <AdminModalForm title="Add Mock Feedback" isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSubmit={handleSubmit}>
