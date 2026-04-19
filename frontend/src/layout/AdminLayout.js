@@ -17,7 +17,7 @@ import './AdminLayout.css';
 const rolePermissions = {
   'Super Admin':       ['dashboard', 'animals', 'exhibits', 'attractions', 'events', 'tickets', 'shop', 'maintenance', 'staff', 'analytics', 'feedback', 'reports', 'memberships', 'animal-health', 'animal-care', 'animal-report', 'employee-report'],
   'Zoo Manager':       ['dashboard', 'animals', 'exhibits', 'attractions', 'events', 'maintenance', 'animal-health', 'animal-care', 'animal-report', 'employee-report', 'reports', 'analytics', 'feedback'],
-  'Caretaker':         ['dashboard', 'animals', 'maintenance', 'animal-health', 'animal-care', 'animal-report'],
+  'Caretaker':         ['dashboard', 'animals', 'exhibits', 'maintenance', 'animal-health', 'animal-care', 'animal-report'],
   'Event Coordinator': ['dashboard', 'events', 'reports', 'maintenance'],
   'Ticket Staff':      ['dashboard', 'tickets', 'memberships', 'reports', 'maintenance'],
   'Shop Manager':      ['dashboard', 'shop', 'reports', 'maintenance'],

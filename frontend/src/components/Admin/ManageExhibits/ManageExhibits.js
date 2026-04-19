@@ -8,6 +8,7 @@ import AdminSelect from '../AdminSelect';
 import TimePickerInput from '../TimePickerInput';
 import { getExhibits, createExhibit, updateExhibit, deleteExhibit, uploadExhibitImage, setExhibitFeatured } from '../../../services/exhibitService';
 import { API_BASE_URL } from '../../../services/apiClient';
+import { useAuth } from '../../../context/AuthContext';
 
 const to12hr = (t) => {
   if (!t) return '';
@@ -54,6 +55,8 @@ const ManageExhibits = () => {
   });
   const [imageFile, setImageFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
+  const { userProfile } = useAuth();
+  const canEdit = ['Super Admin', 'Zoo Manager'].includes(userProfile?.Role);
 
   const loadData = async () => {
     try {
@@ -224,20 +227,27 @@ const ManageExhibits = () => {
         return aV - bV;
       },
       cell: ({ row }) => (
-        <button
-          onClick={() => handleToggleFeatured(row.original)}
-          title={row.original.isFeatured ? 'Remove from featured' : 'Mark as featured'}
-          style={{
-            background: 'none', border: 'none', cursor: 'pointer', padding: 4,
-            color: row.original.isFeatured ? '#f59e0b' : 'var(--adm-text-muted)',
-            transition: 'color 0.15s, transform 0.15s',
-            display: 'flex', alignItems: 'center', gap: 6,
-            fontSize: '0.8rem', fontWeight: 600,
-          }}
-        >
-          <Star size={16} fill={row.original.isFeatured ? 'currentColor' : 'none'} />
-          {row.original.isFeatured ? 'Featured' : ''}
-        </button>
+        canEdit ? (
+          <button
+            onClick={() => handleToggleFeatured(row.original)}
+            title={row.original.isFeatured ? 'Remove from featured' : 'Mark as featured'}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer', padding: 4,
+              color: row.original.isFeatured ? '#f59e0b' : 'var(--adm-text-muted)',
+              transition: 'color 0.15s, transform 0.15s',
+              display: 'flex', alignItems: 'center', gap: 6,
+              fontSize: '0.8rem', fontWeight: 600,
+            }}
+          >
+            <Star size={16} fill={row.original.isFeatured ? 'currentColor' : 'none'} />
+            {row.original.isFeatured ? 'Featured' : ''}
+          </button>
+        ) : (
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: row.original.isFeatured ? '#f59e0b' : 'var(--adm-text-muted)', fontSize: '0.8rem', fontWeight: 600 }}>
+            <Star size={16} fill={row.original.isFeatured ? 'currentColor' : 'none'} />
+            {row.original.isFeatured ? 'Featured' : ''}
+          </span>
+        )
       ),
     },
     {
@@ -252,7 +262,7 @@ const ManageExhibits = () => {
         return <span className="text-secondary">—</span>;
       },
     },
-    {
+    ...(canEdit ? [{
       id: 'actions',
       header: 'Actions',
       enableSorting: false,
@@ -262,7 +272,7 @@ const ManageExhibits = () => {
           <button className="action-btn delete" onClick={() => handleDelete(row.original.id)}><Trash2 size={16} /></button>
         </div>
       ),
-    },
+    }] : []),
   ], [exhibits]);
 
   const table = useReactTable({
@@ -288,9 +298,38 @@ const ManageExhibits = () => {
             <Search className="search-icon" size={16} />
             <input type="text" placeholder="Search exhibits..." className="admin-search-input" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          <button className="admin-btn-primary" onClick={() => handleOpenModal()}>
-            <Plus size={16} /> Add Exhibit
-          </button>
+          {canEdit && (
+            <button className="admin-btn-primary" onClick={() => handleOpenModal()}>
+              <Plus size={16} /> Add Exhibit
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ── Filter Row ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap', padding: '10px 14px', background: 'var(--adm-bg-surface)', border: '1px solid var(--adm-border)', borderRadius: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Area</span>
+          <AdminSelect value={filterArea} onChange={setFilterArea} width="140px" options={[{ value: '', label: 'All Areas' }, ...areas.map(a => ({ value: a, label: a }))]} />
+        </div>
+
+        <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Habitat</span>
+          <AdminSelect value={filterHabitat} onChange={setFilterHabitat} width="140px" options={[{ value: '', label: 'All Habitats' }, ...habitats.map(h => ({ value: h, label: h }))]} />
+        </div>
+
+        <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Featured</span>
+          {[{ val: '', label: 'All' }, { val: 'yes', label: 'Featured' }, { val: 'no', label: 'Standard' }].map(f => (
+            <button key={f.val || 'all'} onClick={() => setFilterFeatured(f.val)}
+              style={{ padding: '3px 10px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', border: `1px solid ${filterFeatured === f.val ? 'var(--adm-accent)' : 'var(--adm-border)'}`, background: filterFeatured === f.val ? 'var(--adm-accent-dim, rgba(34,107,64,0.1))' : 'transparent', color: filterFeatured === f.val ? 'var(--adm-accent)' : 'var(--adm-text-secondary)', transition: 'all 0.15s' }}>
+              {f.label}
+            </button>
+          ))}
         </div>
       </div>
 

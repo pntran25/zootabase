@@ -148,7 +148,8 @@ const StaffReport = () => {
         const headers = { 'Authorization': `Bearer ${token}` };
         // Phase 1: Load staff list first for faster initial render
         const staffRes = await fetch(`${API_BASE_URL}/api/staff`, { headers });
-        setStaffList(await staffRes.json());
+        const staffData = await staffRes.json();
+        setStaffList(Array.isArray(staffData) ? staffData : []);
         setLoading(false);
         // Phase 2: Load schedules and assignments in background
         const [schedRes, assignRes] = await Promise.all([

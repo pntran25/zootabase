@@ -78,9 +78,9 @@ const ManageStaff = () => {
         lastName: staff.LastName || '',
         email: staff.Email || '',
         dateOfBirth: staff.DateOfBirth ? staff.DateOfBirth.substring(0, 10) : '',
-        ssn: staff.SSN || '',
+        ssn: staff.SSN ? formatSSN(String(staff.SSN)) : '',
         role: staff.Role || 'Caretaker',
-        contactNumber: staff.ContactNumber || '',
+        contactNumber: staff.ContactNumber ? formatPhone(String(staff.ContactNumber)) : '',
         salary: staff.Salary || ''
       });
     } else {
@@ -320,7 +320,7 @@ const ManageStaff = () => {
                       </span>
                     </td>
                     <td style={{ color: 'var(--adm-text-secondary)' }}>{staff.Email}</td>
-                    <td style={{ color: 'var(--adm-text-secondary)' }}>{staff.ContactNumber || '—'}</td>
+                    <td style={{ color: 'var(--adm-text-secondary)' }}>{staff.ContactNumber ? formatPhone(String(staff.ContactNumber)) : '—'}</td>
                     <td>
                       <div className="action-buttons">
                         <button className="action-btn edit" onClick={() => handleOpenModal(staff)} title="Edit"><Edit2 size={15} /></button>
@@ -402,7 +402,7 @@ const ManageStaff = () => {
             gap: 12,
           }}>
             <div>
-              <span style={{ fontSize: '0.72rem', color: 'var(--adm-text-muted)', display: 'block', marginBottom: 2 }}>Default password for new staff</span>
+              <span style={{ fontSize: '0.72rem', color: 'var(--adm-text-muted)', display: 'block', marginBottom: 2 }}>Default password for new staff who haven't set one previously</span>
               <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '0.95rem', color: '#10b981', letterSpacing: '0.05em' }}>{DEFAULT_PASSWORD}</span>
             </div>
             <button

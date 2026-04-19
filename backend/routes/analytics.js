@@ -5,7 +5,7 @@ const { verifyToken, requireRole } = require('../middleware/authMiddleware');
 const Q = require('../queries/analyticsQueries');
 
 // Get segregated login analytics
-router.get('/logins', verifyToken, requireRole(['Super Admin']), async (req, res) => {
+router.get('/logins', verifyToken, requireRole(['Super Admin', 'Zoo Manager']), async (req, res) => {
     try {
         const pool = await connectToDb();
 
