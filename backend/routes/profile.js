@@ -52,6 +52,7 @@ router.get('/membership', verifyToken, async (req, res) => {
         const pool = await connectToDb();
         const result = await pool.request()
             .input('customerId', sql.Int, req.userProfile?.CustomerID || null)
+            .input('firebaseUid', sql.NVarChar(128), req.user?.uid || null)
             .input('email', sql.NVarChar(200), email)
             .query(Q.membership);
 

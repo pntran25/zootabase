@@ -36,8 +36,10 @@ router.post('/', optionalAuth, async (req, res) => {
     try {
         const pool = await connectToDb();
         const finalCustomerId = req.userProfile?.CustomerID || customerId || null;
+        const firebaseUid = req.user?.uid || null;
         const result = await pool.request()
             .input('CustomerID',          sql.Int,               finalCustomerId)
+            .input('FirebaseUid',         sql.NVarChar(128),     firebaseUid)
             .input('PlanName',            sql.NVarChar(100),     planName)
             .input('BillingPeriod',       sql.NVarChar(10),      billingPeriod)
             .input('FirstName',           sql.NVarChar(50),      firstName)
@@ -116,6 +118,7 @@ router.get('/active', verifyToken, async (req, res) => {
         const pool = await connectToDb();
         const result = await pool.request()
             .input('customerId', sql.Int, req.userProfile?.CustomerID || null)
+            .input('firebaseUid', sql.NVarChar(128), req.user?.uid || null)
             .input('email', sql.NVarChar(200), email)
             .query(Q.getActiveSubscription);
 
@@ -146,6 +149,7 @@ router.post('/cancel', verifyToken, async (req, res) => {
         const pool = await connectToDb();
         const result = await pool.request()
             .input('customerId', sql.Int, req.userProfile?.CustomerID || null)
+            .input('firebaseUid', sql.NVarChar(128), req.user?.uid || null)
             .input('email', sql.NVarChar(200), email)
             .query(Q.cancelActiveSubscription);
         if (result.rowsAffected[0] === 0) {

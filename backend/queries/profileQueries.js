@@ -26,6 +26,7 @@ const membership = `
   SELECT TOP 1 SubID, PlanName, BillingPeriod, StartDate, EndDate, Total
   FROM MembershipSubscriptions
   WHERE (CustomerID = @customerId AND @customerId IS NOT NULL)
+     OR (FirebaseUid = @firebaseUid AND @firebaseUid IS NOT NULL)
      OR (@customerId IS NULL AND LOWER(Email) = LOWER(@email))
      OR (CustomerID IS NULL AND LOWER(Email) = LOWER(@email))
   ORDER BY EndDate DESC

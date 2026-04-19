@@ -347,6 +347,7 @@ async function runMigrations(pool) {
 		`IF COL_LENGTH('TicketOrders','LastName') IS NULL ALTER TABLE TicketOrders ADD LastName NVARCHAR(50) NULL`,
 		`IF COL_LENGTH('MembershipSubscriptions','FirstName') IS NULL ALTER TABLE MembershipSubscriptions ADD FirstName NVARCHAR(50) NULL`,
 		`IF COL_LENGTH('MembershipSubscriptions','LastName') IS NULL ALTER TABLE MembershipSubscriptions ADD LastName NVARCHAR(50) NULL`,
+		`IF COL_LENGTH('MembershipSubscriptions','FirebaseUid') IS NULL ALTER TABLE MembershipSubscriptions ADD FirebaseUid NVARCHAR(128) NULL`,
 		// Backfill FirstName/LastName from FullName for rows created before the split
 		// Wrapped in EXEC() so SQL Server only compiles the UPDATE when the column still exists
 		`IF COL_LENGTH('Orders','FullName') IS NOT NULL EXEC('UPDATE Orders SET FirstName = LTRIM(RTRIM(LEFT(FullName, CHARINDEX('' '', FullName + '' '') - 1))), LastName = NULLIF(LTRIM(RTRIM(SUBSTRING(FullName, CHARINDEX('' '', FullName + '' '') + 1, LEN(FullName)))), '''') WHERE FirstName IS NULL AND FullName IS NOT NULL')`,

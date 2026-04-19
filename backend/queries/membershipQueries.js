@@ -27,12 +27,12 @@ const deletePlan = `
 // ── Subscriptions ──
 
 const insertSubscription = `
-  INSERT INTO MembershipSubscriptions (CustomerID, PlanName, BillingPeriod, FirstName, LastName, Email, Phone,
+  INSERT INTO MembershipSubscriptions (CustomerID, FirebaseUid, PlanName, BillingPeriod, FirstName, LastName, Email, Phone,
        AddressLine1, AddressLine2, City, StateProvince, ZipCode,
        BillingSameAsContact, BillingFullName, BillingAddress1, BillingAddress2,
        BillingCity, BillingState, BillingZip, CardLastFour, Total, StartDate, EndDate)
   OUTPUT INSERTED.SubID
-  VALUES (@CustomerID, @PlanName, @BillingPeriod, @FirstName, @LastName, @Email, @Phone,
+  VALUES (@CustomerID, @FirebaseUid, @PlanName, @BillingPeriod, @FirstName, @LastName, @Email, @Phone,
        @AddressLine1, @AddressLine2, @City, @StateProvince, @ZipCode,
        @BillingSameAsContact, @BillingFullName, @BillingAddress1, @BillingAddress2,
        @BillingCity, @BillingState, @BillingZip, @CardLastFour, @Total, @StartDate, @EndDate)
@@ -57,6 +57,7 @@ const getActiveSubscription = `
   WHERE ms.EndDate >= CAST(GETDATE() AS DATE)
     AND (
       (ms.CustomerID = @customerId AND @customerId IS NOT NULL)
+      OR (ms.FirebaseUid = @firebaseUid AND @firebaseUid IS NOT NULL)
       OR (@customerId IS NULL AND LOWER(ms.Email) = LOWER(@email))
       OR (ms.CustomerID IS NULL AND LOWER(ms.Email) = LOWER(@email))
     )
@@ -73,6 +74,7 @@ const cancelActiveSubscription = `
   WHERE EndDate >= CAST(GETDATE() AS DATE)
     AND (
       (CustomerID = @customerId AND @customerId IS NOT NULL)
+      OR (FirebaseUid = @firebaseUid AND @firebaseUid IS NOT NULL)
       OR (@customerId IS NULL AND LOWER(Email) = LOWER(@email))
       OR (CustomerID IS NULL AND LOWER(Email) = LOWER(@email))
     )

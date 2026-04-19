@@ -214,30 +214,30 @@ const OverviewTab = () => {
                   <AreaChart data={data.monthlyTrend} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                     <defs>
                       <linearGradient id="gradTickets" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%"  stopColor={COLORS.tickets}     stopOpacity={0.25} />
+                        <stop offset="5%"  stopColor={COLORS.tickets}     stopOpacity={0.15} />
                         <stop offset="95%" stopColor={COLORS.tickets}     stopOpacity={0} />
                       </linearGradient>
                       <linearGradient id="gradMemberships" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%"  stopColor={COLORS.memberships} stopOpacity={0.25} />
+                        <stop offset="5%"  stopColor={COLORS.memberships} stopOpacity={0} />
                         <stop offset="95%" stopColor={COLORS.memberships} stopOpacity={0} />
                       </linearGradient>
                       <linearGradient id="gradGiftShop" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%"  stopColor={COLORS.giftShop}    stopOpacity={0.2} />
+                        <stop offset="5%"  stopColor={COLORS.giftShop}    stopOpacity={0} />
                         <stop offset="95%" stopColor={COLORS.giftShop}    stopOpacity={0} />
                       </linearGradient>
                       <linearGradient id="gradEvents" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%"  stopColor={COLORS.events}      stopOpacity={0.2} />
+                        <stop offset="5%"  stopColor={COLORS.events}      stopOpacity={0} />
                         <stop offset="95%" stopColor={COLORS.events}      stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--adm-border)" />
-                    <XAxis dataKey="month" tick={{ fontSize: 11, fill: 'var(--adm-text-secondary)' }} />
+                    <XAxis dataKey="month" tick={{ fontSize: 11, fill: 'var(--adm-text-secondary)' }} interval={data.monthlyTrend.length > 15 ? Math.floor(data.monthlyTrend.length / 8) : 0} />
                     <YAxis tickFormatter={v => v >= 1000 ? fmtMoney(v) : `$${v}`} tick={{ fontSize: 11, fill: 'var(--adm-text-secondary)' }} width={52} />
                     <Tooltip content={<LineTooltip />} />
-                    <Area type="monotone" dataKey="tickets"     name="Tickets"     stroke={COLORS.tickets}     strokeWidth={2} fill="url(#gradTickets)"     dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                    <Area type="monotone" dataKey="memberships" name="Memberships" stroke={COLORS.memberships} strokeWidth={2} fill="url(#gradMemberships)" dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                    <Area type="monotone" dataKey="giftShop"    name="Gift Shop"   stroke={COLORS.giftShop}    strokeWidth={2} fill="url(#gradGiftShop)"    dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                    <Area type="monotone" dataKey="events"      name="Events"      stroke={COLORS.events}      strokeWidth={2} fill="url(#gradEvents)"      dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                    <Area type="monotone" dataKey="tickets"     name="Tickets"     stroke={COLORS.tickets}     strokeWidth={2} fill="url(#gradTickets)"     dot={false} activeDot={{ r: 5 }} />
+                    <Area type="monotone" dataKey="memberships" name="Memberships" stroke={COLORS.memberships} strokeWidth={2} fill="url(#gradMemberships)" dot={false} activeDot={{ r: 5 }} />
+                    <Area type="monotone" dataKey="giftShop"    name="Gift Shop"   stroke={COLORS.giftShop}    strokeWidth={2} fill="url(#gradGiftShop)"    dot={false} activeDot={{ r: 5 }} />
+                    <Area type="monotone" dataKey="events"      name="Events"      stroke={COLORS.events}      strokeWidth={2} fill="url(#gradEvents)"      dot={false} activeDot={{ r: 5 }} />
                   </AreaChart>
                 </ResponsiveContainer>
               )}

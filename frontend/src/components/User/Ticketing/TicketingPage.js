@@ -43,8 +43,8 @@ const TicketingPage = () => {
 
   useEffect(() => {
     setIsMounted(true);
-    Promise.all([apiGet('/api/ticket-packages'), apiGet('/api/ticket-addons'), apiGet('/api/attractions')])
-      .then(([pkgs, ads, attrs]) => {
+    Promise.all([apiGet('/api/ticket-packages'), apiGet('/api/ticket-addons')])
+      .then(([pkgs, ads]) => {
         const mapped = pkgs.map(p => ({
           id: String(p.packageId),
           name: p.name,
@@ -58,10 +58,7 @@ const TicketingPage = () => {
         const popular = mapped.find(t => t.popular) || mapped[0];
         if (popular) setSelectedTicket(popular.id);
         const ticketAddons = ads.map(a => ({ id: String(a.addonId), name: a.name, price: a.price, description: a.description }));
-        const attractionAddons = (attrs || [])
-          .filter(a => a.status === 'Open' && a.price > 0)
-          .map(a => ({ id: `attr-${a.id}`, name: a.name, price: a.price, description: '' }));
-        setAddons([...ticketAddons, ...attractionAddons]);
+        setAddons(ticketAddons);
       })
       .catch(() => {})
       .finally(() => setDataLoading(false));
