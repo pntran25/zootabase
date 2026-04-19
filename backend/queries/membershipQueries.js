@@ -50,11 +50,16 @@ const countSubscriptions = (where) => `
   SELECT COUNT(*) AS total FROM MembershipSubscriptions ${where}
 `;
 
-const getActiveByEmail = `
+const getActiveSubscription = `
   SELECT TOP 1 ms.PlanName, ms.EndDate, mp.Features
   FROM MembershipSubscriptions ms
   LEFT JOIN MembershipPlans mp ON mp.Name = ms.PlanName AND mp.DeletedAt IS NULL
-  WHERE ms.Email = @Email AND ms.EndDate >= CAST(GETDATE() AS DATE)
+  WHERE ms.EndDate >= CAST(GETDATE() AS DATE)
+    AND (
+      (ms.CustomerID = @customerId AND @customerId IS NOT NULL)
+      OR (@customerId IS NULL AND LOWER(ms.Email) = LOWER(@email))
+      OR (ms.CustomerID IS NULL AND LOWER(ms.Email) = LOWER(@email))
+    )
   ORDER BY ms.EndDate DESC
 `;
 
@@ -62,10 +67,15 @@ const getSubscriptionById = `
   SELECT *, CONCAT(ISNULL(FirstName,''),' ',ISNULL(LastName,'')) AS FullName FROM MembershipSubscriptions WHERE SubID = @id
 `;
 
-const cancelSubscriptionByEmail = `
+const cancelActiveSubscription = `
   UPDATE MembershipSubscriptions
   SET EndDate = CAST(GETDATE() AS DATE)
-  WHERE Email = @Email AND EndDate >= CAST(GETDATE() AS DATE)
+  WHERE EndDate >= CAST(GETDATE() AS DATE)
+    AND (
+      (CustomerID = @customerId AND @customerId IS NOT NULL)
+      OR (@customerId IS NULL AND LOWER(Email) = LOWER(@email))
+      OR (CustomerID IS NULL AND LOWER(Email) = LOWER(@email))
+    )
 `;
 
 module.exports = {
@@ -76,7 +86,7 @@ module.exports = {
   insertSubscription,
   listSubscriptions,
   countSubscriptions,
-  getActiveByEmail,
+  getActiveSubscription,
   getSubscriptionById,
-  cancelSubscriptionByEmail,
+  cancelActiveSubscription,
 };

@@ -111,12 +111,13 @@ router.get('/', async (req, res) => {
 
 // GET /api/membership-subscriptions/active — active sub for the logged-in user + gift shop discount
 router.get('/active', verifyToken, async (req, res) => {
-    const email = req.user.email;
+    const email = req.userProfile?.Email || req.user?.email;
     try {
         const pool = await connectToDb();
         const result = await pool.request()
-            .input('Email', sql.NVarChar(200), email)
-            .query(Q.getActiveByEmail);
+            .input('customerId', sql.Int, req.userProfile?.CustomerID || null)
+            .input('email', sql.NVarChar(200), email)
+            .query(Q.getActiveSubscription);
 
         if (!result.recordset.length) return res.json({ active: false });
 
@@ -140,12 +141,13 @@ router.get('/active', verifyToken, async (req, res) => {
 
 // POST /api/membership-subscriptions/cancel — cancel the logged-in user's active membership
 router.post('/cancel', verifyToken, async (req, res) => {
-    const email = req.user.email;
+    const email = req.userProfile?.Email || req.user?.email;
     try {
         const pool = await connectToDb();
         const result = await pool.request()
-            .input('Email', sql.NVarChar(200), email)
-            .query(Q.cancelSubscriptionByEmail);
+            .input('customerId', sql.Int, req.userProfile?.CustomerID || null)
+            .input('email', sql.NVarChar(200), email)
+            .query(Q.cancelActiveSubscription);
         if (result.rowsAffected[0] === 0) {
             return res.status(404).json({ error: 'No active membership found.' });
         }
