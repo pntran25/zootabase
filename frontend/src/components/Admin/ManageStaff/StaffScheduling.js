@@ -39,7 +39,7 @@ const StaffScheduling = () => {
   const [filterWeek, setFilterWeek] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() - d.getDay());
-    return d.toISOString().split('T')[0];
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split('T')[0];
   });
 
   const [formData, setFormData] = useState({
@@ -85,7 +85,7 @@ const StaffScheduling = () => {
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(start);
       d.setDate(d.getDate() + i);
-      return d.toISOString().split('T')[0];
+      return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split('T')[0];
     });
   }, [filterWeek]);
 
@@ -182,14 +182,14 @@ const StaffScheduling = () => {
   const navigateWeek = (dir) => {
     const d = new Date(weekDays[0] + 'T00:00:00');
     d.setDate(d.getDate() + (dir * 7));
-    setFilterWeek(d.toISOString().split('T')[0]);
+    setFilterWeek(new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split('T')[0]);
     setExpandedDays({});
   };
 
   const goToToday = () => {
     const d = new Date();
     d.setDate(d.getDate() - d.getDay());
-    setFilterWeek(d.toISOString().split('T')[0]);
+    setFilterWeek(new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split('T')[0]);
     setExpandedDays({});
   };
 
@@ -355,7 +355,7 @@ const StaffScheduling = () => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6 }}>
           {weekDays.map(day => {
             const dayScheds = filteredSchedules.filter(s => (s.WorkDate || '').substring(0, 10) === day);
-            const isToday = day === new Date().toISOString().split('T')[0];
+            const isToday = day === new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
             const isExpanded = expandedDays[day];
             const visibleScheds = isExpanded ? dayScheds : dayScheds.slice(0, MAX_VISIBLE_PER_DAY);
             const hiddenCount = dayScheds.length - MAX_VISIBLE_PER_DAY;
@@ -439,7 +439,7 @@ const StaffScheduling = () => {
                 if (dayScheds.length === 0) return null;
                 return dayScheds.map((s, idx) => {
                   const rc = roleColors[s.StaffRole] || { bg: 'rgba(100,116,139,0.12)', color: '#64748b' };
-                  const isToday = day === new Date().toISOString().split('T')[0];
+                  const isToday = day === new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
                   return (
                     <tr key={s.ScheduleID} style={{
                       borderBottom: '1px solid var(--adm-border)',

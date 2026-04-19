@@ -15,13 +15,13 @@ import {
 
 /* ── Colours ─────────────────────────────────────────── */
 const roleColorMap = {
-  'Super Admin':       '#10b981',
-  'Zoo Manager':       '#0891b2',
-  'Caretaker':         '#3b82f6',
+  'Super Admin': '#10b981',
+  'Zoo Manager': '#0891b2',
+  'Caretaker': '#3b82f6',
   'Event Coordinator': '#a855f7',
-  'Ticket Staff':      '#eab308',
-  'Shop Manager':      '#f97316',
-  'Maintenance':       '#ef4444',
+  'Ticket Staff': '#eab308',
+  'Shop Manager': '#f97316',
+  'Maintenance': '#ef4444',
 };
 
 const roleBgMap = Object.fromEntries(
@@ -31,15 +31,15 @@ const roleBgMap = Object.fromEntries(
 const CHART_COLORS = ['#10b981', '#3b82f6', '#a855f7', '#f97316', '#0891b2', '#eab308', '#ef4444', '#6366f1'];
 
 const RANGE_OPTIONS = [
-  { value: 'today',  label: 'Today' },
-  { value: 'week',   label: 'This Week' },
-  { value: 'month',  label: 'This Month' },
+  { value: 'today', label: 'Today' },
+  { value: 'week', label: 'This Week' },
+  { value: 'month', label: 'This Month' },
   { value: 'custom', label: 'Custom Range' },
 ];
 
 function getDateRange(range) {
   const today = new Date();
-  const fmt = (d) => d.toISOString().split('T')[0];
+  const fmt = (d) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split('T')[0];
   if (range === 'today') return { start: fmt(today), end: fmt(today) };
   if (range === 'week') {
     const mon = new Date(today); mon.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1));
@@ -92,7 +92,7 @@ const LoginAnalytics = () => {
   const [customEnd, setCustomEnd] = useState('');
   const [staffPage, setStaffPage] = useState(0);
   const [custPage, setCustPage] = useState(0);
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
 
   const fetchAnalytics = useCallback(async (start, end) => {
     if (!start || !end) return;
@@ -127,7 +127,7 @@ const LoginAnalytics = () => {
 
   /* ── Derived chart data ─────────────────────────────── */
   const staffCount = stats.staffLogins?.length || 0;
-  const custCount  = stats.customerLogins?.length || 0;
+  const custCount = stats.customerLogins?.length || 0;
   const totalLogins = staffCount + custCount;
 
   // Unique staff members
@@ -314,6 +314,17 @@ const LoginAnalytics = () => {
           <p className="admin-page-subtitle">Recent login activity across staff and public users.</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <div className="admin-preset-btns">
+            {RANGE_OPTIONS.map(p => (
+              <button
+                key={p.value}
+                className={`admin-preset-btn${range === p.value ? ' active' : ''}`}
+                onClick={() => { setRange(p.value); if (p.value !== 'custom') { setCustomStart(''); setCustomEnd(''); } }}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
           {range === 'custom' && (
             <>
               <AdminDatePicker value={customStart} onChange={setCustomStart} placeholder="Start date" maxDate={customEnd || today} />
@@ -321,7 +332,6 @@ const LoginAnalytics = () => {
               <AdminDatePicker value={customEnd} onChange={setCustomEnd} placeholder="End date" minDate={customStart} maxDate={today} />
             </>
           )}
-          <AdminSelect value={range} onChange={v => { setRange(v); setCustomStart(''); setCustomEnd(''); }} options={RANGE_OPTIONS} width="148px" />
         </div>
       </div>
 
@@ -509,11 +519,13 @@ const LoginAnalytics = () => {
                     <tr key={log.LogID}>
                       <td style={{ color: 'var(--adm-text-primary)', fontWeight: 500 }}>{log.FirstName} {log.LastName}</td>
                       <td>
-                        {(() => { const c = roleColorMap[log.Role] || '#888'; const bg = roleBgMap[log.Role] || 'rgba(100,100,100,0.15)'; return (
-                          <span style={{ padding: '2px 9px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 600, background: bg, color: c }}>
-                            {log.Role}
-                          </span>
-                        ); })()}
+                        {(() => {
+                          const c = roleColorMap[log.Role] || '#888'; const bg = roleBgMap[log.Role] || 'rgba(100,100,100,0.15)'; return (
+                            <span style={{ padding: '2px 9px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 600, background: bg, color: c }}>
+                              {log.Role}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td style={{ color: 'var(--adm-text-secondary)', fontSize: '0.82rem', textAlign: 'left' }}>{formatDate(log.LoginTime)}</td>
                     </tr>

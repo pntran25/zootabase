@@ -96,7 +96,7 @@ const AnimalReport = () => {
   const { dateFrom, dateTo } = useMemo(() => {
     const now = new Date();
     const todayStr = getYMD(now);
-    
+
     if (dateFilter === 'today') return { dateFrom: todayStr, dateTo: todayStr };
     if (dateFilter === 'week') {
       const s = new Date(now);
@@ -128,7 +128,7 @@ const AnimalReport = () => {
       .then(data => setHealthData(data))
       .catch(() => toast.error('Failed to load health data.'))
       .finally(() => setHealthLoading(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
   const inDateRange = (dateStr) => {
@@ -168,7 +168,7 @@ const AnimalReport = () => {
       .filter(an => {
         if (search) {
           const q = search.toLowerCase();
-          if (!((an.AnimalCode||'').toLowerCase().includes(q) || (an.Name||'').toLowerCase().includes(q) || (an.Species||'').toLowerCase().includes(q))) return false;
+          if (!((an.AnimalCode || '').toLowerCase().includes(q) || (an.Name || '').toLowerCase().includes(q) || (an.Species || '').toLowerCase().includes(q))) return false;
         }
         if (filterHealth.length > 0 && !filterHealth.includes(an.HealthStatus)) return false;
         if (filterGroups.length > 0 && !filterGroups.includes(an.Species)) return false;
@@ -239,7 +239,7 @@ const AnimalReport = () => {
         if (recordsSortCol === 'staff') return dir * ((a.StaffName || '').localeCompare(b.StaffName || ''));
         return 0;
       });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [healthData, search, filterHealth, filterGroups, filterActivity, filterRecordStaff, dateFrom, dateTo, recordsSortCol, recordsSortDir]);
 
   // Filtered feedings for Feeding Schedules tab
@@ -280,7 +280,7 @@ const AnimalReport = () => {
         if (alertsSortCol === 'type') return dir * ((a.AlertType || '').localeCompare(b.AlertType || ''));
         return 0;
       });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [healthData, search, filterGroups, filterAlertType, filterAlertResolved, dateFrom, dateTo, alertsSortCol, alertsSortDir]);
 
   const toggleRecordsSort = (col) => {
@@ -378,7 +378,7 @@ const AnimalReport = () => {
                 'Status': a.IsResolved ? 'Resolved' : 'Active',
               }));
               const now = new Date();
-              const stamp = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}-${String(now.getMinutes()).padStart(2,'0')}`;
+              const stamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`;
               exportSectionsToSingleSheet([
                 { name: 'Animals Summary', data: summaryRows },
                 { name: 'Health Records', data: recordRows },
@@ -440,195 +440,195 @@ const AnimalReport = () => {
         )}
         {/* Date range — relevant for animals (dateArrived), records (checkupDate), alerts (createdAt), not feedings */}
         {activeTab !== 'feedings' && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
-          {dateFilter === 'custom' && (
-            <>
-              <AdminDatePicker value={customStart} onChange={setCustomStart} placeholder="Start date" maxDate={customEnd || TODAY} />
-              <span style={{ color: 'var(--adm-text-secondary)', fontSize: '0.82rem' }}>to</span>
-              <AdminDatePicker value={customEnd} onChange={setCustomEnd} placeholder="End date" minDate={customStart || undefined} maxDate={TODAY} />
-            </>
-          )}
-          <AdminSelect
-            value={dateFilter}
-            onChange={v => { setDateFilter(v); setCustomStart(''); setCustomEnd(''); }}
-            width="148px"
-            options={[
-              { value: 'today', label: 'Today' },
-              { value: 'week', label: 'This Week' },
-              { value: 'month', label: 'This Month' },
-              { value: 'custom', label: 'Custom Range' },
-            ]}
-          />
-        </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
+            {dateFilter === 'custom' && (
+              <>
+                <AdminDatePicker value={customStart} onChange={setCustomStart} placeholder="Start date" maxDate={customEnd || TODAY} />
+                <span style={{ color: 'var(--adm-text-secondary)', fontSize: '0.82rem' }}>to</span>
+                <AdminDatePicker value={customEnd} onChange={setCustomEnd} placeholder="End date" minDate={customStart || undefined} maxDate={TODAY} />
+              </>
+            )}
+            <AdminSelect
+              value={dateFilter}
+              onChange={v => { setDateFilter(v); setCustomStart(''); setCustomEnd(''); }}
+              width="148px"
+              options={[
+                { value: 'today', label: 'Today' },
+                { value: 'week', label: 'This Week' },
+                { value: 'month', label: 'This Month' },
+                { value: 'custom', label: 'Custom Range' },
+              ]}
+            />
+          </div>
         )}
       </div>
 
       {/* ── Filters Row 2: advanced filters (tab-specific) ── */}
       {activeTab !== 'overview' && (activeTab === 'animals' || activeTab === 'records') && (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap', padding: '10px 14px', background: 'var(--adm-bg-surface)', border: '1px solid var(--adm-border)', borderRadius: 8 }}>
-        {/* Health Status chips — Animals + Health Records */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: 2 }}>Health</span>
-          {['Critical','Fair','Good','Excellent'].map(h => {
-            const col = healthColor[h] || '#6b7280';
-            const active = filterHealth.includes(h);
-            return (
-              <button key={h} onClick={() => setFilterHealth(prev => prev.includes(h) ? prev.filter(x => x !== h) : [...prev, h])}
-                style={{ padding: '3px 10px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', border: `1px solid ${active ? col : 'var(--adm-border)'}`, background: active ? col + '22' : 'transparent', color: active ? col : 'var(--adm-text-secondary)', transition: 'all 0.15s' }}>
-                {h}
-              </button>
-            );
-          })}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap', padding: '10px 14px', background: 'var(--adm-bg-surface)', border: '1px solid var(--adm-border)', borderRadius: 8 }}>
+          {/* Health Status chips — Animals + Health Records */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: 2 }}>Health</span>
+            {['Critical', 'Fair', 'Good', 'Excellent'].map(h => {
+              const col = healthColor[h] || '#6b7280';
+              const active = filterHealth.includes(h);
+              return (
+                <button key={h} onClick={() => setFilterHealth(prev => prev.includes(h) ? prev.filter(x => x !== h) : [...prev, h])}
+                  style={{ padding: '3px 10px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', border: `1px solid ${active ? col : 'var(--adm-border)'}`, background: active ? col + '22' : 'transparent', color: active ? col : 'var(--adm-text-secondary)', transition: 'all 0.15s' }}>
+                  {h}
+                </button>
+              );
+            })}
+          </div>
+
+          <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+
+          {/* Animal Group multi-select */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Group</span>
+            <AdminSelect
+              value={filterGroups[0] || ''}
+              onChange={v => setFilterGroups(v ? [v] : [])}
+              width="130px"
+              options={[{ value: '', label: 'All Groups' }, ...allGroups.map(g => ({ value: g, label: g }))]}
+            />
+            {filterGroups.length > 0 && <span style={{ fontSize: '0.7rem', color: 'var(--adm-accent)', fontWeight: 600 }}>{filterGroups[0]}</span>}
+          </div>
+
+          {activeTab === 'animals' && (<>
+            <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+
+            {/* Exhibit */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Exhibit</span>
+              <AdminSelect
+                value={filterExhibit}
+                onChange={setFilterExhibit}
+                width="150px"
+                options={[
+                  { value: '', label: 'All Exhibits' },
+                  { value: '__unassigned__', label: 'Unassigned' },
+                  ...allExhibits.map(e => ({ value: e, label: e }))
+                ]}
+              />
+            </div>
+
+            <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+
+            {/* Sex toggle */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Sex</span>
+              {['', 'Male', 'Female'].map(s => (
+                <button key={s || 'all'} onClick={() => setFilterSex(s)}
+                  style={{ padding: '3px 10px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', border: `1px solid ${filterSex === s ? 'var(--adm-accent)' : 'var(--adm-border)'}`, background: filterSex === s ? 'var(--adm-accent-dim)' : 'transparent', color: filterSex === s ? 'var(--adm-accent)' : 'var(--adm-text-secondary)', transition: 'all 0.15s' }}>
+                  {s || 'All'}
+                </button>
+              ))}
+            </div>
+
+            <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+
+            {/* Age range */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Age</span>
+              <input type="number" min="0" placeholder="Min" value={ageMin} onChange={e => setAgeMin(e.target.value)}
+                style={{ width: 52, padding: '4px 7px', borderRadius: 6, border: '1px solid var(--adm-border)', background: 'var(--adm-bg)', color: 'var(--adm-text-primary)', fontSize: '0.78rem' }} />
+              <span style={{ color: 'var(--adm-text-muted)', fontSize: '0.75rem' }}>–</span>
+              <input type="number" min="0" placeholder="Max" value={ageMax} onChange={e => setAgeMax(e.target.value)}
+                style={{ width: 52, padding: '4px 7px', borderRadius: 6, border: '1px solid var(--adm-border)', background: 'var(--adm-bg)', color: 'var(--adm-text-primary)', fontSize: '0.78rem' }} />
+              <span style={{ fontSize: '0.72rem', color: 'var(--adm-text-muted)' }}>yrs</span>
+            </div>
+          </>)}
+
+          {/* Activity + Staff — Health Records only */}
+          {activeTab === 'records' && (<>
+            <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Activity</span>
+              <AdminSelect
+                value={filterActivity}
+                onChange={setFilterActivity}
+                width="130px"
+                options={[{ value: '', label: 'All Levels' }, ...allActivityLevels.map(a => ({ value: a, label: a }))]}
+              />
+            </div>
+            <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Staff</span>
+              <AdminSelect
+                value={filterRecordStaff}
+                onChange={setFilterRecordStaff}
+                width="160px"
+                searchable
+                options={[{ value: '', label: 'All Staff' }, ...allRecordStaff.map(s => ({ value: s, label: s }))]}
+              />
+            </div>
+          </>)}
         </div>
-
-        <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
-
-        {/* Animal Group multi-select */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Group</span>
-          <AdminSelect
-            value={filterGroups[0] || ''}
-            onChange={v => setFilterGroups(v ? [v] : [])}
-            width="130px"
-            options={[{ value: '', label: 'All Groups' }, ...allGroups.map(g => ({ value: g, label: g }))]}
-          />
-          {filterGroups.length > 0 && <span style={{ fontSize: '0.7rem', color: 'var(--adm-accent)', fontWeight: 600 }}>{filterGroups[0]}</span>}
-        </div>
-
-        {activeTab === 'animals' && (<>
-        <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
-
-        {/* Exhibit */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Exhibit</span>
-          <AdminSelect
-            value={filterExhibit}
-            onChange={setFilterExhibit}
-            width="150px"
-            options={[
-              { value: '', label: 'All Exhibits' },
-              { value: '__unassigned__', label: 'Unassigned' },
-              ...allExhibits.map(e => ({ value: e, label: e }))
-            ]}
-          />
-        </div>
-
-        <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
-
-        {/* Sex toggle */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Sex</span>
-          {['','Male','Female'].map(s => (
-            <button key={s || 'all'} onClick={() => setFilterSex(s)}
-              style={{ padding: '3px 10px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', border: `1px solid ${filterSex === s ? 'var(--adm-accent)' : 'var(--adm-border)'}`, background: filterSex === s ? 'var(--adm-accent-dim)' : 'transparent', color: filterSex === s ? 'var(--adm-accent)' : 'var(--adm-text-secondary)', transition: 'all 0.15s' }}>
-              {s || 'All'}
-            </button>
-          ))}
-        </div>
-
-        <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
-
-        {/* Age range */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Age</span>
-          <input type="number" min="0" placeholder="Min" value={ageMin} onChange={e => setAgeMin(e.target.value)}
-            style={{ width: 52, padding: '4px 7px', borderRadius: 6, border: '1px solid var(--adm-border)', background: 'var(--adm-bg)', color: 'var(--adm-text-primary)', fontSize: '0.78rem' }} />
-          <span style={{ color: 'var(--adm-text-muted)', fontSize: '0.75rem' }}>–</span>
-          <input type="number" min="0" placeholder="Max" value={ageMax} onChange={e => setAgeMax(e.target.value)}
-            style={{ width: 52, padding: '4px 7px', borderRadius: 6, border: '1px solid var(--adm-border)', background: 'var(--adm-bg)', color: 'var(--adm-text-primary)', fontSize: '0.78rem' }} />
-          <span style={{ fontSize: '0.72rem', color: 'var(--adm-text-muted)' }}>yrs</span>
-        </div>
-        </>)}
-
-        {/* Activity + Staff — Health Records only */}
-        {activeTab === 'records' && (<>
-        <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Activity</span>
-          <AdminSelect
-            value={filterActivity}
-            onChange={setFilterActivity}
-            width="130px"
-            options={[{ value: '', label: 'All Levels' }, ...allActivityLevels.map(a => ({ value: a, label: a }))]}
-          />
-        </div>
-        <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Staff</span>
-          <AdminSelect
-            value={filterRecordStaff}
-            onChange={setFilterRecordStaff}
-            width="160px"
-            searchable
-            options={[{ value: '', label: 'All Staff' }, ...allRecordStaff.map(s => ({ value: s, label: s }))]}
-          />
-        </div>
-        </>)}
-      </div>
       )}
 
       {/* ── Filters Row 2b: Group + tab-specific for feedings/alerts ── */}
       {(activeTab === 'feedings' || activeTab === 'alerts') && (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap', padding: '10px 14px', background: 'var(--adm-bg-surface)', border: '1px solid var(--adm-border)', borderRadius: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Group</span>
-          <AdminSelect
-            value={filterGroups[0] || ''}
-            onChange={v => setFilterGroups(v ? [v] : [])}
-            width="130px"
-            options={[{ value: '', label: 'All Groups' }, ...allGroups.map(g => ({ value: g, label: g }))]}
-          />
-          {filterGroups.length > 0 && <span style={{ fontSize: '0.7rem', color: 'var(--adm-accent)', fontWeight: 600 }}>{filterGroups[0]}</span>}
-        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap', padding: '10px 14px', background: 'var(--adm-bg-surface)', border: '1px solid var(--adm-border)', borderRadius: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Group</span>
+            <AdminSelect
+              value={filterGroups[0] || ''}
+              onChange={v => setFilterGroups(v ? [v] : [])}
+              width="130px"
+              options={[{ value: '', label: 'All Groups' }, ...allGroups.map(g => ({ value: g, label: g }))]}
+            />
+            {filterGroups.length > 0 && <span style={{ fontSize: '0.7rem', color: 'var(--adm-accent)', fontWeight: 600 }}>{filterGroups[0]}</span>}
+          </div>
 
-        {/* Food Type + Frequency — Feeding Schedules only */}
-        {activeTab === 'feedings' && (<>
-        <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Food Type</span>
-          <AdminSelect
-            value={filterFoodType}
-            onChange={setFilterFoodType}
-            width="140px"
-            options={[{ value: '', label: 'All Types' }, ...allFoodTypes.map(t => ({ value: t, label: t }))]}
-          />
-        </div>
-        <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Frequency</span>
-          <AdminSelect
-            value={filterFrequency}
-            onChange={setFilterFrequency}
-            width="130px"
-            options={[{ value: '', label: 'All' }, ...allFrequencies.map(f => ({ value: f, label: f }))]}
-          />
-        </div>
-        </>)}
+          {/* Food Type + Frequency — Feeding Schedules only */}
+          {activeTab === 'feedings' && (<>
+            <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Food Type</span>
+              <AdminSelect
+                value={filterFoodType}
+                onChange={setFilterFoodType}
+                width="140px"
+                options={[{ value: '', label: 'All Types' }, ...allFoodTypes.map(t => ({ value: t, label: t }))]}
+              />
+            </div>
+            <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Frequency</span>
+              <AdminSelect
+                value={filterFrequency}
+                onChange={setFilterFrequency}
+                width="130px"
+                options={[{ value: '', label: 'All' }, ...allFrequencies.map(f => ({ value: f, label: f }))]}
+              />
+            </div>
+          </>)}
 
-        {/* Alert Type + Resolved Status — Health Alerts only */}
-        {activeTab === 'alerts' && (<>
-        <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Alert Type</span>
-          <AdminSelect
-            value={filterAlertType}
-            onChange={setFilterAlertType}
-            width="150px"
-            options={[{ value: '', label: 'All Types' }, ...allAlertTypes.map(t => ({ value: t, label: t }))]}
-          />
+          {/* Alert Type + Resolved Status — Health Alerts only */}
+          {activeTab === 'alerts' && (<>
+            <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Alert Type</span>
+              <AdminSelect
+                value={filterAlertType}
+                onChange={setFilterAlertType}
+                width="150px"
+                options={[{ value: '', label: 'All Types' }, ...allAlertTypes.map(t => ({ value: t, label: t }))]}
+              />
+            </div>
+            <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</span>
+              {[['', 'All'], ['active', 'Active'], ['resolved', 'Resolved']].map(([val, lbl]) => (
+                <button key={val} onClick={() => setFilterAlertResolved(val)}
+                  style={{ padding: '3px 10px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', border: `1px solid ${filterAlertResolved === val ? (val === 'active' ? '#ef4444' : val === 'resolved' ? '#10b981' : 'var(--adm-accent)') : 'var(--adm-border)'}`, background: filterAlertResolved === val ? (val === 'active' ? 'rgba(239,68,68,0.12)' : val === 'resolved' ? 'rgba(16,185,129,0.15)' : 'var(--adm-accent-dim)') : 'transparent', color: filterAlertResolved === val ? (val === 'active' ? '#ef4444' : val === 'resolved' ? '#10b981' : 'var(--adm-accent)') : 'var(--adm-text-secondary)', transition: 'all 0.15s' }}>
+                  {lbl}
+                </button>
+              ))}
+            </div>
+          </>)}
         </div>
-        <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</span>
-          {[['','All'],['active','Active'],['resolved','Resolved']].map(([val, lbl]) => (
-            <button key={val} onClick={() => setFilterAlertResolved(val)}
-              style={{ padding: '3px 10px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', border: `1px solid ${filterAlertResolved === val ? (val === 'active' ? '#ef4444' : val === 'resolved' ? '#10b981' : 'var(--adm-accent)') : 'var(--adm-border)'}`, background: filterAlertResolved === val ? (val === 'active' ? 'rgba(239,68,68,0.12)' : val === 'resolved' ? 'rgba(16,185,129,0.15)' : 'var(--adm-accent-dim)') : 'transparent', color: filterAlertResolved === val ? (val === 'active' ? '#ef4444' : val === 'resolved' ? '#10b981' : 'var(--adm-accent)') : 'var(--adm-text-secondary)', transition: 'all 0.15s' }}>
-              {lbl}
-            </button>
-          ))}
-        </div>
-        </>)}
-      </div>
       )}
 
       {/* ── Summary bars ── */}
@@ -655,213 +655,216 @@ const AnimalReport = () => {
 
       {/* ── Animals Table ── */}
       {activeTab === 'animals' && (
-      <>
-      <div className="admin-table-container">
-          {animals.length === 0 ? (
-            <div className="admin-table-empty">Loading animals...</div>
-          ) : (
-            <table className="admin-table">
-              <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
-                <tr>
-                  <th>Animal ID</th>
-                  <th onClick={() => toggleSort('date')} style={{ cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none' }}>
-                    DATE ARRIVED{' '}
-                    {sortCol === 'date'
-                      ? (sortDir === 'asc' ? <ChevronUp size={12} className="sort-icon" /> : <ChevronDown size={12} className="sort-icon" />)
-                      : <ChevronsUpDown size={12} className="sort-icon" />}
-                  </th>
-                  <th onClick={() => toggleSort('name')} style={{ cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none' }}>
-                    NAME{' '}
-                    {sortCol === 'name'
-                      ? (sortDir === 'asc' ? <ChevronUp size={12} className="sort-icon" /> : <ChevronDown size={12} className="sort-icon" />)
-                      : <ChevronsUpDown size={12} className="sort-icon" />}
-                  </th>
-                  <th onClick={() => toggleSort('group')} style={{ cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none' }}>
-                    ANIMAL GROUP{' '}
-                    {sortCol === 'group'
-                      ? (sortDir === 'asc' ? <ChevronUp size={12} className="sort-icon" /> : <ChevronDown size={12} className="sort-icon" />)
-                      : <ChevronsUpDown size={12} className="sort-icon" />}
-                  </th>
-                  <th onClick={() => toggleSort('exhibit')} style={{ cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none' }}>
-                    EXHIBIT{' '}
-                    {sortCol === 'exhibit'
-                      ? (sortDir === 'asc' ? <ChevronUp size={12} className="sort-icon" /> : <ChevronDown size={12} className="sort-icon" />)
-                      : <ChevronsUpDown size={12} className="sort-icon" />}
-                  </th>
-                  <th onClick={() => toggleSort('age')} style={{ cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none' }}>
-                    AGE / SEX{' '}
-                    {sortCol === 'age'
-                      ? (sortDir === 'asc' ? <ChevronUp size={12} className="sort-icon" /> : <ChevronDown size={12} className="sort-icon" />)
-                      : <ChevronsUpDown size={12} className="sort-icon" />}
-                  </th>
-                  <th onClick={() => toggleSort('health')} style={{ cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none' }}>
-                    HEALTH{' '}
-                    {sortCol === 'health'
-                      ? (sortDir === 'asc' ? <ChevronUp size={12} className="sort-icon" /> : <ChevronDown size={12} className="sort-icon" />)
-                      : <ChevronsUpDown size={12} className="sort-icon" />}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredAnimals.length === 0 ? (
-                  <tr className="no-hover">
-                    <td colSpan={7} style={{ textAlign: 'center', padding: 32, color: 'var(--adm-text-muted)' }}>
-                      No animals found matching your filters.
-                    </td>
+        <>
+          <div className="admin-table-container">
+            {animals.length === 0 ? (
+              <div className="admin-table-empty">Loading animals...</div>
+            ) : (
+              <table className="admin-table">
+                <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                  <tr>
+                    <th>Animal ID</th>
+                    <th onClick={() => toggleSort('date')} style={{ cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none' }}>
+                      DATE ARRIVED{' '}
+                      {sortCol === 'date'
+                        ? (sortDir === 'asc' ? <ChevronUp size={12} className="sort-icon" /> : <ChevronDown size={12} className="sort-icon" />)
+                        : <ChevronsUpDown size={12} className="sort-icon" />}
+                    </th>
+                    <th onClick={() => toggleSort('name')} style={{ cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none' }}>
+                      NAME{' '}
+                      {sortCol === 'name'
+                        ? (sortDir === 'asc' ? <ChevronUp size={12} className="sort-icon" /> : <ChevronDown size={12} className="sort-icon" />)
+                        : <ChevronsUpDown size={12} className="sort-icon" />}
+                    </th>
+                    <th onClick={() => toggleSort('group')} style={{ cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none' }}>
+                      ANIMAL GROUP{' '}
+                      {sortCol === 'group'
+                        ? (sortDir === 'asc' ? <ChevronUp size={12} className="sort-icon" /> : <ChevronDown size={12} className="sort-icon" />)
+                        : <ChevronsUpDown size={12} className="sort-icon" />}
+                    </th>
+                    <th onClick={() => toggleSort('exhibit')} style={{ cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none' }}>
+                      EXHIBIT{' '}
+                      {sortCol === 'exhibit'
+                        ? (sortDir === 'asc' ? <ChevronUp size={12} className="sort-icon" /> : <ChevronDown size={12} className="sort-icon" />)
+                        : <ChevronsUpDown size={12} className="sort-icon" />}
+                    </th>
+                    <th onClick={() => toggleSort('age')} style={{ cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none' }}>
+                      AGE / SEX{' '}
+                      {sortCol === 'age'
+                        ? (sortDir === 'asc' ? <ChevronUp size={12} className="sort-icon" /> : <ChevronDown size={12} className="sort-icon" />)
+                        : <ChevronsUpDown size={12} className="sort-icon" />}
+                    </th>
+                    <th onClick={() => toggleSort('health')} style={{ cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none' }}>
+                      HEALTH{' '}
+                      {sortCol === 'health'
+                        ? (sortDir === 'asc' ? <ChevronUp size={12} className="sort-icon" /> : <ChevronDown size={12} className="sort-icon" />)
+                        : <ChevronsUpDown size={12} className="sort-icon" />}
+                    </th>
                   </tr>
-                ) : (
-                  filteredAnimals.slice(animalPage * PAGE_SIZE, (animalPage + 1) * PAGE_SIZE).map(an => {
-                    const hc = healthColor[an.HealthStatus] || '#6b7280';
-                    return (
-                      <tr key={an.AnimalID}>
-                        <td><span style={{ fontFamily: 'monospace', color: 'var(--adm-accent)', fontSize: '0.82rem' }}>{an.AnimalCode || '—'}</span></td>
-                        <td style={{ color: 'var(--adm-text-secondary)', fontSize: '0.85rem' }}>{an.DateArrived ? new Date(an.DateArrived).toLocaleDateString('en-US', { timeZone: 'UTC' }) : '—'}</td>
-                        <td style={{ fontWeight: 600 }}>{an.Name || <span style={{ color: 'var(--adm-text-muted)', fontStyle: 'italic' }}>Unnamed</span>}</td>
-                        <td>{an.Species}</td>
-                        <td style={{ color: 'var(--adm-text-secondary)' }}>{an.ExhibitName || <span style={{ color: 'var(--adm-text-muted)', fontStyle: 'italic' }}>Unassigned</span>}</td>
-                        <td style={{ color: 'var(--adm-text-secondary)' }}>{an.Age ? `${an.Age} yrs` : '—'}{an.Gender ? ` · ${an.Gender}` : ''}</td>
-                        <td>{an.HealthStatus && (<span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 600, background: hc + '22', color: hc }}>{an.HealthStatus}</span>)}</td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          )}
-      </div>
-      {renderPagination(filteredAnimals.length, animalPage, setAnimalPage, 'animals')}
-      </>
+                </thead>
+                <tbody>
+                  {filteredAnimals.length === 0 ? (
+                    <tr className="no-hover">
+                      <td colSpan={7} style={{ textAlign: 'center', padding: 32, color: 'var(--adm-text-muted)' }}>
+                        No animals found matching your filters.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredAnimals.slice(animalPage * PAGE_SIZE, (animalPage + 1) * PAGE_SIZE).map(an => {
+                      const hc = healthColor[an.HealthStatus] || '#6b7280';
+                      return (
+                        <tr key={an.AnimalID}>
+                          <td><span style={{ fontFamily: 'monospace', color: 'var(--adm-accent)', fontSize: '0.82rem' }}>{an.AnimalCode || '—'}</span></td>
+                          <td style={{ color: 'var(--adm-text-secondary)', fontSize: '0.85rem' }}>{an.DateArrived ? new Date(an.DateArrived).toLocaleDateString('en-US', { timeZone: 'UTC' }) : '—'}</td>
+                          <td style={{ fontWeight: 600 }}>{an.Name || <span style={{ color: 'var(--adm-text-muted)', fontStyle: 'italic' }}>Unnamed</span>}</td>
+                          <td>{an.Species}</td>
+                          <td style={{ color: 'var(--adm-text-secondary)' }}>{an.ExhibitName || <span style={{ color: 'var(--adm-text-muted)', fontStyle: 'italic' }}>Unassigned</span>}</td>
+                          <td style={{ color: 'var(--adm-text-secondary)' }}>{an.Age ? `${an.Age} yrs` : '—'}{an.Gender ? ` · ${an.Gender}` : ''}</td>
+                          <td>{an.HealthStatus && (<span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 600, background: hc + '22', color: hc }}>{an.HealthStatus}</span>)}</td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            )}
+            {renderPagination(filteredAnimals.length, animalPage, setAnimalPage, 'animals')}
+          </div>
+        </>
       )}
 
       {/* ── Health Records Table ── */}
       {activeTab === 'records' && (
-      <>
-      {healthLoading ? (
-        <div className="admin-table-empty" style={{ padding: 32 }}>Loading health records...</div>
-      ) : (
-        <div className="admin-table-container">
-          <table className="admin-table">
-            <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
-              <tr>
-                <RecordsSortHeader col="animal">Animal</RecordsSortHeader>
-                <th>Code</th>
-                <th>Species</th>
-                <RecordsSortHeader col="date">Date</RecordsSortHeader>
-                <RecordsSortHeader col="score">Score</RecordsSortHeader>
-                <th>Weight</th>
-                <th>Activity</th>
-                <RecordsSortHeader col="staff">Staff</RecordsSortHeader>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredRecords.length === 0 ? (
-                <tr className="no-hover"><td colSpan={8} style={{ textAlign: 'center', padding: 32, color: 'var(--adm-text-muted)' }}>No health records found.</td></tr>
-              ) : (
-                filteredRecords.slice(recordsPage * PAGE_SIZE, (recordsPage + 1) * PAGE_SIZE).map((r, i) => (
-                  <tr key={r.RecordID || i}>
-                    <td style={{ fontWeight: 600 }}>{r.AnimalName || '—'}</td>
-                    <td><span style={{ fontFamily: 'monospace', color: 'var(--adm-accent)', fontSize: '0.82rem' }}>{r.AnimalCode || '—'}</span></td>
-                    <td>{r.Species || '—'}</td>
-                    <td>{fmtDate(r.CheckupDate)}</td>
-                    <td><span className={`ah-score ${scoreClass(r.HealthScore)}`}><span className="ah-score-dot" />{r.HealthScore} — {scoreLabel(r.HealthScore)}</span></td>
-                    <td>{r.Weight != null ? `${Number(r.Weight).toFixed(1)} kg` : '—'}</td>
-                    <td>{r.ActivityLevel || '—'}</td>
-                    <td>{r.StaffName || '—'}</td>
+        <>
+          {healthLoading ? (
+            <div className="admin-table-empty" style={{ padding: 32 }}>Loading health records...</div>
+          ) : (
+            <div className="admin-table-container">
+              <table className="admin-table">
+                <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                  <tr>
+                    <RecordsSortHeader col="animal">Animal</RecordsSortHeader>
+                    <th>Code</th>
+                    <th>Species</th>
+                    <RecordsSortHeader col="date">Date</RecordsSortHeader>
+                    <RecordsSortHeader col="score">Score</RecordsSortHeader>
+                    <th>Weight</th>
+                    <th>Activity</th>
+                    <RecordsSortHeader col="staff">Staff</RecordsSortHeader>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
-      {renderPagination(filteredRecords.length, recordsPage, setRecordsPage, 'health records')}
-      </>
+                </thead>
+                <tbody>
+                  {filteredRecords.length === 0 ? (
+                    <tr className="no-hover"><td colSpan={8} style={{ textAlign: 'center', padding: 32, color: 'var(--adm-text-muted)' }}>No health records found.</td></tr>
+                  ) : (
+                    filteredRecords.slice(recordsPage * PAGE_SIZE, (recordsPage + 1) * PAGE_SIZE).map((r, i) => (
+                      <tr key={r.RecordID || i}>
+                        <td style={{ fontWeight: 600 }}>{r.AnimalName || '—'}</td>
+                        <td><span style={{ fontFamily: 'monospace', color: 'var(--adm-accent)', fontSize: '0.82rem' }}>{r.AnimalCode || '—'}</span></td>
+                        <td>{r.Species || '—'}</td>
+                        <td>{fmtDate(r.CheckupDate)}</td>
+                        <td><span className={`ah-score ${scoreClass(r.HealthScore)}`}><span className="ah-score-dot" />{r.HealthScore} — {scoreLabel(r.HealthScore)}</span></td>
+                        <td>{r.Weight != null ? `${Number(r.Weight).toFixed(1)} kg` : '—'}</td>
+                        <td>{r.ActivityLevel || '—'}</td>
+                        <td>{r.StaffName || '—'}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+              {renderPagination(filteredRecords.length, recordsPage, setRecordsPage, 'health records')}
+            </div>
+          )
+          }
+        </>
       )}
 
       {/* ── Feeding Schedules Table ── */}
       {activeTab === 'feedings' && (
-      <>
-      {healthLoading ? (
-        <div className="admin-table-empty" style={{ padding: 32 }}>Loading feeding schedules...</div>
-      ) : (
-        <div className="admin-table-container">
-          <table className="admin-table">
-            <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
-              <tr>
-                <th>Animal</th><th>Code</th><th>Species</th>
-                <th>Food Type</th><th>Quantity</th><th>Frequency</th>
-                <th>Time</th><th>Special Instructions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredFeedings.length === 0 ? (
-                <tr className="no-hover"><td colSpan={8} style={{ textAlign: 'center', padding: 32, color: 'var(--adm-text-muted)' }}>No feeding schedules found.</td></tr>
-              ) : (
-                filteredFeedings.slice(feedingsPage * PAGE_SIZE, (feedingsPage + 1) * PAGE_SIZE).map((f, i) => (
-                  <tr key={f.ScheduleID || i}>
-                    <td style={{ fontWeight: 600 }}>{f.AnimalName || '—'}</td>
-                    <td><span style={{ fontFamily: 'monospace', color: 'var(--adm-accent)', fontSize: '0.82rem' }}>{f.AnimalCode || '—'}</span></td>
-                    <td>{f.Species || '—'}</td>
-                    <td>{f.FoodType || '—'}</td>
-                    <td>{f.Quantity != null ? `${f.Quantity} ${f.Unit || ''}`.trim() : '—'}</td>
-                    <td>{f.Frequency || '—'}</td>
-                    <td>{f.FeedingTime || '—'}</td>
-                    <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.SpecialInstructions || '—'}</td>
+        <>
+          {healthLoading ? (
+            <div className="admin-table-empty" style={{ padding: 32 }}>Loading feeding schedules...</div>
+          ) : (
+            <div className="admin-table-container">
+              <table className="admin-table">
+                <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                  <tr>
+                    <th>Animal</th><th>Code</th><th>Species</th>
+                    <th>Food Type</th><th>Quantity</th><th>Frequency</th>
+                    <th>Time</th><th>Special Instructions</th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
-      {renderPagination(filteredFeedings.length, feedingsPage, setFeedingsPage, 'feeding schedules')}
-      </>
+                </thead>
+                <tbody>
+                  {filteredFeedings.length === 0 ? (
+                    <tr className="no-hover"><td colSpan={8} style={{ textAlign: 'center', padding: 32, color: 'var(--adm-text-muted)' }}>No feeding schedules found.</td></tr>
+                  ) : (
+                    filteredFeedings.slice(feedingsPage * PAGE_SIZE, (feedingsPage + 1) * PAGE_SIZE).map((f, i) => (
+                      <tr key={f.ScheduleID || i}>
+                        <td style={{ fontWeight: 600 }}>{f.AnimalName || '—'}</td>
+                        <td><span style={{ fontFamily: 'monospace', color: 'var(--adm-accent)', fontSize: '0.82rem' }}>{f.AnimalCode || '—'}</span></td>
+                        <td>{f.Species || '—'}</td>
+                        <td>{f.FoodType || '—'}</td>
+                        <td>{f.Quantity != null ? `${f.Quantity} ${f.Unit || ''}`.trim() : '—'}</td>
+                        <td>{f.Frequency || '—'}</td>
+                        <td>{f.FeedingTime || '—'}</td>
+                        <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.SpecialInstructions || '—'}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+              {renderPagination(filteredFeedings.length, feedingsPage, setFeedingsPage, 'feeding schedules')}
+            </div>
+          )
+          }
+        </>
       )}
 
       {/* ── Health Alerts Table ── */}
       {activeTab === 'alerts' && (
-      <>
-      {healthLoading ? (
-        <div className="admin-table-empty" style={{ padding: 32 }}>Loading health alerts...</div>
-      ) : (
-        <div className="admin-table-container">
-          <table className="admin-table">
-            <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
-              <tr>
-                <AlertsSortHeader col="animal">Animal</AlertsSortHeader>
-                <th>Code</th>
-                <th>Species</th>
-                <AlertsSortHeader col="type">Alert Type</AlertsSortHeader>
-                <th>Message</th>
-                <AlertsSortHeader col="date">Date</AlertsSortHeader>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredAlerts.length === 0 ? (
-                <tr className="no-hover"><td colSpan={7} style={{ textAlign: 'center', padding: 32, color: 'var(--adm-text-muted)' }}>No health alerts found.</td></tr>
-              ) : (
-                filteredAlerts.slice(alertsPage * PAGE_SIZE, (alertsPage + 1) * PAGE_SIZE).map((a, i) => (
-                  <tr key={a.AlertID || i}>
-                    <td style={{ fontWeight: 600 }}>{a.AnimalName || '—'}</td>
-                    <td><span style={{ fontFamily: 'monospace', color: 'var(--adm-accent)', fontSize: '0.82rem' }}>{a.AnimalCode || '—'}</span></td>
-                    <td>{a.Species || '—'}</td>
-                    <td>{a.AlertType || '—'}</td>
-                    <td style={{ maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.AlertMessage || '—'}</td>
-                    <td>{fmtDate(a.CreatedAt)}</td>
-                    <td>{a.IsResolved
-                      ? <span style={{ color: '#10b981', fontWeight: 600, fontSize: '0.8rem' }}><CheckCircle size={13} style={{ verticalAlign: 'middle' }} /> Resolved</span>
-                      : <span style={{ color: '#ef4444', fontWeight: 600, fontSize: '0.8rem' }}><AlertTriangle size={13} style={{ verticalAlign: 'middle' }} /> Active</span>
-                    }</td>
+        <>
+          {healthLoading ? (
+            <div className="admin-table-empty" style={{ padding: 32 }}>Loading health alerts...</div>
+          ) : (
+            <div className="admin-table-container">
+              <table className="admin-table">
+                <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                  <tr>
+                    <AlertsSortHeader col="animal">Animal</AlertsSortHeader>
+                    <th>Code</th>
+                    <th>Species</th>
+                    <AlertsSortHeader col="type">Alert Type</AlertsSortHeader>
+                    <th>Message</th>
+                    <AlertsSortHeader col="date">Date</AlertsSortHeader>
+                    <th>Status</th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
-      {renderPagination(filteredAlerts.length, alertsPage, setAlertsPage, 'health alerts')}
-      </>
+                </thead>
+                <tbody>
+                  {filteredAlerts.length === 0 ? (
+                    <tr className="no-hover"><td colSpan={7} style={{ textAlign: 'center', padding: 32, color: 'var(--adm-text-muted)' }}>No health alerts found.</td></tr>
+                  ) : (
+                    filteredAlerts.slice(alertsPage * PAGE_SIZE, (alertsPage + 1) * PAGE_SIZE).map((a, i) => (
+                      <tr key={a.AlertID || i}>
+                        <td style={{ fontWeight: 600 }}>{a.AnimalName || '—'}</td>
+                        <td><span style={{ fontFamily: 'monospace', color: 'var(--adm-accent)', fontSize: '0.82rem' }}>{a.AnimalCode || '—'}</span></td>
+                        <td>{a.Species || '—'}</td>
+                        <td>{a.AlertType || '—'}</td>
+                        <td style={{ maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.AlertMessage || '—'}</td>
+                        <td>{fmtDate(a.CreatedAt)}</td>
+                        <td>{a.IsResolved
+                          ? <span style={{ color: '#10b981', fontWeight: 600, fontSize: '0.8rem' }}><CheckCircle size={13} style={{ verticalAlign: 'middle' }} /> Resolved</span>
+                          : <span style={{ color: '#ef4444', fontWeight: 600, fontSize: '0.8rem' }}><AlertTriangle size={13} style={{ verticalAlign: 'middle' }} /> Active</span>
+                        }</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+              {renderPagination(filteredAlerts.length, alertsPage, setAlertsPage, 'health alerts')}
+            </div>
+          )
+          }
+        </>
       )}
     </div>
   );

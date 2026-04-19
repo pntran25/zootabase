@@ -27,8 +27,8 @@ const SortIcon = ({ column }) => {
   return (
     <span className="sort-icon">
       {column.getIsSorted() === 'asc' ? <ChevronUp size={12} /> :
-       column.getIsSorted() === 'desc' ? <ChevronDown size={12} /> :
-       <ChevronsUpDown size={12} />}
+        column.getIsSorted() === 'desc' ? <ChevronDown size={12} /> :
+          <ChevronsUpDown size={12} />}
     </span>
   );
 };
@@ -54,21 +54,31 @@ const scoreLabel = (s) => {
 
 /* ── Health Assessment Scoring ─────────────────────────────── */
 const HEALTH_CATEGORIES = [
-  { key: 'BodyCondition', label: 'Body Condition', max: 25, options: [
-    { label: 'Ideal', value: 25 }, { label: 'Slightly Over/Under', value: 15 }, { label: 'Over/Underweight', value: 5 },
-  ]},
-  { key: 'ActivityLevel', label: 'Activity Level', max: 20, options: [
-    { label: 'Normal / High', value: 20 }, { label: 'Low', value: 10 }, { label: 'Sedentary', value: 5 },
-  ]},
-  { key: 'Appetite', label: 'Appetite', max: 20, options: [
-    { label: 'Normal', value: 20 }, { label: 'Increased', value: 15 }, { label: 'Decreased', value: 10 }, { label: 'None', value: 0 },
-  ]},
-  { key: 'Hydration', label: 'Hydration', max: 15, options: [
-    { label: 'Normal', value: 15 }, { label: 'Mild Dehydration', value: 8 }, { label: 'Dehydrated', value: 3 },
-  ]},
-  { key: 'Behavior', label: 'Behavior / Temperament', max: 20, options: [
-    { label: 'Alert / Normal', value: 20 }, { label: 'Slightly Lethargic', value: 12 }, { label: 'Lethargic', value: 5 }, { label: 'Distressed', value: 0 },
-  ]},
+  {
+    key: 'BodyCondition', label: 'Body Condition', max: 25, options: [
+      { label: 'Ideal', value: 25 }, { label: 'Slightly Over/Under', value: 15 }, { label: 'Over/Underweight', value: 5 },
+    ]
+  },
+  {
+    key: 'ActivityLevel', label: 'Activity Level', max: 20, options: [
+      { label: 'Normal / High', value: 20 }, { label: 'Low', value: 10 }, { label: 'Sedentary', value: 5 },
+    ]
+  },
+  {
+    key: 'Appetite', label: 'Appetite', max: 20, options: [
+      { label: 'Normal', value: 20 }, { label: 'Increased', value: 15 }, { label: 'Decreased', value: 10 }, { label: 'None', value: 0 },
+    ]
+  },
+  {
+    key: 'Hydration', label: 'Hydration', max: 15, options: [
+      { label: 'Normal', value: 15 }, { label: 'Mild Dehydration', value: 8 }, { label: 'Dehydrated', value: 3 },
+    ]
+  },
+  {
+    key: 'Behavior', label: 'Behavior / Temperament', max: 20, options: [
+      { label: 'Alert / Normal', value: 20 }, { label: 'Slightly Lethargic', value: 12 }, { label: 'Lethargic', value: 5 }, { label: 'Distressed', value: 0 },
+    ]
+  },
 ];
 
 const calcHealthScore = (assess) => {
@@ -135,8 +145,7 @@ const DataTable = ({ data, columns, sorting, setSorting, loading, emptyText, ren
             </tbody>
           </table>
         )}
-      </div>
-      {!loading && data.length > 0 && table.getPageCount() > 1 && (() => {
+        {!loading && data.length > 0 && table.getPageCount() > 1 && (() => {
         const pageCount = table.getPageCount();
         const pi = table.getState().pagination.pageIndex;
         let pages = [];
@@ -175,6 +184,7 @@ const DataTable = ({ data, columns, sorting, setSorting, loading, emptyText, ren
           </div>
         );
       })()}
+      </div>
     </>
   );
 };
@@ -272,7 +282,7 @@ const AnimalHealth = () => {
     } else {
       setEditingRecord(null);
       setRecordForm({
-        AnimalID: '', CheckupDate: new Date().toISOString().split('T')[0], HealthScore: '', Notes: '', StaffID: '',
+        AnimalID: '', CheckupDate: new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0], HealthScore: '', Notes: '', StaffID: '',
         ActivityLevel: '', Weight: '', WeightRangeLow: '', WeightRangeHigh: '',
         MedicalConditions: '', RecentTreatments: '', AppetiteStatus: ''
       });
@@ -314,12 +324,12 @@ const AnimalHealth = () => {
   /* ── Alert resolve ─────────────────────────────────────── */
   const openResolveModal = (alert) => {
     const recentRecord = records.find(r => String(r.AnimalID) === String(alert.AnimalID)) || {};
-    
+
     setResolvingAlert(alert);
     setResolutionNotes('');
     setRecordForm({
       AnimalID: String(alert.AnimalID),
-      CheckupDate: new Date().toISOString().split('T')[0],
+      CheckupDate: new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0],
       HealthScore: '', Notes: '', StaffID: '',
       ActivityLevel: recentRecord.ActivityLevel || '',
       Weight: recentRecord.Weight != null ? String(recentRecord.Weight) : '',
@@ -361,7 +371,7 @@ const AnimalHealth = () => {
       // 2) Resolve the alert
       await resolveHealthAlert(resolvingAlert.AlertID, { ResolutionNotes: resolutionNotes });
       toast.success('Alert resolved and new health record added.');
-      
+
       setResolveModal(false);
       setResolvingAlert(null);
       setResolutionNotes('');
@@ -372,18 +382,23 @@ const AnimalHealth = () => {
 
   /* ── Column definitions ────────────────────────────────── */
   const recordColumns = useMemo(() => [
-    { id: 'expand', header: '', enableSorting: false, size: 36, cell: ({ row }) => (
-      <span className="ah-expand-chevron" onClick={e => { e.stopPropagation(); row.toggleExpanded(); }}>
-        {row.getIsExpanded() ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-      </span>
-    )},
-    { accessorKey: 'AnimalName', header: 'Animal', cell: ({ row }) => (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-        <span style={{ fontWeight: 600 }}>{row.original.AnimalName}</span>
-        <span style={{ fontSize: '0.76rem', color: 'var(--adm-text-secondary)' }}>{row.original.Species}</span>
-      </div>
-    )},
-    { accessorKey: 'CheckupDate', header: 'Checkup Date', cell: info => fmtDate(info.getValue()),
+    {
+      id: 'expand', header: '', enableSorting: false, size: 36, cell: ({ row }) => (
+        <span className="ah-expand-chevron" onClick={e => { e.stopPropagation(); row.toggleExpanded(); }}>
+          {row.getIsExpanded() ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+        </span>
+      )
+    },
+    {
+      accessorKey: 'AnimalName', header: 'Animal', cell: ({ row }) => (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <span style={{ fontWeight: 600 }}>{row.original.AnimalName}</span>
+          <span style={{ fontSize: '0.76rem', color: 'var(--adm-text-secondary)' }}>{row.original.Species}</span>
+        </div>
+      )
+    },
+    {
+      accessorKey: 'CheckupDate', header: 'Checkup Date', cell: info => fmtDate(info.getValue()),
       sortingFn: (rowA, rowB, columnId) => {
         const a = rowA.original.CheckupDate || '';
         const b = rowB.original.CheckupDate || '';
@@ -393,40 +408,48 @@ const AnimalHealth = () => {
         return (rowA.original.RecordID || 0) - (rowB.original.RecordID || 0);
       },
     },
-    { accessorKey: 'HealthScore', header: 'Health Score', size: 130, cell: info => {
-      const v = info.getValue();
-      return (
-        <span className={`ah-score ${scoreClass(v)}`}>
-          <span className="ah-score-dot" />{v} — {scoreLabel(v)}
-        </span>
-      );
-    }},
+    {
+      accessorKey: 'HealthScore', header: 'Health Score', size: 130, cell: info => {
+        const v = info.getValue();
+        return (
+          <span className={`ah-score ${scoreClass(v)}`}>
+            <span className="ah-score-dot" />{v} — {scoreLabel(v)}
+          </span>
+        );
+      }
+    },
     { accessorKey: 'StaffName', header: 'Vet / Staff', cell: info => info.getValue() || '—' },
-    { accessorKey: 'Notes', header: 'Notes', cell: info => (
-      <span style={{ fontSize: '0.82rem', color: 'var(--adm-text-secondary)', maxWidth: 200, display: 'inline-block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {info.getValue() || '—'}
-      </span>
-    )},
-    { accessorKey: 'Weight', header: 'Weight (kg)', size: 120, cell: ({ row }) => {
-      const w = row.original.Weight;
-      const lo = row.original.WeightRangeLow;
-      const hi = row.original.WeightRangeHigh;
-      if (w == null) return '—';
-      const outOfRange = (lo && w < lo) || (hi && w > hi);
-      return (
-        <span className={outOfRange ? 'ah-weight-flag' : 'ah-weight-flag ah-weight-ok'}>
-          {outOfRange && <AlertTriangle size={13} />}
-          {Number(w).toFixed(1)}
+    {
+      accessorKey: 'Notes', header: 'Notes', cell: info => (
+        <span style={{ fontSize: '0.82rem', color: 'var(--adm-text-secondary)', maxWidth: 200, display: 'inline-block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {info.getValue() || '—'}
         </span>
-      );
-    }},
-    { id: 'actions', header: 'Actions', enableSorting: false, size: 100, cell: ({ row }) => (
-      <div className="action-buttons">
-        <button className="action-btn edit" onClick={() => openRecordModal(row.original)}><Edit2 size={16} /></button>
-        <button className="action-btn delete" onClick={() => handleRecordDelete(row.original.RecordID)}><Trash2 size={16} /></button>
-      </div>
-    )},
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+      )
+    },
+    {
+      accessorKey: 'Weight', header: 'Weight (kg)', size: 120, cell: ({ row }) => {
+        const w = row.original.Weight;
+        const lo = row.original.WeightRangeLow;
+        const hi = row.original.WeightRangeHigh;
+        if (w == null) return '—';
+        const outOfRange = (lo && w < lo) || (hi && w > hi);
+        return (
+          <span className={outOfRange ? 'ah-weight-flag' : 'ah-weight-flag ah-weight-ok'}>
+            {outOfRange && <AlertTriangle size={13} />}
+            {Number(w).toFixed(1)}
+          </span>
+        );
+      }
+    },
+    {
+      id: 'actions', header: 'Actions', enableSorting: false, size: 100, cell: ({ row }) => (
+        <div className="action-buttons">
+          <button className="action-btn edit" onClick={() => openRecordModal(row.original)}><Edit2 size={16} /></button>
+          <button className="action-btn delete" onClick={() => handleRecordDelete(row.original.RecordID)}><Trash2 size={16} /></button>
+        </div>
+      )
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   ], [animals, staff]);
 
   /* ── Animal / Staff dropdown options ───────────────────── */
@@ -713,71 +736,71 @@ const AnimalHealth = () => {
               }
               return (
                 <>
-                <div className="ah-alert-list">
-                  {visibleAlerts.slice(alertPage * 10, (alertPage + 1) * 10).map(a => (
-                    <div key={a.AlertID} className={`ah-alert-card ${a.IsResolved ? 'resolved' : 'unresolved'}`}>
-                      <div className="ah-alert-icon">
-                        {a.IsResolved ? <CheckCircle size={18} color="#22c55e" /> : <AlertTriangle size={18} color="#ef4444" />}
-                      </div>
-                      <div className="ah-alert-body">
-                        <div className="ah-alert-type">{a.AlertType} — {a.AnimalName} ({a.Species})</div>
-                        <div className="ah-alert-msg">{a.AlertMessage}</div>
-                        <div className="ah-alert-time">{fmtDate(a.CreatedAt)}</div>
-                      </div>
-                      {!a.IsResolved ? (
-                        <button className="ah-alert-resolve-btn" onClick={() => openResolveModal(a)}>
-                          <CheckCircle size={13} /> Resolve
-                        </button>
-                      ) : (
-                        <div className="ah-resolved-info">
-                          <span className="ah-resolved-badge">Resolved {a.ResolvedAt ? fmtDate(a.ResolvedAt) : ''}</span>
-                          {a.ResolutionNotes && <span className="ah-resolved-notes">{a.ResolutionNotes}</span>}
+                  <div className="ah-alert-list">
+                    {visibleAlerts.slice(alertPage * 10, (alertPage + 1) * 10).map(a => (
+                      <div key={a.AlertID} className={`ah-alert-card ${a.IsResolved ? 'resolved' : 'unresolved'}`}>
+                        <div className="ah-alert-icon">
+                          {a.IsResolved ? <CheckCircle size={18} color="#22c55e" /> : <AlertTriangle size={18} color="#ef4444" />}
                         </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                {/* Alert pagination */}
-                {(() => {
-                  const pageCount = Math.ceil(visibleAlerts.length / 10);
-                  if (visibleAlerts.length === 0 || pageCount <= 1) return null;
-                  let pages = [];
-                  if (pageCount <= 6) {
-                    pages = Array.from({ length: pageCount }, (_, i) => i);
-                  } else {
-                    if (alertPage <= 2) {
-                      pages = [0, 1, 2, 3, 4, '...', pageCount - 1];
-                    } else if (alertPage >= pageCount - 3) {
-                      pages = [0, '...', pageCount - 5, pageCount - 4, pageCount - 3, pageCount - 2, pageCount - 1];
-                    } else {
-                      pages = [0, '...', alertPage - 1, alertPage, alertPage + 1, '...', pageCount - 1];
-                    }
-                  }
-                  return (
-                    <div className="admin-table-pagination" style={{ borderTop: '1px solid var(--adm-border)' }}>
-                      <span className="admin-pagination-info">
-                        Page {alertPage + 1} of {pageCount} · {visibleAlerts.length} alerts
-                      </span>
-                      <div className="admin-pagination-controls">
-                        <button className="admin-pagination-btn" onClick={() => setAlertPage(alertPage - 1)} disabled={alertPage === 0}>
-                          <ChevronLeft size={14} />
-                        </button>
-                        {pages.map((p, idx) => (
-                          p === '...' ? (
-                            <span key={`ellipsis-${idx}`} style={{ padding: '0 8px', color: 'var(--adm-text-secondary)' }}>...</span>
-                          ) : (
-                            <button key={p} className={`admin-pagination-btn${alertPage === p ? ' active' : ''}`} onClick={() => setAlertPage(p)}>
-                              {p + 1}
-                            </button>
-                          )
-                        ))}
-                        <button className="admin-pagination-btn" onClick={() => setAlertPage(alertPage + 1)} disabled={alertPage >= pageCount - 1}>
-                          <ChevronRight size={14} />
-                        </button>
+                        <div className="ah-alert-body">
+                          <div className="ah-alert-type">{a.AlertType} — {a.AnimalName} ({a.Species})</div>
+                          <div className="ah-alert-msg">{a.AlertMessage}</div>
+                          <div className="ah-alert-time">{fmtDate(a.CreatedAt)}</div>
+                        </div>
+                        {!a.IsResolved ? (
+                          <button className="ah-alert-resolve-btn" onClick={() => openResolveModal(a)}>
+                            <CheckCircle size={13} /> Resolve
+                          </button>
+                        ) : (
+                          <div className="ah-resolved-info">
+                            <span className="ah-resolved-badge">Resolved {a.ResolvedAt ? fmtDate(a.ResolvedAt) : ''}</span>
+                            {a.ResolutionNotes && <span className="ah-resolved-notes">{a.ResolutionNotes}</span>}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  );
-                })()}
+                    ))}
+                  </div>
+                  {/* Alert pagination */}
+                  {(() => {
+                    const pageCount = Math.ceil(visibleAlerts.length / 10);
+                    if (visibleAlerts.length === 0 || pageCount <= 1) return null;
+                    let pages = [];
+                    if (pageCount <= 6) {
+                      pages = Array.from({ length: pageCount }, (_, i) => i);
+                    } else {
+                      if (alertPage <= 2) {
+                        pages = [0, 1, 2, 3, 4, '...', pageCount - 1];
+                      } else if (alertPage >= pageCount - 3) {
+                        pages = [0, '...', pageCount - 5, pageCount - 4, pageCount - 3, pageCount - 2, pageCount - 1];
+                      } else {
+                        pages = [0, '...', alertPage - 1, alertPage, alertPage + 1, '...', pageCount - 1];
+                      }
+                    }
+                    return (
+                      <div className="admin-table-pagination" style={{ borderTop: '1px solid var(--adm-border)' }}>
+                        <span className="admin-pagination-info">
+                          Page {alertPage + 1} of {pageCount} · {visibleAlerts.length} alerts
+                        </span>
+                        <div className="admin-pagination-controls">
+                          <button className="admin-pagination-btn" onClick={() => setAlertPage(alertPage - 1)} disabled={alertPage === 0}>
+                            <ChevronLeft size={14} />
+                          </button>
+                          {pages.map((p, idx) => (
+                            p === '...' ? (
+                              <span key={`ellipsis-${idx}`} style={{ padding: '0 8px', color: 'var(--adm-text-secondary)' }}>...</span>
+                            ) : (
+                              <button key={p} className={`admin-pagination-btn${alertPage === p ? ' active' : ''}`} onClick={() => setAlertPage(p)}>
+                                {p + 1}
+                              </button>
+                            )
+                          ))}
+                          <button className="admin-pagination-btn" onClick={() => setAlertPage(alertPage + 1)} disabled={alertPage >= pageCount - 1}>
+                            <ChevronRight size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </>
               );
             })()}

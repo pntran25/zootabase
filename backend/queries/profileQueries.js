@@ -4,7 +4,9 @@ const shopOrders = `
   SELECT OrderID, FirstName, LastName, Email,
          Subtotal, Shipping, Tax, Total, PlacedAt, OrderItems
   FROM Orders
-  WHERE LOWER(Email) = LOWER(@email)
+  WHERE (CustomerID = @customerId AND @customerId IS NOT NULL)
+     OR (@customerId IS NULL AND LOWER(Email) = LOWER(@email))
+     OR (CustomerID IS NULL AND LOWER(Email) = LOWER(@email))
   ORDER BY PlacedAt DESC
 `;
 
@@ -14,14 +16,18 @@ const ticketOrders = `
          AdultQty, ChildQty, SeniorQty,
          Total, PlacedAt, AddOns
   FROM TicketOrders
-  WHERE LOWER(Email) = LOWER(@email)
+  WHERE (CustomerID = @customerId AND @customerId IS NOT NULL)
+     OR (@customerId IS NULL AND LOWER(Email) = LOWER(@email))
+     OR (CustomerID IS NULL AND LOWER(Email) = LOWER(@email))
   ORDER BY PlacedAt DESC
 `;
 
 const membership = `
   SELECT TOP 1 SubID, PlanName, BillingPeriod, StartDate, EndDate, Total
   FROM MembershipSubscriptions
-  WHERE Email = @email
+  WHERE (CustomerID = @customerId AND @customerId IS NOT NULL)
+     OR (@customerId IS NULL AND LOWER(Email) = LOWER(@email))
+     OR (CustomerID IS NULL AND LOWER(Email) = LOWER(@email))
   ORDER BY EndDate DESC
 `;
 

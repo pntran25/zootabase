@@ -13,6 +13,7 @@ const customerLogins = `
   FROM CustomerLoginAudit c
   JOIN Customer cu ON c.CustomerID = cu.CustomerID
   WHERE CAST(c.LoginTime AS DATE) >= @start AND CAST(c.LoginTime AS DATE) <= @end
+    AND cu.Email NOT IN (SELECT Email FROM Staff WHERE DeletedAt IS NULL)
   ORDER BY c.LoginTime DESC
 `;
 

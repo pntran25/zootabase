@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import '../AdminTable.css';
 import '../AnimalHealth/HealthReport.css';
-import { Wrench, Search, Plus, CheckCircle, Edit2, Trash2, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { Wrench, Search, Plus, CheckCircle, Edit2, Trash2, ChevronUp, ChevronDown, ChevronsUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useReactTable, getCoreRowModel, getSortedRowModel, getPaginationRowModel, flexRender } from '@tanstack/react-table';
 import { toast } from 'sonner';
 import AdminModalForm from '../AdminModalForm';
@@ -48,7 +48,7 @@ const ManageMaintenance = () => {
   const [sorting, setSorting] = useState([]);
   const [formData, setFormData] = useState({
     issueType: '', location: '', status: 'Pending',
-    date: new Date().toISOString().split('T')[0], priority: 'Medium'
+    date: new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0], priority: 'Medium'
   });
 
   const loadData = async () => {
@@ -95,7 +95,7 @@ const ManageMaintenance = () => {
       setFormData({ issueType: log.issueType, location: log.location, status: log.status, date: log.date, priority: log.priority });
     } else {
       setEditingLog(null);
-      setFormData({ issueType: '', location: '', status: 'Pending', date: new Date().toISOString().split('T')[0], priority: 'Medium' });
+      setFormData({ issueType: '', location: '', status: 'Pending', date: new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0], priority: 'Medium' });
     }
     setIsModalOpen(true);
   };
@@ -325,15 +325,46 @@ const ManageMaintenance = () => {
             )}
           </tbody>
         </table>
-        {!isLoading && table.getPageCount() > 1 && (
-          <div className="admin-table-pagination">
-            <span className="admin-pagination-info">Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()} · {filteredLogs.length} records</span>
-            <div className="admin-pagination-controls">
-              <button className="admin-pagination-btn" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>←</button>
-              <button className="admin-pagination-btn" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>→</button>
+        {!isLoading && table.getPageCount() > 1 && (() => {
+          const pageCount = table.getPageCount();
+          const pi = table.getState().pagination.pageIndex;
+          let pages = [];
+          if (pageCount <= 6) {
+            pages = Array.from({ length: pageCount }, (_, i) => i);
+          } else {
+            if (pi <= 2) {
+              pages = [0, 1, 2, 3, 4, '...', pageCount - 1];
+            } else if (pi >= pageCount - 3) {
+              pages = [0, '...', pageCount - 5, pageCount - 4, pageCount - 3, pageCount - 2, pageCount - 1];
+            } else {
+              pages = [0, '...', pi - 1, pi, pi + 1, '...', pageCount - 1];
+            }
+          }
+          return (
+            <div className="admin-table-pagination" style={{ borderTop: '1px solid var(--adm-border)' }}>
+              <span className="admin-pagination-info">
+                Page {pi + 1} of {pageCount} · {filteredLogs.length} records
+              </span>
+              <div className="admin-pagination-controls">
+                <button className="admin-pagination-btn" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
+                  <ChevronLeft size={14} />
+                </button>
+                {pages.map((p, idx) => (
+                  p === '...' ? (
+                    <span key={`ellipsis-${idx}`} style={{ padding: '0 8px', color: 'var(--adm-text-secondary)' }}>...</span>
+                  ) : (
+                    <button key={p} className={`admin-pagination-btn${pi === p ? ' active' : ''}`} onClick={() => table.setPageIndex(p)}>
+                      {p + 1}
+                    </button>
+                  )
+                ))}
+                <button className="admin-pagination-btn" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
+                  <ChevronRight size={14} />
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
 
       <AdminModalForm title={editingLog ? 'Edit Maintenance Request' : 'New Maintenance Request'} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSubmit={handleSubmit}>

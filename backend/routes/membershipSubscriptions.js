@@ -2,11 +2,11 @@ const express = require('express');
 const router = express.Router();
 const { connectToDb } = require('../services/admin');
 const sql = require('mssql');
-const { verifyToken } = require('../middleware/authMiddleware');
+const { verifyToken, optionalAuth } = require('../middleware/authMiddleware');
 const Q = require('../queries/membershipQueries');
 
 // POST /api/membership-subscriptions — purchase a membership
-router.post('/', async (req, res) => {
+router.post('/', optionalAuth, async (req, res) => {
     const {
         customerId,
         planName, billingPeriod,
@@ -35,8 +35,9 @@ router.post('/', async (req, res) => {
 
     try {
         const pool = await connectToDb();
+        const finalCustomerId = req.userProfile?.CustomerID || customerId || null;
         const result = await pool.request()
-            .input('CustomerID',          sql.Int,               customerId || null)
+            .input('CustomerID',          sql.Int,               finalCustomerId)
             .input('PlanName',            sql.NVarChar(100),     planName)
             .input('BillingPeriod',       sql.NVarChar(10),      billingPeriod)
             .input('FirstName',           sql.NVarChar(50),      firstName)

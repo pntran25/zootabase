@@ -111,26 +111,46 @@ const DataTable = ({ data, columns, sorting, setSorting, loading, emptyText }) =
             </tbody>
           </table>
         )}
-      </div>
-      {!loading && data.length > 0 && table.getPageCount() > 1 && (
-        <div className="admin-table-pagination">
-          <span className="admin-pagination-info">
-            Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
-          </span>
-          <div className="admin-pagination-controls">
-            <button className="admin-pagination-btn" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
-              <ChevronLeft size={14} />
-            </button>
-            {Array.from({ length: table.getPageCount() }, (_, i) => (
-              <button key={i} className={`admin-pagination-btn${table.getState().pagination.pageIndex === i ? ' active' : ''}`}
-                onClick={() => table.setPageIndex(i)}>{i + 1}</button>
-            ))}
-            <button className="admin-pagination-btn" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
-              <ChevronRight size={14} />
-            </button>
+        {!loading && data.length > 0 && table.getPageCount() > 1 && (() => {
+        const pageCount = table.getPageCount();
+        const pi = table.getState().pagination.pageIndex;
+        let pages = [];
+        if (pageCount <= 6) {
+          pages = Array.from({ length: pageCount }, (_, i) => i);
+        } else {
+          if (pi <= 2) {
+            pages = [0, 1, 2, 3, 4, '...', pageCount - 1];
+          } else if (pi >= pageCount - 3) {
+            pages = [0, '...', pageCount - 5, pageCount - 4, pageCount - 3, pageCount - 2, pageCount - 1];
+          } else {
+            pages = [0, '...', pi - 1, pi, pi + 1, '...', pageCount - 1];
+          }
+        }
+        return (
+          <div className="admin-table-pagination" style={{ borderTop: '1px solid var(--adm-border)' }}>
+            <span className="admin-pagination-info">
+              Page {pi + 1} of {pageCount} · {data.length} records
+            </span>
+            <div className="admin-pagination-controls">
+              <button className="admin-pagination-btn" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
+                <ChevronLeft size={14} />
+              </button>
+              {pages.map((p, idx) => (
+                p === '...' ? (
+                  <span key={`ellipsis-${idx}`} style={{ padding: '0 8px', color: 'var(--adm-text-secondary)' }}>...</span>
+                ) : (
+                  <button key={p} className={`admin-pagination-btn${pi === p ? ' active' : ''}`}
+                    onClick={() => table.setPageIndex(p)}>{p + 1}</button>
+                )
+              ))}
+              <button className="admin-pagination-btn" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
+                <ChevronRight size={14} />
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
+      </div>
     </>
   );
 };
@@ -294,7 +314,7 @@ const AnimalCare = () => {
       });
     } else {
       setEditingAssignment(null);
-      setAssignmentForm({ AnimalID: '', StaffID: '', StartDate: new Date().toISOString().split('T')[0], EndDate: '' });
+      setAssignmentForm({ AnimalID: '', StaffID: '', StartDate: new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0], EndDate: '' });
     }
     setAssignmentModal(true);
   };
@@ -533,7 +553,7 @@ const AnimalCare = () => {
                         className={`meal-btn${selected ? ' active' : ''}`}
                         style={{ width: '100%' }}
                         onClick={() => {
-                          const today = new Date().toISOString().split('T')[0];
+                          const today = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
                           setFeedingForm(p => ({ ...p, FeedTime: `${today}T${meal.time}` }));
                         }}
                       >

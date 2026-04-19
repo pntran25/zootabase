@@ -72,7 +72,7 @@ const deleteAddon = `
 // ── Ticket Orders ──
 
 const insertOrder = `
-  INSERT INTO TicketOrders (FirstName, LastName, Email, Phone,
+  INSERT INTO TicketOrders (CustomerID, FirstName, LastName, Email, Phone,
        AddressLine1, AddressLine2, City, StateProvince, ZipCode,
        BillingSameAsContact, BillingFullName, BillingAddress1, BillingAddress2,
        BillingCity, BillingState, BillingZip,
@@ -80,7 +80,7 @@ const insertOrder = `
        AdultUnitPrice, ChildUnitPrice, SeniorUnitPrice,
        AddOns, CardLastFour, Subtotal, Total)
   OUTPUT INSERTED.TicketOrderID
-  VALUES (@FirstName, @LastName, @Email, @Phone,
+  VALUES (@CustomerID, @FirstName, @LastName, @Email, @Phone,
        @AddressLine1, @AddressLine2, @City, @StateProvince, @ZipCode,
        @BillingSameAsContact, @BillingFullName, @BillingAddress1, @BillingAddress2,
        @BillingCity, @BillingState, @BillingZip,

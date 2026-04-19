@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Users, Clock, CalendarDays, TrendingUp } from 'lucide-react';
 import AdminDatePicker from '../AdminDatePicker';
 
@@ -27,28 +27,17 @@ const PRESET_SUB = { '30d': 'last 30 days', '90d': 'last 90 days', '6m': 'last 6
 
 const getPresetRange = (preset) => {
   const now = new Date();
-  const today = now.toISOString().split('T')[0];
-  if (preset === '90d') { const s = new Date(now); s.setDate(s.getDate() - 90); return { start: s.toISOString().split('T')[0], end: today }; }
-  if (preset === '6m')  { const s = new Date(now); s.setMonth(s.getMonth() - 6); return { start: s.toISOString().split('T')[0], end: today }; }
-  if (preset === '1y')  { const s = new Date(now); s.setFullYear(s.getFullYear() - 1); return { start: s.toISOString().split('T')[0], end: today }; }
+  const today = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+  if (preset === '90d') { const s = new Date(now); s.setDate(s.getDate() - 90); return { start: new Date(s.getTime() - s.getTimezoneOffset() * 60000).toISOString().split('T')[0], end: today }; }
+  if (preset === '6m')  { const s = new Date(now); s.setMonth(s.getMonth() - 6); return { start: new Date(s.getTime() - s.getTimezoneOffset() * 60000).toISOString().split('T')[0], end: today }; }
+  if (preset === '1y')  { const s = new Date(now); s.setFullYear(s.getFullYear() - 1); return { start: new Date(s.getTime() - s.getTimezoneOffset() * 60000).toISOString().split('T')[0], end: today }; }
   const s = new Date(now); s.setDate(s.getDate() - 30);
-  return { start: s.toISOString().split('T')[0], end: today };
+  return { start: new Date(s.getTime() - s.getTimezoneOffset() * 60000).toISOString().split('T')[0], end: today };
 };
 
-const TODAY = new Date().toISOString().split('T')[0];
+const TODAY = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
 
-const RADIAN = Math.PI / 180;
-const renderCustomLabel = ({ cx, cy, midAngle, outerRadius, name, value }) => {
-  const radius = outerRadius + 28;
-  const x = cx + radius * Math.cos(-midAngle * RADIAN);
-  const y = cy + radius * Math.sin(-midAngle * RADIAN);
-  return (
-    <text x={x} y={y} fill="var(--adm-text-secondary)" textAnchor={x > cx ? 'start' : 'end'}
-      dominantBaseline="central" fontSize={13} fontWeight={600}>
-      {name} ({value})
-    </text>
-  );
-};
+
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
@@ -240,10 +229,19 @@ const StaffReportOverview = ({ staffList, schedules, assignments }) => {
           {roleData.length > 0 ? (
             <ResponsiveContainer width="100%" height={280}>
               <PieChart>
-                <Pie data={roleData} cx="50%" cy="50%" innerRadius={55} outerRadius={95} paddingAngle={3} dataKey="value" label={renderCustomLabel} labelLine={false}>
+                <Pie data={roleData} cx="50%" cy="50%" innerRadius={55} outerRadius={95} paddingAngle={3} dataKey="value">
                   {roleData.map((d, i) => <Cell key={i} fill={ROLE_COLORS[d.name] || '#6b7280'} />)}
                 </Pie>
                 <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(136,136,136,0.15)' }} />
+                <Legend
+                  iconType="circle"
+                  iconSize={8}
+                  formatter={(value, entry) => (
+                    <span style={{ color: 'var(--adm-text-secondary)', fontSize: '0.75rem' }}>
+                      {value} <strong style={{ color: 'var(--adm-text-primary)' }}>{entry.payload.value}</strong>
+                    </span>
+                  )}
+                />
               </PieChart>
             </ResponsiveContainer>
           ) : <div className="ov-no-data">No role data</div>}

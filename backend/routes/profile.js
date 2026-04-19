@@ -15,9 +15,11 @@ router.get('/orders', verifyToken, async (req, res) => {
 
         const [shopResult, ticketResult] = await Promise.all([
             pool.request()
+                .input('customerId', sql.Int, req.userProfile?.CustomerID || null)
                 .input('email', sql.NVarChar(200), email)
                 .query(Q.shopOrders),
             pool.request()
+                .input('customerId', sql.Int, req.userProfile?.CustomerID || null)
                 .input('email', sql.NVarChar(200), email)
                 .query(Q.ticketOrders),
         ]);
@@ -49,6 +51,7 @@ router.get('/membership', verifyToken, async (req, res) => {
     try {
         const pool = await connectToDb();
         const result = await pool.request()
+            .input('customerId', sql.Int, req.userProfile?.CustomerID || null)
             .input('email', sql.NVarChar(200), email)
             .query(Q.membership);
 

@@ -246,10 +246,22 @@
 }
 
 /* ── Text Utilities ──────────────────────────────────── */
-.font-medium { font-weight: 600; }
-.text-dark { color: var(--adm-text-primary); }
-.text-secondary { color: var(--adm-text-secondary); font-size: 0.85rem; }
-.align-center { text-align: center; }
+.font-medium {
+  font-weight: 600;
+}
+
+.text-dark {
+  color: var(--adm-text-primary);
+}
+
+.text-secondary {
+  color: var(--adm-text-secondary);
+  font-size: 0.85rem;
+}
+
+.align-center {
+  text-align: center;
+}
 
 /* ── Status Badges ──────────────────────────────────── */
 .status-badge {
@@ -261,15 +273,45 @@
   letter-spacing: 0.01em;
 }
 
-.status-badge.excellent { background-color: #dcfce7; color: #166534; }
-.status-badge.good      { background-color: #f0fdf4; color: #15803d; }
-.status-badge.fair      { background-color: #fef9c3; color: #854d0e; }
-.status-badge.poor      { background-color: #fee2e2; color: #991b1b; }
+.status-badge.excellent {
+  background-color: #dcfce7;
+  color: #166534;
+}
 
-.status-badge.in.stock      { background-color: #dcfce7; color: #166534; }
-.status-badge.out.of.stock  { background-color: #fee2e2; color: #991b1b; }
-.status-badge.open          { background-color: #e2e8f0; color: var(--adm-text-primary); }
-.status-badge.in.progress   { background-color: #fef9c3; color: #854d0e; }
+.status-badge.good {
+  background-color: #f0fdf4;
+  color: #15803d;
+}
+
+.status-badge.fair {
+  background-color: #fef9c3;
+  color: #854d0e;
+}
+
+.status-badge.poor {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.status-badge.in.stock {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.status-badge.out.of.stock {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.status-badge.open {
+  background-color: #e2e8f0;
+  color: var(--adm-text-primary);
+}
+
+.status-badge.in.progress {
+  background-color: #fef9c3;
+  color: #854d0e;
+}
 
 .status-indicator-dot {
   display: inline-block;
@@ -278,10 +320,22 @@
   border-radius: 50%;
   margin-right: 6px;
 }
-.dot-green { background-color: #16a34a; }
-.dot-red   { background-color: #dc2626; }
-.dot-yellow { background-color: #ca8a04; }
-.dot-blue  { background-color: #2563eb; }
+
+.dot-green {
+  background-color: #16a34a;
+}
+
+.dot-red {
+  background-color: #dc2626;
+}
+
+.dot-yellow {
+  background-color: #ca8a04;
+}
+
+.dot-blue {
+  background-color: #2563eb;
+}
 
 /* ── Pill Badges ────────────────────────────────────── */
 .pill-badge {
@@ -323,14 +377,39 @@
   transition: all 0.15s ease;
 }
 
-.action-btn.edit  { color: #3b82f6; }
-.action-btn.edit:hover  { background-color: #eff6ff; color: #1d4ed8; }
+.action-btn.edit {
+  color: #3b82f6;
+}
 
-.action-btn.delete { color: #ef4444; }
-.action-btn.delete:hover { background-color: #fef2f2; color: #b91c1c; }
+.action-btn.edit:hover {
+  background-color: #eff6ff;
+  color: #1d4ed8;
+}
 
-.action-btn.toggle { color: #f59e0b; font-size: 0.75rem; font-weight: 600; padding: 4px 10px; border: 1px solid #fed7aa; border-radius: 20px; background: #fff7ed; opacity: 1 !important; }
-.action-btn.toggle:hover { background-color: #ffedd5; color: #c2410c; }
+.action-btn.delete {
+  color: #ef4444;
+}
+
+.action-btn.delete:hover {
+  background-color: #fef2f2;
+  color: #b91c1c;
+}
+
+.action-btn.toggle {
+  color: #f59e0b;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border: 1px solid #fed7aa;
+  border-radius: 20px;
+  background: #fff7ed;
+  opacity: 1 !important;
+}
+
+.action-btn.toggle:hover {
+  background-color: #ffedd5;
+  color: #c2410c;
+}
 
 /* ── Empty State ────────────────────────────────────── */
 .admin-table-empty {
@@ -442,6 +521,36 @@
   color: white;
 }
 
+/* ── Preset Buttons (Date Filters, etc) ─────────────── */
+.admin-preset-btns {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.admin-preset-btn {
+  padding: 6px 14px;
+  border-radius: 7px;
+  border: 1px solid var(--adm-border);
+  background: var(--adm-bg-surface);
+  color: var(--adm-text-secondary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.admin-preset-btn.active {
+  background: var(--adm-accent);
+  color: #fff;
+  border-color: var(--adm-accent);
+}
+
+.admin-preset-btn:hover:not(.active) {
+  background: var(--adm-bg-hover);
+  color: var(--adm-text-primary);
+}
+
 /* ── Form Utilities ─────────────────────────────────── */
 .form-row {
   display: flex;
@@ -484,13 +593,16 @@
 .admin-layout[data-theme="dark"] .action-btn.edit {
   color: #6b9ff0;
 }
+
 .admin-layout[data-theme="dark"] .action-btn.edit:hover {
   background-color: rgba(107, 159, 240, 0.12);
   color: #93bbf8;
 }
+
 .admin-layout[data-theme="dark"] .action-btn.delete:hover {
   background-color: rgba(239, 68, 68, 0.12);
 }
+
 .admin-layout[data-theme="dark"] .status-badge.open {
   background-color: #2a2a2a;
   color: var(--adm-text-secondary);

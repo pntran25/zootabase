@@ -54,7 +54,7 @@ function enrichEvent(ev) {
     ...ev,
     title: ev.name || 'Untitled Event',
     image: ev.imageUrl ? (ev.imageUrl?.startsWith('http') ? ev.imageUrl : `${API_BASE_URL}${ev.imageUrl}`) : '',
-    date: ev.date ? ev.date.split('T')[0] : new Date().toISOString().split('T')[0],
+    date: ev.date ? ev.date.split('T')[0] : new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0],
     endDate: ev.endDate || '',
     time: (ev.startTime || ev.time) ? `${fmt12(ev.startTime || ev.time)}${ev.endTime ? ' – ' + fmt12(ev.endTime) : ''}` : 'TBD',
     location: ev.exhibit || ev.location || 'Zoo-wide',

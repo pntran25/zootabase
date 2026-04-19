@@ -107,7 +107,7 @@ const MembershipCheckoutModal = ({
         total,
       });
 
-      toast.success('Membership activated! Welcome to the wild side.', { duration: 6000 });
+      toast.success(`Membership activated! Confirmation will be sent to ${contact.email}.`, { duration: 6000 });
       onOrderPlaced();
       onClose();
     } catch (err) {
