@@ -77,21 +77,21 @@ function App() {
           {/* Admin Routes */}
           <Route path="/admin" element={<ProtectedRoute allowedRoles={allStaffRoles}><AdminLayout /></ProtectedRoute>}>
              <Route index element={<Dashboard />} />
-             <Route path="animals" element={<ProtectedRoute allowedRoles={['Super Admin', 'Caretaker']}><ManageAnimals /></ProtectedRoute>} />
-             <Route path="exhibits" element={<ProtectedRoute allowedRoles={['Super Admin', 'Caretaker']}><ManageExhibits /></ProtectedRoute>} />
-             <Route path="attractions" element={<ProtectedRoute allowedRoles={['Super Admin']}><ManageAttractions /></ProtectedRoute>} />
-             <Route path="events" element={<ProtectedRoute allowedRoles={['Super Admin', 'Event Coordinator']}><ManageEvents /></ProtectedRoute>} />
+             <Route path="animals" element={<ProtectedRoute allowedRoles={['Super Admin', 'Zoo Manager', 'Caretaker']}><ManageAnimals /></ProtectedRoute>} />
+             <Route path="exhibits" element={<ProtectedRoute allowedRoles={['Super Admin', 'Zoo Manager', 'Caretaker']}><ManageExhibits /></ProtectedRoute>} />
+             <Route path="attractions" element={<ProtectedRoute allowedRoles={['Super Admin', 'Zoo Manager']}><ManageAttractions /></ProtectedRoute>} />
+             <Route path="events" element={<ProtectedRoute allowedRoles={['Super Admin', 'Zoo Manager', 'Event Coordinator']}><ManageEvents /></ProtectedRoute>} />
              <Route path="tickets" element={<ProtectedRoute allowedRoles={['Super Admin', 'Ticket Staff']}><ManageTickets /></ProtectedRoute>} />
              <Route path="shop" element={<ProtectedRoute allowedRoles={['Super Admin', 'Shop Manager']}><ManageShop /></ProtectedRoute>} />
              <Route path="maintenance" element={<ProtectedRoute allowedRoles={allStaffRoles}><ManageMaintenance /></ProtectedRoute>} />
-             <Route path="feedback" element={<ProtectedRoute allowedRoles={['Super Admin']}><GuestFeedback /></ProtectedRoute>} />
+             <Route path="feedback" element={<ProtectedRoute allowedRoles={['Super Admin', 'Zoo Manager']}><GuestFeedback /></ProtectedRoute>} />
              <Route path="staff" element={<ProtectedRoute allowedRoles={['Super Admin']}><ManageStaff /></ProtectedRoute>} />
-             <Route path="analytics" element={<ProtectedRoute allowedRoles={['Super Admin']}><LoginAnalytics /></ProtectedRoute>} />
-             <Route path="animal-health" element={<ProtectedRoute allowedRoles={['Super Admin', 'Caretaker']}><AnimalHealth /></ProtectedRoute>} />
-             <Route path="animal-care" element={<ProtectedRoute allowedRoles={['Super Admin', 'Caretaker']}><AnimalCare /></ProtectedRoute>} />
-             <Route path="animal-report" element={<ProtectedRoute allowedRoles={['Super Admin', 'Caretaker']}><AnimalReport /></ProtectedRoute>} />
-             <Route path="reports" element={<ProtectedRoute allowedRoles={['Super Admin', 'Shop Manager']}><DataReports /></ProtectedRoute>} />
-             <Route path="employee-report" element={<ProtectedRoute allowedRoles={['Super Admin']}><StaffReport /></ProtectedRoute>} />
+             <Route path="analytics" element={<ProtectedRoute allowedRoles={['Super Admin', 'Zoo Manager']}><LoginAnalytics /></ProtectedRoute>} />
+             <Route path="animal-health" element={<ProtectedRoute allowedRoles={['Super Admin', 'Zoo Manager', 'Caretaker']}><AnimalHealth /></ProtectedRoute>} />
+             <Route path="animal-care" element={<ProtectedRoute allowedRoles={['Super Admin', 'Zoo Manager', 'Caretaker']}><AnimalCare /></ProtectedRoute>} />
+             <Route path="animal-report" element={<ProtectedRoute allowedRoles={['Super Admin', 'Zoo Manager', 'Caretaker']}><AnimalReport /></ProtectedRoute>} />
+             <Route path="reports" element={<ProtectedRoute allowedRoles={['Super Admin', 'Zoo Manager', 'Shop Manager']}><DataReports /></ProtectedRoute>} />
+             <Route path="employee-report" element={<ProtectedRoute allowedRoles={['Super Admin', 'Zoo Manager']}><StaffReport /></ProtectedRoute>} />
              <Route path="memberships" element={<ProtectedRoute allowedRoles={['Super Admin']}><ManageMemberships /></ProtectedRoute>} />
           </Route>
         </Routes>

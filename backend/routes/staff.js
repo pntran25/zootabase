@@ -1,12 +1,13 @@
 const express = require('express');
 const router = express.Router();
+const sql = require('mssql');
 const { connectToDb } = require('../services/admin');
 const { verifyToken, requireRole } = require('../middleware/authMiddleware');
 const admin = require('../services/firebaseSetup');
 const Q = require('../queries/staffQueries');
 
 // Get all active staff (Super Admin only)
-router.get('/', verifyToken, requireRole(['Super Admin']), async (req, res) => {
+router.get('/', verifyToken, requireRole(['Super Admin', 'Zoo Manager']), async (req, res) => {
     try {
         const pool = await connectToDb();
         const result = await pool.request().query(Q.getAll);
@@ -18,7 +19,9 @@ router.get('/', verifyToken, requireRole(['Super Admin']), async (req, res) => {
 
 // Add new staff (Super Admin only)
 router.post('/', verifyToken, requireRole(['Super Admin']), async (req, res) => {
-    const { firstName, lastName, email, dateOfBirth, ssn, role, contactNumber, salary, hireDate } = req.body;
+    const { firstName, lastName, email, dateOfBirth, ssn: rawSsn, role, contactNumber: rawContact, salary, hireDate } = req.body;
+    const contactNumber = rawContact ? Number(rawContact.replace(/\D/g, '')) || null : null;
+    const ssn = rawSsn ? rawSsn.replace(/\D/g, '') : rawSsn;
     try {
         const pool = await connectToDb();
 
@@ -45,7 +48,8 @@ router.post('/', verifyToken, requireRole(['Super Admin']), async (req, res) => 
             if (fbError.code === 'auth/email-already-exists') {
                 const existingUser = await admin.auth().getUserByEmail(email);
                 firebaseUid = existingUser.uid;
-                await admin.auth().updateUser(firebaseUid, { password: 'ZooStaff2026!' });
+                // Keep existing password, only sync display name
+                await admin.auth().updateUser(firebaseUid, { displayName: fullName });
             } else {
                 throw fbError;
             }
@@ -58,8 +62,8 @@ router.post('/', verifyToken, requireRole(['Super Admin']), async (req, res) => 
             .input('DateOfBirth', dateOfBirth)
             .input('SSN', ssn)
             .input('Role', role)
-            .input('ContactNumber', contactNumber)
-            .input('Salary', salary || 0)
+            .input('ContactNumber', sql.BigInt, contactNumber)
+            .input('Salary', sql.Decimal(10, 2), salary || 0)
             .input('HireDate', hireDate || new Date().toISOString().split('T')[0])
             .input('FullName', fullName)
             .input('FirebaseUid', firebaseUid)
@@ -75,7 +79,9 @@ router.post('/', verifyToken, requireRole(['Super Admin']), async (req, res) => 
 // Update existing staff
 router.put('/:id', verifyToken, requireRole(['Super Admin']), async (req, res) => {
     const { id } = req.params;
-    const { firstName, lastName, email, dateOfBirth, ssn, role, contactNumber, salary } = req.body;
+    const { firstName, lastName, email, dateOfBirth, ssn: rawSsn, role, contactNumber: rawContact, salary } = req.body;
+    const contactNumber = rawContact ? Number(rawContact.replace(/\D/g, '')) || null : null;
+    const ssn = rawSsn ? rawSsn.replace(/\D/g, '') : rawSsn;
     try {
         const pool = await connectToDb();
 
@@ -99,8 +105,8 @@ router.put('/:id', verifyToken, requireRole(['Super Admin']), async (req, res) =
             .input('SSN', ssn)
             .input('Role', role)
             .input('FullName', fullName)
-            .input('ContactNumber', contactNumber)
-            .input('Salary', salary)
+            .input('ContactNumber', sql.BigInt, contactNumber)
+            .input('Salary', sql.Decimal(10, 2), salary || 0)
             .query(Q.updateStaff);
 
         res.json({ success: true });
