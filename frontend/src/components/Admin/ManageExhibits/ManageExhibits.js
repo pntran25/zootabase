@@ -333,6 +333,33 @@ const ManageExhibits = () => {
         </div>
       </div>
 
+      {/* ── Filter Row ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap', padding: '10px 14px', background: 'var(--adm-bg-surface)', border: '1px solid var(--adm-border)', borderRadius: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Area</span>
+          <AdminSelect value={filterArea} onChange={setFilterArea} width="140px" options={[{ value: '', label: 'All Areas' }, ...areas.map(a => ({ value: a, label: a }))]} />
+        </div>
+
+        <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Habitat</span>
+          <AdminSelect value={filterHabitat} onChange={setFilterHabitat} width="140px" options={[{ value: '', label: 'All Habitats' }, ...habitats.map(h => ({ value: h, label: h }))]} />
+        </div>
+
+        <div style={{ width: 1, height: 24, background: 'var(--adm-border)', margin: '0 4px' }} />
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--adm-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Featured</span>
+          {[{ val: '', label: 'All' }, { val: 'yes', label: 'Featured' }, { val: 'no', label: 'Standard' }].map(f => (
+            <button key={f.val || 'all'} onClick={() => setFilterFeatured(f.val)}
+              style={{ padding: '3px 10px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', border: `1px solid ${filterFeatured === f.val ? 'var(--adm-accent)' : 'var(--adm-border)'}`, background: filterFeatured === f.val ? 'var(--adm-accent-dim, rgba(34,107,64,0.1))' : 'transparent', color: filterFeatured === f.val ? 'var(--adm-accent)' : 'var(--adm-text-secondary)', transition: 'all 0.15s' }}>
+              {f.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="admin-table-container">
         <table className="admin-table">
           <thead>
