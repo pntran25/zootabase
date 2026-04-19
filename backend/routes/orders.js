@@ -3,9 +3,10 @@ const router = express.Router();
 const { connectToDb } = require('../services/admin');
 const sql = require('mssql');
 const Q = require('../queries/orderQueries');
+const { optionalAuth } = require('../middleware/authMiddleware');
 
-// POST /api/orders — place a new order (no auth required, public)
-router.post('/', async (req, res) => {
+// POST /api/orders — place a new order (public, but supports optionalAuth)
+router.post('/', optionalAuth, async (req, res) => {
     const {
         firstName, lastName, email, phone,
         addressLine1, addressLine2,
@@ -29,6 +30,7 @@ router.post('/', async (req, res) => {
             // Insert the order
             const insertReq = new sql.Request(transaction);
             const result = await insertReq
+                .input('CustomerID',            sql.Int,           req.userProfile?.CustomerID || null)
                 .input('FirstName',             sql.NVarChar(50),  firstName)
                 .input('LastName',              sql.NVarChar(50),  lastName)
                 .input('Email',                 sql.NVarChar(200), email)

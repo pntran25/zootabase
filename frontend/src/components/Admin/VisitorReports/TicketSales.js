@@ -22,10 +22,10 @@ const TicketSales = () => {
   };
 
   useEffect(() => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
     const monthAgo = new Date();
     monthAgo.setDate(monthAgo.getDate() - 30);
-    const start = monthAgo.toISOString().split('T')[0];
+    const start = new Date(monthAgo.getTime() - monthAgo.getTimezoneOffset() * 60000).toISOString().split('T')[0];
 
     loadData(start, today);
   }, []);
@@ -37,17 +37,17 @@ const TicketSales = () => {
     let start, end;
 
     if (preset === 'today') {
-      start = end = today.toISOString().split('T')[0];
+      start = end = new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString().split('T')[0];
     } else if (preset === 'week') {
       const weekAgo = new Date(today);
       weekAgo.setDate(today.getDate() - 7);
-      start = weekAgo.toISOString().split('T')[0];
-      end = today.toISOString().split('T')[0];
+      start = new Date(weekAgo.getTime() - weekAgo.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+      end = new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString().split('T')[0];
     } else if (preset === 'month') {
       const monthAgo = new Date(today);
       monthAgo.setDate(today.getDate() - 30);
-      start = monthAgo.toISOString().split('T')[0];
-      end = today.toISOString().split('T')[0];
+      start = new Date(monthAgo.getTime() - monthAgo.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+      end = new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString().split('T')[0];
     }
 
     loadData(start, end);

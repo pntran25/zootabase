@@ -2,10 +2,10 @@
 
 const insert = `
   DECLARE @NewOrder TABLE (OrderID INT);
-  INSERT INTO Orders (FirstName, LastName, Email, Phone, AddressLine1, AddressLine2, City, StateProvince,
+  INSERT INTO Orders (CustomerID, FirstName, LastName, Email, Phone, AddressLine1, AddressLine2, City, StateProvince,
        ZipCode, BillingSameAsShipping, CardLastFour, Subtotal, Shipping, Tax, Total, OrderItems)
   OUTPUT INSERTED.OrderID INTO @NewOrder
-  VALUES (@FirstName, @LastName, @Email, @Phone, @AddressLine1, @AddressLine2, @City, @StateProvince,
+  VALUES (@CustomerID, @FirstName, @LastName, @Email, @Phone, @AddressLine1, @AddressLine2, @City, @StateProvince,
        @ZipCode, @BillingSameAsShipping, @CardLastFour, @Subtotal, @Shipping, @Tax, @Total, @OrderItems);
   SELECT OrderID FROM @NewOrder;
 `;

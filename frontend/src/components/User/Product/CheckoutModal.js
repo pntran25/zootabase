@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Lock, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { API_BASE_URL } from '../../../services/apiClient';
+import { API_BASE_URL, apiPost } from '../../../services/apiClient';
 import { useAuth } from '../../../context/AuthContext';
 import './CheckoutModal.css';
 
@@ -111,10 +111,7 @@ const CheckoutModal = ({ isOpen, onClose, cart, cartTotal, membershipDiscount = 
       const orderItems = JSON.stringify(
         cart.map(i => ({ id: i.id, name: i.name, price: i.price, quantity: i.quantity }))
       );
-      const response = await fetch(`${API_BASE_URL}/api/orders`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const payload = {
           firstName: ship.firstName, lastName: ship.lastName, email: ship.email, phone: ship.phone,
           addressLine1: ship.address1, addressLine2: ship.address2,
           city: ship.city, stateProvince: ship.state, zipCode: ship.zip,
@@ -129,13 +126,10 @@ const CheckoutModal = ({ isOpen, onClose, cart, cartTotal, membershipDiscount = 
           subtotal: discountedSubtotal,
           membershipDiscount, discountAmount,
           shipping: SHIPPING_COST, tax, total, orderItems,
-        }),
-      });
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || 'Failed to place order.');
-      }
-      toast.success('Your order has been successfully placed! 🎉', { duration: 5000 });
+      };
+      
+      await apiPost('/api/orders', payload);
+      toast.success(`Your order has been placed! 🎉 Confirmation will be sent to ${ship.email}.`, { duration: 6000 });
       onOrderPlaced();
       onClose();
     } catch (err) {
