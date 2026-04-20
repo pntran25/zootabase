@@ -1,5 +1,5 @@
-const express = require('express');
-const router = express.Router();
+const { Router } = require('../lib/router');
+const router = new Router();
 const sql = require('mssql');
 const { connectToDb } = require('../services/admin');
 const { verifyToken, requireRole } = require('../middleware/authMiddleware');

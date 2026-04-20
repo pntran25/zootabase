@@ -1,24 +1,28 @@
 require('dotenv').config();
 
-const express = require('express');
-const cors = require('cors');
+const { createApp } = require('./lib/router');
 const { connectToDb } = require('./services/admin');
 
-const app = express();
+const app = createApp();
 const PORT = parseInt(process.env.PORT, 10) || 5000;
 
 // CORS: allow only known origins in production
 const allowedOrigins = process.env.CORS_ORIGINS
 	? process.env.CORS_ORIGINS.split(',').map(o => o.trim().replace(/\/$/, ''))
 	: ['http://localhost:3000', 'http://localhost:3001', 'http://172.25.156.187:3000', 'http://172.25.156.187:3001'];
-app.use(cors({
-	origin: (origin, cb) => {
-		// Allow requests with no origin (mobile apps, curl, Postman in dev)
-		if (!origin || origin.includes('localhost') || origin.match(/^http:\/\/172\.25\.\d+\.\d+:\d+/) || allowedOrigins.includes(origin)) return cb(null, true);
-		cb(new Error('Not allowed by CORS'));
-	}
-}));
-app.use(express.json({ limit: '1mb' }));
+app.setCors((origin) => {
+	// Allow requests with no origin (mobile apps, curl, Postman in dev)
+	if (!origin) return true;
+	if (allowedOrigins.includes(origin)) return true;
+	// Allow localhost on any port (exact hostname match)
+	try {
+		const u = new URL(origin);
+		if (u.hostname === 'localhost' || u.hostname === '127.0.0.1') return true;
+		if (/^172\.25\.\d{1,3}\.\d{1,3}$/.test(u.hostname)) return true;
+	} catch { /* malformed origin */ }
+	return false;
+});
+app.setBodyLimit(1 * 1024 * 1024); // 1 MB
 
 let isDatabaseConnected = false;
 
@@ -81,7 +85,7 @@ app.use('/api/staff-schedules', staffSchedulesRouter);
 
 // Serve uploaded images – use UPLOADS_DIR env var on Azure (/home/uploads)
 const uploadsRoot = process.env.UPLOADS_DIR || path.join(__dirname, 'uploads');
-app.use('/images', express.static(uploadsRoot));
+app.static('/images', uploadsRoot);
 
 async function runMigrations(pool) {
 	const steps = [
@@ -427,7 +431,8 @@ async function startServer() {
 }
 
 // Global Error Handler
-app.use((err, req, res, _next) => {
+app.setErrorHandler((err, req, res) => {
+	if (res.writableEnded) return;
 	console.error(err);
 
 	// Gracefully handle specific user-facing errors (like file uploads)
