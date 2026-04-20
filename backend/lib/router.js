@@ -1,9 +1,3 @@
-/**
- * Minimal Node.js HTTP router — drop-in replacement for Express Router + App.
- * Provides: Router class, createApp() factory, JSON body parsing, CORS,
- * static-file serving, and Express-compatible req/res helpers.
- */
-
 const http = require('http');
 const { URL } = require('url');
 const path = require('path');
@@ -20,7 +14,6 @@ const MIME_TYPES = {
     '.ico':  'image/x-icon',    '.txt':  'text/plain',
 };
 
-// ── Compile an Express-style route pattern into a regex ─────────────
 function compilePattern(routePath) {
     const paramNames = [];
     const regexStr = routePath.replace(/:([a-zA-Z_][a-zA-Z0-9_]*)/g, (_, name) => {
@@ -56,7 +49,6 @@ function parseJsonBody(req, maxBytes) {
     });
 }
 
-// ── Augment the native ServerResponse with Express-like helpers ─────
 function augmentResponse(res) {
     res.status = function (code) {
         res.statusCode = code;
@@ -70,7 +62,6 @@ function augmentResponse(res) {
     };
 }
 
-// ── Run an ordered middleware/handler chain ──────────────────────────
 function runHandlers(handlers, req, res, onError) {
     let idx = 0;
     function next(err) {
@@ -90,7 +81,6 @@ function runHandlers(handlers, req, res, onError) {
     next();
 }
 
-// ── Router class (equivalent to express.Router()) ───────────────────
 class Router {
     constructor() { this.routes = []; }
     _add(method, routePath, handlers) {
@@ -122,14 +112,12 @@ function createApp() {
     };
 
     const app = {
-        /* ── Mount a Router under a prefix (replaces app.use(prefix, router)) ── */
         use(prefix, router) {
             if (router instanceof Router) {
                 mounts.push({ prefix, router });
             }
         },
 
-        /* ── Register a route directly on the app ─────────────────────────── */
         get(routePath, ...handlers) {
             const { regex, paramNames } = compilePattern(routePath);
             directRoutes.push({ method: 'GET', regex, paramNames, handlers });
@@ -138,8 +126,19 @@ function createApp() {
             const { regex, paramNames } = compilePattern(routePath);
             directRoutes.push({ method: 'POST', regex, paramNames, handlers });
         },
+        put(routePath, ...handlers) {
+            const { regex, paramNames } = compilePattern(routePath);
+            directRoutes.push({ method: 'PUT', regex, paramNames, handlers });
+        },
+        patch(routePath, ...handlers) {
+            const { regex, paramNames } = compilePattern(routePath);
+            directRoutes.push({ method: 'PATCH', regex, paramNames, handlers });
+        },
+        delete(routePath, ...handlers) {
+            const { regex, paramNames } = compilePattern(routePath);
+            directRoutes.push({ method: 'DELETE', regex, paramNames, handlers });
+        },
 
-        /* ── Configuration helpers ────────────────────────────────────────── */
         setCors(fn)          { corsCheck = fn; },
         setBodyLimit(bytes)  { bodyLimit = bytes; },
         setErrorHandler(fn)  { errorHandler = fn; },
