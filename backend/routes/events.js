@@ -29,9 +29,9 @@ const upload = multer({
 });
 
 // Helper to resolve or create Exhibit based on name
-async function resolveOrCreateExhibit(request, exhibitName) {
+async function resolveOrCreateExhibit(transaction, exhibitName) {
     // Try to find existing
-    const exhRes = await request
+    const exhRes = await new sql.Request(transaction)
         .input('exhName', sql.NVarChar, exhibitName)
         .query(Q.findExhibit);
 
@@ -40,10 +40,11 @@ async function resolveOrCreateExhibit(request, exhibitName) {
     }
 
     // Create an Area -> Exhibit chain if missing
-    const areaRes = await request.query(Q.ensureEventsArea);
+    const areaRes = await new sql.Request(transaction)
+        .query(Q.ensureEventsArea);
     const areaId = areaRes.recordset[0].AreaID;
 
-    const newExhRes = await request
+    const newExhRes = await new sql.Request(transaction)
         .input('newExhName', sql.NVarChar, exhibitName)
         .input('areaId', sql.Int, areaId)
         .query(Q.createExhibit);
@@ -107,10 +108,9 @@ router.post('/api/events', optionalAuth, async (req, res) => {
         await transaction.begin();
 
         try {
-            const request = new sql.Request(transaction);
-            const exhibitId = await resolveOrCreateExhibit(request, exhibit);
+            const exhibitId = await resolveOrCreateExhibit(transaction, exhibit);
 
-            const result = await request
+            const result = await new sql.Request(transaction)
                 .input('name', sql.NVarChar, name)
                 .input('date', sql.Date, date)
                 .input('endDate', sql.Date, endDate || null)
@@ -128,7 +128,7 @@ router.post('/api/events', optionalAuth, async (req, res) => {
             await transaction.commit();
             res.status(201).json({ id: result.recordset[0].id.toString(), ...req.body });
         } catch (err) {
-            await transaction.rollback();
+            try { await transaction.rollback(); } catch (_) { /* already aborted */ }
             throw err;
         }
     } catch (error) {
@@ -151,10 +151,9 @@ router.put('/api/events/:id', optionalAuth, async (req, res) => {
         await transaction.begin();
 
         try {
-            const request = new sql.Request(transaction);
-            const exhibitId = await resolveOrCreateExhibit(request, exhibit);
+            const exhibitId = await resolveOrCreateExhibit(transaction, exhibit);
 
-            await request
+            await new sql.Request(transaction)
                 .input('id', sql.Int, parseInt(req.params.id, 10))
                 .input('name', sql.NVarChar, name)
                 .input('date', sql.Date, date)
@@ -173,7 +172,7 @@ router.put('/api/events/:id', optionalAuth, async (req, res) => {
             await transaction.commit();
             res.json({ success: true });
         } catch (err) {
-            await transaction.rollback();
+            try { await transaction.rollback(); } catch (_) { /* already aborted */ }
             throw err;
         }
     } catch (error) {

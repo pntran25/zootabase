@@ -101,6 +101,7 @@ function createApp() {
     const staticMounts = [];   // { urlPrefix, fsRoot }
     let bodyLimit      = 1 * 1024 * 1024; // 1 MB
     let corsCheck      = null;
+    let spaFallback    = null;  // path to index.html for SPA routing
 
     // Default error handler
     let errorHandler = (err, _req, res) => {
@@ -142,6 +143,7 @@ function createApp() {
         setCors(fn)          { corsCheck = fn; },
         setBodyLimit(bytes)  { bodyLimit = bytes; },
         setErrorHandler(fn)  { errorHandler = fn; },
+        setSpaFallback(indexPath) { spaFallback = indexPath; },
         static(urlPrefix, fsRoot) { staticMounts.push({ urlPrefix, fsRoot }); },
 
         /* ── Start the HTTP server ────────────────────────────────────────── */
@@ -187,25 +189,30 @@ function createApp() {
 
         // ── Static files ────────────────────────────────────────────
         for (const { urlPrefix, fsRoot } of staticMounts) {
-            if (pathname.startsWith(urlPrefix + '/') || pathname === urlPrefix) {
-                const relative = pathname.slice(urlPrefix.length);
-                const filePath = path.resolve(fsRoot, '.' + path.sep + relative);
-                if (!filePath.startsWith(path.resolve(fsRoot) + path.sep) && filePath !== path.resolve(fsRoot)) {
-                    res.statusCode = 403;
-                    res.end('Forbidden');
+            let relative;
+            if (urlPrefix === '/') {
+                relative = pathname;
+            } else if (pathname === urlPrefix || pathname.startsWith(urlPrefix + '/')) {
+                relative = pathname.slice(urlPrefix.length);
+            } else {
+                continue;
+            }
+            const filePath = path.resolve(fsRoot, '.' + path.sep + relative);
+            if (!filePath.startsWith(path.resolve(fsRoot) + path.sep) && filePath !== path.resolve(fsRoot)) {
+                res.statusCode = 403;
+                res.end('Forbidden');
+                return;
+            }
+            try {
+                const stat = await fs.promises.stat(filePath);
+                if (stat.isFile()) {
+                    const ext  = path.extname(filePath).toLowerCase();
+                    const mime = MIME_TYPES[ext] || 'application/octet-stream';
+                    res.setHeader('Content-Type', mime);
+                    fs.createReadStream(filePath).pipe(res);
                     return;
                 }
-                try {
-                    const stat = await fs.promises.stat(filePath);
-                    if (stat.isFile()) {
-                        const ext  = path.extname(filePath).toLowerCase();
-                        const mime = MIME_TYPES[ext] || 'application/octet-stream';
-                        res.setHeader('Content-Type', mime);
-                        fs.createReadStream(filePath).pipe(res);
-                        return;
-                    }
-                } catch { /* file not found — fall through to routes */ }
-            }
+            } catch { /* file not found — fall through to routes */ }
         }
 
         // ── Parse JSON body ─────────────────────────────────────────
@@ -246,6 +253,16 @@ function createApp() {
                     route.paramNames.forEach((n, i) => { req.params[n] = decodeURIComponent(m[i + 1]); });
                     return runHandlers(route.handlers, req, res, errorHandler);
                 }
+            }
+        }
+
+        // ── SPA fallback ────────────────────────────────────────────
+        if (spaFallback && !pathname.startsWith('/api/') && !pathname.startsWith('/images/')) {
+            const ext = path.extname(pathname);
+            if (!ext || ext === '.html') {
+                res.setHeader('Content-Type', 'text/html');
+                fs.createReadStream(spaFallback).pipe(res);
+                return;
             }
         }
 

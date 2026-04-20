@@ -6,8 +6,8 @@ const { optionalAuth } = require('../middleware/authMiddleware');
 const Q = require('../queries/maintenanceQueries');
 
 // Helper to resolve or create Exhibit based on name
-async function getOrCreateExhibitId(request, exhibitName) {
-    const exhRes = await request
+async function getOrCreateExhibitId(transaction, exhibitName) {
+    const exhRes = await new sql.Request(transaction)
         .input('exhName', sql.NVarChar, exhibitName)
         .query(Q.findExhibit);
     
@@ -15,10 +15,11 @@ async function getOrCreateExhibitId(request, exhibitName) {
         return exhRes.recordset[0].ExhibitID;
     }
 
-    const areaRes = await request.query(Q.ensureGeneralGroundsArea);
+    const areaRes = await new sql.Request(transaction)
+        .query(Q.ensureGeneralGroundsArea);
     const areaId = areaRes.recordset[0].AreaID;
 
-    const newExhRes = await request
+    const newExhRes = await new sql.Request(transaction)
         .input('newExhName', sql.NVarChar, exhibitName)
         .input('areaId', sql.Int, areaId)
         .query(Q.createExhibit);
@@ -26,8 +27,8 @@ async function getOrCreateExhibitId(request, exhibitName) {
 }
 
 // Helper to resolve or create Staff based on name
-async function getOrCreateStaffId(request, staffName) {
-    const staffRes = await request
+async function getOrCreateStaffId(transaction, staffName) {
+    const staffRes = await new sql.Request(transaction)
         .input('staffName', sql.NVarChar, staffName)
         .query(Q.findStaffByName);
     
@@ -35,7 +36,7 @@ async function getOrCreateStaffId(request, staffName) {
         return staffRes.recordset[0].StaffID;
     }
 
-    const newStaffRes = await request
+    const newStaffRes = await new sql.Request(transaction)
         .input('newStaffName', sql.NVarChar, staffName)
         .query(Q.createStaff);
     return newStaffRes.recordset[0].StaffID;
@@ -77,11 +78,10 @@ router.post('/api/maintenance', optionalAuth, async (req, res) => {
         await transaction.begin();
 
         try {
-            const request = new sql.Request(transaction);
-            const exhibitId = await getOrCreateExhibitId(request, exhibit);
-            const staffId = await getOrCreateStaffId(request, reportedBy || 'Admin User');
+            const exhibitId = await getOrCreateExhibitId(transaction, exhibit);
+            const staffId = await getOrCreateStaffId(transaction, reportedBy || 'Admin User');
 
-            const result = await request
+            const result = await new sql.Request(transaction)
                 .input('exhId', sql.Int, exhibitId)
                 .input('desc', sql.NVarChar, description)
                 .input('reqDate', sql.Date, dateSubmitted)
@@ -93,7 +93,7 @@ router.post('/api/maintenance', optionalAuth, async (req, res) => {
             await transaction.commit();
             res.status(201).json({ id: result.recordset[0].RequestID.toString(), ...req.body });
         } catch (err) {
-            await transaction.rollback();
+            try { await transaction.rollback(); } catch (_) { /* already aborted */ }
             throw err;
         }
     } catch (error) {
@@ -113,11 +113,10 @@ router.put('/api/maintenance/:id', optionalAuth, async (req, res) => {
         await transaction.begin();
 
         try {
-            const request = new sql.Request(transaction);
-            const exhibitId = await getOrCreateExhibitId(request, exhibit);
-            const staffId = await getOrCreateStaffId(request, reportedBy || 'Admin User');
+            const exhibitId = await getOrCreateExhibitId(transaction, exhibit);
+            const staffId = await getOrCreateStaffId(transaction, reportedBy || 'Admin User');
 
-            await request
+            await new sql.Request(transaction)
                 .input('id', sql.Int, parseInt(req.params.id, 10))
                 .input('exhId', sql.Int, exhibitId)
                 .input('desc', sql.NVarChar, description)
@@ -130,7 +129,7 @@ router.put('/api/maintenance/:id', optionalAuth, async (req, res) => {
             await transaction.commit();
             res.json({ success: true });
         } catch (err) {
-            await transaction.rollback();
+            try { await transaction.rollback(); } catch (_) { /* already aborted */ }
             throw err;
         }
     } catch (error) {

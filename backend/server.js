@@ -87,6 +87,10 @@ app.use('/api/staff-schedules', staffSchedulesRouter);
 const uploadsRoot = process.env.UPLOADS_DIR || path.join(__dirname, 'uploads');
 app.static('/images', uploadsRoot);
 
+// Serve React production build from public/
+app.static('/', path.join(__dirname, 'public'));
+app.setSpaFallback(path.join(__dirname, 'public', 'index.html'));
+
 async function runMigrations(pool) {
 	const steps = [
 		`IF NOT EXISTS(SELECT * FROM sys.columns WHERE Name=N'ImageUrl' AND Object_ID=Object_ID(N'Animal')) ALTER TABLE Animal ADD ImageUrl NVARCHAR(255) NULL`,
@@ -402,6 +406,17 @@ async function runMigrations(pool) {
 		  )`,
 		`IF COL_LENGTH('Orders','CustomerID') IS NULL ALTER TABLE Orders ADD CustomerID INT NULL`,
 		`IF COL_LENGTH('TicketOrders','CustomerID') IS NULL ALTER TABLE TicketOrders ADD CustomerID INT NULL`,
+		// AnimalAudit table (required by trg_Animal_Update_Audit trigger)
+		`IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='AnimalAudit' AND xtype='U')
+		  CREATE TABLE AnimalAudit (
+		    AuditID      INT IDENTITY(1,1) PRIMARY KEY,
+		    AnimalID     INT NOT NULL,
+		    FieldName    NVARCHAR(100) NOT NULL,
+		    OldValue     NVARCHAR(MAX) NULL,
+		    NewValue     NVARCHAR(MAX) NULL,
+		    ChangedAt    DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+		    ChangedBy    NVARCHAR(100) NULL
+		  )`,
 	];
 
 	for (const sql of steps) {

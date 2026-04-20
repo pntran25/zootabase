@@ -37,9 +37,9 @@ const upload = multer({
 });
 
 // Helper to resolve HabitatID from Exhibit name
-async function resolveHabitatId(request, exhibitName) {
+async function resolveHabitatId(transaction, exhibitName) {
     // Try to find existing Habitat matching the ExhibitName
-    const habRes = await request
+    const habRes = await new sql.Request(transaction)
         .input('searchExhibit', sql.NVarChar, exhibitName)
         .query(Q.findHabitat);
     if (habRes.recordset.length > 0) {
@@ -47,7 +47,8 @@ async function resolveHabitatId(request, exhibitName) {
     }
 
     // Try to find the Exhibit, to add a Habitat to it
-    const exhRes = await request
+    const exhRes = await new sql.Request(transaction)
+        .input('searchExhibit', sql.NVarChar, exhibitName)
         .query(Q.findExhibit);
     let exhibitId;
 
@@ -55,10 +56,11 @@ async function resolveHabitatId(request, exhibitName) {
         exhibitId = exhRes.recordset[0].ExhibitID;
     } else {
         // Create an Area -> Exhibit -> Habitat chain
-        const areaRes = await request.query(Q.ensureGeneralArea);
+        const areaRes = await new sql.Request(transaction)
+            .query(Q.ensureGeneralArea);
         const areaId = areaRes.recordset[0].AreaID;
 
-        const newExhRes = await request
+        const newExhRes = await new sql.Request(transaction)
             .input('newExhName', sql.NVarChar, exhibitName)
             .input('areaId', sql.Int, areaId)
             .query(Q.createExhibit);
@@ -66,7 +68,7 @@ async function resolveHabitatId(request, exhibitName) {
     }
 
     // Create Habitat for Exhibit
-    const newHabRes = await request
+    const newHabRes = await new sql.Request(transaction)
         .input('exhibitId', sql.Int, exhibitId)
         .query(Q.createHabitat);
     return newHabRes.recordset[0].HabitatID;
@@ -95,14 +97,13 @@ router.post('/', optionalAuth, async (req, res) => {
         await transaction.begin();
 
         try {
-            const request = new sql.Request(transaction);
             const habitatId = (exhibit && exhibit !== 'Undecided')
-                ? await resolveHabitatId(request, exhibit)
+                ? await resolveHabitatId(transaction, exhibit)
                 : null;
 
             // Auto-assign AnimalCode from SpeciesCode registry
             let animalCode = null;
-            const scRes = await request
+            const scRes = await new sql.Request(transaction)
                 .input('speciesLookup', sql.NVarChar, species)
                 .query(Q.incrementSpeciesCode);
             if (scRes.recordset.length) {
@@ -110,14 +111,14 @@ router.post('/', optionalAuth, async (req, res) => {
                 animalCode = `${CodeSuffix}-${String(LastCount).padStart(5, '0')}`;
             } else if (codeSuffix) {
                 const cs = codeSuffix.trim().toLowerCase();
-                await request
+                await new sql.Request(transaction)
                     .input('newSn', sql.NVarChar, species)
                     .input('newCs', sql.NVarChar, cs)
                     .query(Q.insertSpeciesCode);
                 animalCode = `${cs}-00001`;
             }
 
-            const result = await request
+            const result = await new sql.Request(transaction)
                 .input('name', sql.NVarChar, name)
                 .input('species', sql.NVarChar, species)
                 .input('age', sql.Int, parseInt(age) || 0)
@@ -146,7 +147,7 @@ router.post('/', optionalAuth, async (req, res) => {
                 imageUrl: result.recordset[0].imageUrl
             });
         } catch (err) {
-            await transaction.rollback();
+            try { await transaction.rollback(); } catch (_) { /* already aborted */ }
             throw err;
         }
     } catch (error) {
@@ -166,9 +167,8 @@ router.put('/:id', optionalAuth, async (req, res) => {
         await transaction.begin();
 
         try {
-            const request = new sql.Request(transaction);
             const habitatId = (exhibit && exhibit !== 'Undecided')
-                ? await resolveHabitatId(request, exhibit)
+                ? await resolveHabitatId(transaction, exhibit)
                 : null;
 
             // Check if this animal already has an AnimalCode
@@ -180,8 +180,7 @@ router.put('/:id', optionalAuth, async (req, res) => {
             // Auto-assign AnimalCode if missing
             let animalCode = existingCode || null;
             if (!animalCode && species) {
-                const scReq = new sql.Request(transaction);
-                const scRes = await scReq
+                const scRes = await new sql.Request(transaction)
                     .input('speciesLookup', sql.NVarChar, species)
                     .query(Q.incrementSpeciesCode);
                 if (scRes.recordset.length) {
@@ -190,7 +189,7 @@ router.put('/:id', optionalAuth, async (req, res) => {
                 }
             }
 
-            await request
+            await new sql.Request(transaction)
                 .input('id', sql.Int, id)
                 .input('name', sql.NVarChar, name)
                 .input('species', sql.NVarChar, species)
@@ -214,7 +213,7 @@ router.put('/:id', optionalAuth, async (req, res) => {
             await transaction.commit();
             res.json({ message: 'Animal updated successfully' });
         } catch (err) {
-            await transaction.rollback();
+            try { await transaction.rollback(); } catch (_) { /* already aborted */ }
             throw err;
         }
     } catch (error) {

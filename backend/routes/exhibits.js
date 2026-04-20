@@ -60,24 +60,23 @@ router.post('/', optionalAuth, async (req, res) => {
         await transaction.begin();
 
         try {
-            const request = new sql.Request(transaction);
-
             // 1. Check if Area exists, if not create it
             let areaId;
-            const areaResult = await request
+            const areaResult = await new sql.Request(transaction)
                 .input('paramAreaName', sql.NVarChar, AreaName)
                 .query(Q.findArea);
 
             if (areaResult.recordset.length > 0) {
                 areaId = areaResult.recordset[0].AreaID;
             } else {
-                const insertAreaResult = await request
+                const insertAreaResult = await new sql.Request(transaction)
+                    .input('paramAreaName', sql.NVarChar, AreaName)
                     .query(Q.createArea);
                 areaId = insertAreaResult.recordset[0].AreaID;
             }
 
             // 2. Insert Exhibit
-            const exhibitResult = await request
+            const exhibitResult = await new sql.Request(transaction)
                 .input('paramExhibitName', sql.NVarChar, ExhibitName)
                 .input('paramAreaId', sql.Int, areaId)
                 .input('paramCapacity', sql.Int, Capacity)
@@ -89,10 +88,10 @@ router.post('/', optionalAuth, async (req, res) => {
 
             // 3. Insert Habitat if provided
             if (HabitatType) {
-                await request
+                await new sql.Request(transaction)
                     .input('paramHabitatType', sql.NVarChar, HabitatType)
                     .input('paramExhibitId', sql.Int, exhibitId)
-                    .query(Q.insertHabitat); // Providing default Size of 100 for now, UI doesn't collect it.
+                    .query(Q.insertHabitat);
             }
 
             await transaction.commit();
@@ -106,7 +105,7 @@ router.post('/', optionalAuth, async (req, res) => {
             });
 
         } catch (err) {
-            await transaction.rollback();
+            try { await transaction.rollback(); } catch (_) { /* already aborted */ }
             throw err;
         }
 
@@ -128,24 +127,23 @@ router.put('/:id', optionalAuth, async (req, res) => {
         await transaction.begin();
 
         try {
-            const request = new sql.Request(transaction);
-
             // 1. Manage Area
             let areaId;
-            const areaResult = await request
+            const areaResult = await new sql.Request(transaction)
                 .input('paramAreaName', sql.NVarChar, AreaName)
                 .query(Q.findArea);
 
             if (areaResult.recordset.length > 0) {
                 areaId = areaResult.recordset[0].AreaID;
             } else {
-                const insertAreaResult = await request
+                const insertAreaResult = await new sql.Request(transaction)
+                    .input('paramAreaName', sql.NVarChar, AreaName)
                     .query(Q.createArea);
                 areaId = insertAreaResult.recordset[0].AreaID;
             }
 
             // 2. Update Exhibit
-            await request
+            await new sql.Request(transaction)
                 .input('paramId', sql.Int, id)
                 .input('paramExhibitName', sql.NVarChar, ExhibitName)
                 .input('paramAreaId', sql.Int, areaId)
@@ -156,15 +154,18 @@ router.put('/:id', optionalAuth, async (req, res) => {
                 .query(Q.updateExhibit);
 
             // 3. Manage Habitat
-            const habitatResult = await request
+            const habitatResult = await new sql.Request(transaction)
+                .input('paramId', sql.Int, id)
                 .query(Q.checkHabitat);
 
             if (habitatResult.recordset.length > 0) {
-                await request
+                await new sql.Request(transaction)
+                    .input('paramId', sql.Int, id)
                     .input('paramHabitatType', sql.NVarChar, HabitatType)
                     .query(Q.updateHabitat);
             } else if (HabitatType) {
-                await request
+                await new sql.Request(transaction)
+                    .input('paramId', sql.Int, id)
                     .input('paramHabitatType', sql.NVarChar, HabitatType)
                     .query(Q.insertHabitatForExhibit);
             }
@@ -173,7 +174,7 @@ router.put('/:id', optionalAuth, async (req, res) => {
             res.json({ message: 'Exhibit updated successfully' });
 
         } catch (err) {
-            await transaction.rollback();
+            try { await transaction.rollback(); } catch (_) { /* already aborted */ }
             throw err;
         }
 
