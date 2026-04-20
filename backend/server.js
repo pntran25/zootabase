@@ -406,6 +406,20 @@ async function runMigrations(pool) {
 		  )`,
 		`IF COL_LENGTH('Orders','CustomerID') IS NULL ALTER TABLE Orders ADD CustomerID INT NULL`,
 		`IF COL_LENGTH('TicketOrders','CustomerID') IS NULL ALTER TABLE TicketOrders ADD CustomerID INT NULL`,
+		// LowStockAlert table (required by trg_Product_LowStock trigger)
+		`IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='LowStockAlert' AND xtype='U')
+		  CREATE TABLE LowStockAlert (
+		    AlertID       INT IDENTITY(1,1) PRIMARY KEY,
+		    ProductID     INT NOT NULL,
+		    ProductName   NVARCHAR(120) NOT NULL,
+		    StockQuantity INT NOT NULL,
+		    Threshold     INT NOT NULL,
+		    AlertType     NVARCHAR(50) NOT NULL,
+		    AlertMessage  NVARCHAR(500) NOT NULL,
+		    CreatedAt     DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+		    IsResolved    BIT NOT NULL DEFAULT 0,
+		    ResolvedAt    DATETIME2 NULL
+		  )`,
 		// AnimalAudit table (required by trg_Animal_Update_Audit trigger)
 		`IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='AnimalAudit' AND xtype='U')
 		  CREATE TABLE AnimalAudit (
@@ -416,6 +430,15 @@ async function runMigrations(pool) {
 		    NewValue     NVARCHAR(MAX) NULL,
 		    ChangedAt    DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
 		    ChangedBy    NVARCHAR(100) NULL
+		  )`,
+		// CustomerAudit table (required by Customer trigger)
+		`IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='CustomerAudit' AND xtype='U')
+		  CREATE TABLE CustomerAudit (
+		    AuditID      INT IDENTITY(1,1) PRIMARY KEY,
+		    CustomerID   INT NULL,
+		    ActionType   NVARCHAR(20) NULL,
+		    ActionDate   DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+		    PerformedBy  NVARCHAR(100) NULL
 		  )`,
 	];
 
