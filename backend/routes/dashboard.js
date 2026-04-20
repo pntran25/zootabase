@@ -24,7 +24,7 @@ router.get('/', async (req, res) => {
 
         const today      = new Date().toISOString().split('T')[0];
         const monday     = getMondayStr(today);
-        const sunday     = addDays(monday, 6);
+        const sunday     = addDays(monday, 6) > today ? today : addDays(monday, 6);
         const prevMonday = addDays(monday, -7);
         const prevSunday = addDays(monday, -1);
 

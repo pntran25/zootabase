@@ -520,7 +520,15 @@ const AnimalHealth = () => {
         {!isResolve && (
           <div className="form-group">
             <label>Animal *</label>
-            <AdminSelect value={recordForm.AnimalID} onChange={v => setRecordForm(p => ({ ...p, AnimalID: v }))}
+            <AdminSelect value={recordForm.AnimalID} onChange={v => {
+                const prev = records.find(r => String(r.AnimalID) === String(v));
+                setRecordForm(p => ({
+                  ...p,
+                  AnimalID: v,
+                  WeightRangeLow: !editingRecord && prev?.WeightRangeLow != null ? String(prev.WeightRangeLow) : p.WeightRangeLow,
+                  WeightRangeHigh: !editingRecord && prev?.WeightRangeHigh != null ? String(prev.WeightRangeHigh) : p.WeightRangeHigh,
+                }));
+              }}
               options={animalOptions} placeholder="Select animal..." searchable />
           </div>
         )}
@@ -754,7 +762,7 @@ const AnimalHealth = () => {
                         ) : (
                           <div className="ah-resolved-info">
                             <span className="ah-resolved-badge">Resolved {a.ResolvedAt ? fmtDate(a.ResolvedAt) : ''}</span>
-                            {a.ResolutionNotes && <span className="ah-resolved-notes">{a.ResolutionNotes}</span>}
+                            {a.ResolutionNotes && <span className="ah-resolved-notes" title={a.ResolutionNotes}>{a.ResolutionNotes}</span>}
                           </div>
                         )}
                       </div>

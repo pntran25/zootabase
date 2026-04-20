@@ -179,7 +179,7 @@ const AnimalCare = () => {
   const [feedingsSorting, setFeedingsSorting] = useState([{ id: 'FeedTime', desc: false }]);
   const [feedingModal, setFeedingModal] = useState(false);
   const [editingFeeding, setEditingFeeding] = useState(null);
-  const [feedingForm, setFeedingForm] = useState({ AnimalID: '', FeedTime: '', FoodType: '', StaffID: '' });
+  const [feedingForm, setFeedingForm] = useState({ AnimalID: '', FeedTime: '', FoodType: '', StaffID: '', Quantity: '', Unit: '', Frequency: '', SpecialInstructions: '' });
 
   // Keeper Assignments
   const [assignments, setAssignments] = useState([]);
@@ -238,11 +238,15 @@ const AnimalCare = () => {
         AnimalID: String(rec.AnimalID),
         FeedTime: rec.FeedTime ? rec.FeedTime.slice(0, 16) : '',
         FoodType: rec.FoodType || '',
-        StaffID: String(rec.StaffID)
+        StaffID: String(rec.StaffID),
+        Quantity: rec.Quantity != null ? String(rec.Quantity) : '',
+        Unit: rec.Unit || '',
+        Frequency: rec.Frequency || '',
+        SpecialInstructions: rec.SpecialInstructions || ''
       });
     } else {
       setEditingFeeding(null);
-      setFeedingForm({ AnimalID: '', FeedTime: '', FoodType: '', StaffID: '' });
+      setFeedingForm({ AnimalID: '', FeedTime: '', FoodType: '', StaffID: '', Quantity: '', Unit: '', Frequency: '', SpecialInstructions: '' });
     }
     setFeedingModal(true);
   };
@@ -366,6 +370,17 @@ const AnimalCare = () => {
     }},
     { accessorKey: 'FoodType', header: 'Food Type', cell: info => (
       <span style={{ fontWeight: 500 }}>{info.getValue() || '—'}</span>
+    )},
+    { accessorKey: 'Quantity', header: 'Quantity', cell: ({ row }) => {
+      const q = row.original.Quantity;
+      const u = row.original.Unit;
+      return <span>{q ? `${q} ${u || ''}`.trim() : '—'}</span>;
+    }},
+    { accessorKey: 'Frequency', header: 'Frequency', cell: info => (
+      <span>{info.getValue() || '—'}</span>
+    )},
+    { accessorKey: 'SpecialInstructions', header: 'Special Instructions', cell: info => (
+      <span style={{ fontSize: '0.82rem' }}>{info.getValue() || '—'}</span>
     )},
     { accessorKey: 'StaffName', header: 'Assigned Staff', cell: ({ row }) => (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -580,6 +595,32 @@ const AnimalCare = () => {
             <label>Food Type *</label>
             <input value={feedingForm.FoodType}
               onChange={e => setFeedingForm(p => ({ ...p, FoodType: e.target.value }))} placeholder="e.g. Bamboo, Fish, Grain mix" />
+          </div>
+        </div>
+        <div className="form-row">
+          <div className="form-group">
+            <label>Quantity</label>
+            <input type="number" step="0.01" min="0" value={feedingForm.Quantity}
+              onChange={e => setFeedingForm(p => ({ ...p, Quantity: e.target.value }))} placeholder="e.g. 2.5" />
+          </div>
+          <div className="form-group">
+            <label>Unit</label>
+            <AdminSelect value={feedingForm.Unit} onChange={v => setFeedingForm(p => ({ ...p, Unit: v }))}
+              options={[{ value: 'kg', label: 'kg' }, { value: 'lbs', label: 'lbs' }, { value: 'g', label: 'g' }, { value: 'oz', label: 'oz' }, { value: 'cups', label: 'cups' }, { value: 'pieces', label: 'pieces' }]}
+              placeholder="Select unit..." />
+          </div>
+        </div>
+        <div className="form-row">
+          <div className="form-group">
+            <label>Frequency</label>
+            <AdminSelect value={feedingForm.Frequency} onChange={v => setFeedingForm(p => ({ ...p, Frequency: v }))}
+              options={[{ value: 'Once daily', label: 'Once daily' }, { value: 'Twice daily', label: 'Twice daily' }, { value: '3x daily', label: '3x daily' }, { value: 'Every other day', label: 'Every other day' }, { value: 'Weekly', label: 'Weekly' }, { value: 'As needed', label: 'As needed' }]}
+              placeholder="Select frequency..." />
+          </div>
+          <div className="form-group">
+            <label>Special Instructions</label>
+            <input value={feedingForm.SpecialInstructions}
+              onChange={e => setFeedingForm(p => ({ ...p, SpecialInstructions: e.target.value }))} placeholder="e.g. Mix with water, serve warm" />
           </div>
         </div>
       </AdminModalForm>

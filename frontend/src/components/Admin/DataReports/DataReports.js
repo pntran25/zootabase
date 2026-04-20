@@ -105,14 +105,18 @@ const OrderDetailModal = ({ orderId, onClose }) => {
                 <div className="dr-items-header">
                   <span>Item</span><span>Qty</span><span>Unit Price</span><span>Line Total</span>
                 </div>
-                {order.items.map((item, i) => (
-                  <div key={i} className="dr-items-row">
-                    <span className="dr-item-name">{item.name}</span>
-                    <span className="dr-item-qty">{item.quantity}</span>
-                    <span>${Number(item.price).toFixed(2)}</span>
-                    <span className="dr-item-total">${(item.price * item.quantity).toFixed(2)}</span>
-                  </div>
-                ))}
+                {order.items.map((item, i) => {
+                  const price = Number(item.price) || 0;
+                  const qty   = Number(item.quantity) || 0;
+                  return (
+                    <div key={i} className="dr-items-row">
+                      <span className="dr-item-name">{item.name || '—'}</span>
+                      <span className="dr-item-qty">{qty}</span>
+                      <span>${price.toFixed(2)}</span>
+                      <span className="dr-item-total">${(price * qty).toFixed(2)}</span>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <p className="dr-detail-value" style={{ color: 'var(--adm-text-secondary)' }}>No item details available.</p>

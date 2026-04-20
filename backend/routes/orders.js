@@ -113,6 +113,22 @@ router.get('/:id', async (req, res) => {
         const row = result.recordset[0];
         let items = [];
         try { items = row.OrderItems ? JSON.parse(row.OrderItems) : []; } catch { items = []; }
+
+        // Resolve ProductID → product name for seeded orders
+        const productIds = items.filter(it => it.ProductID && !it.name).map(it => parseInt(it.ProductID, 10)).filter(Number.isFinite);
+        let productMap = {};
+        if (productIds.length) {
+            const idList = productIds.join(',');
+            const pRes = await pool.request().query(`SELECT ProductID, Name FROM Products WHERE ProductID IN (${idList})`);
+            pRes.recordset.forEach(p => { productMap[p.ProductID] = p.Name; });
+        }
+
+        // Normalize item fields — seeded data uses ProductID/UnitPrice/LineTotal/Quantity
+        items = items.map(it => ({
+            name:     it.name || it.Name || productMap[it.ProductID] || '—',
+            price:    Number(it.price ?? it.UnitPrice ?? 0),
+            quantity: Number(it.quantity ?? it.Quantity ?? 0),
+        }));
         res.json({ ...row, items });
     } catch (err) {
         res.status(500).json({ error: err.message });

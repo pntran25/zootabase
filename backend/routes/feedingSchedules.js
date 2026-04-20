@@ -34,7 +34,7 @@ router.get('/animal/:animalId', async (req, res) => {
 // ── POST create feeding schedule ────────────────────────────────────
 router.post('/', verifyToken, async (req, res) => {
     try {
-        const { AnimalID, FeedTime, FoodType, StaffID } = req.body;
+        const { AnimalID, FeedTime, FoodType, StaffID, Quantity, Unit, Frequency, SpecialInstructions } = req.body;
         if (!AnimalID || !FeedTime || !FoodType || !StaffID) {
             return res.status(400).json({ error: 'AnimalID, FeedTime, FoodType, and StaffID are required.' });
         }
@@ -44,6 +44,10 @@ router.post('/', verifyToken, async (req, res) => {
             .input('feedTime', sql.DateTime2, new Date(FeedTime))
             .input('foodType', sql.NVarChar(100), FoodType)
             .input('staffId', sql.Int, parseInt(StaffID, 10))
+            .input('quantity', sql.Decimal(10, 2), Quantity != null && Quantity !== '' ? parseFloat(Quantity) : null)
+            .input('unit', sql.NVarChar(50), Unit || null)
+            .input('frequency', sql.NVarChar(50), Frequency || null)
+            .input('specialInstructions', sql.NVarChar(500), SpecialInstructions || null)
             .input('createdBy', sql.NVarChar(100), req.user?.email || 'system')
             .query(Q.insert);
         res.status(201).json({ ScheduleID: result.recordset[0].ScheduleID, ...req.body });
@@ -56,7 +60,7 @@ router.post('/', verifyToken, async (req, res) => {
 // ── PUT update feeding schedule ─────────────────────────────────────
 router.put('/:id', verifyToken, async (req, res) => {
     try {
-        const { AnimalID, FeedTime, FoodType, StaffID } = req.body;
+        const { AnimalID, FeedTime, FoodType, StaffID, Quantity, Unit, Frequency, SpecialInstructions } = req.body;
         if (!AnimalID || !FeedTime || !FoodType || !StaffID) {
             return res.status(400).json({ error: 'AnimalID, FeedTime, FoodType, and StaffID are required.' });
         }
@@ -67,6 +71,10 @@ router.put('/:id', verifyToken, async (req, res) => {
             .input('feedTime', sql.DateTime2, new Date(FeedTime))
             .input('foodType', sql.NVarChar(100), FoodType)
             .input('staffId', sql.Int, parseInt(StaffID, 10))
+            .input('quantity', sql.Decimal(10, 2), Quantity != null && Quantity !== '' ? parseFloat(Quantity) : null)
+            .input('unit', sql.NVarChar(50), Unit || null)
+            .input('frequency', sql.NVarChar(50), Frequency || null)
+            .input('specialInstructions', sql.NVarChar(500), SpecialInstructions || null)
             .input('updatedBy', sql.NVarChar(100), req.user?.email || 'system')
             .query(Q.update);
         res.json({ success: true });

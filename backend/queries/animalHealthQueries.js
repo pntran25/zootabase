@@ -115,6 +115,7 @@ const healthReportKeepers = `
 
 const healthReportFeedings = `
   SELECT fs.ScheduleID, fs.AnimalID, fs.FeedTime, fs.FoodType, fs.StaffID,
+         fs.Quantity, fs.Unit, fs.Frequency, fs.SpecialInstructions,
          a.Name AS AnimalName, a.Species, a.AnimalCode,
          s.FullName AS StaffName
   FROM FeedingSchedule fs

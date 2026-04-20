@@ -650,10 +650,8 @@
 .ah-resolved-notes {
   font-size: 0.7rem;
   color: var(--adm-text-secondary);
-  max-width: 200px;
+  max-width: 300px;
   text-align: right;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  word-break: break-word;
 }
 

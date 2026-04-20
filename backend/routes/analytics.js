@@ -11,7 +11,8 @@ router.get('/logins', verifyToken, requireRole(['Super Admin', 'Zoo Manager']), 
 
         const today = new Date().toISOString().split('T')[0];
         const start = req.query.startDate || today;
-        const end   = req.query.endDate   || today;
+        const rawEnd = req.query.endDate  || today;
+        const end    = rawEnd > today ? today : rawEnd;
 
         const mkReq = () => pool.request()
             .input('start', start)
@@ -37,7 +38,8 @@ router.get('/overview', async (req, res) => {
 
         // Parse date range — default to last 30 days
         const today = new Date().toISOString().split('T')[0];
-        const end   = req.query.endDate   || today;
+        const rawEnd = req.query.endDate || today;
+        const end    = rawEnd > today ? today : rawEnd;
         const thirtyAgo = new Date(); thirtyAgo.setDate(thirtyAgo.getDate() - 30);
         const start = req.query.startDate || thirtyAgo.toISOString().split('T')[0];
 

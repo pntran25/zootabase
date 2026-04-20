@@ -420,16 +420,20 @@ async function runMigrations(pool) {
 		    IsResolved    BIT NOT NULL DEFAULT 0,
 		    ResolvedAt    DATETIME2 NULL
 		  )`,
-		// AnimalAudit table (required by trg_Animal_Update_Audit trigger)
+		// AnimalAudit table (required by Animal trigger)
 		`IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='AnimalAudit' AND xtype='U')
 		  CREATE TABLE AnimalAudit (
 		    AuditID      INT IDENTITY(1,1) PRIMARY KEY,
-		    AnimalID     INT NOT NULL,
-		    FieldName    NVARCHAR(100) NOT NULL,
-		    OldValue     NVARCHAR(MAX) NULL,
-		    NewValue     NVARCHAR(MAX) NULL,
-		    ChangedAt    DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
-		    ChangedBy    NVARCHAR(100) NULL
+		    AnimalID     INT NULL,
+		    Name         NVARCHAR(100) NULL,
+		    Species      NVARCHAR(100) NULL,
+		    Age          INT NULL,
+		    Gender       NVARCHAR(20) NULL,
+		    DateArrived  DATE NULL,
+		    HabitatID    INT NULL,
+		    ActionType   NVARCHAR(10) NULL,
+		    ActionDate   DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+		    PerformedBy  NVARCHAR(100) NULL
 		  )`,
 		// CustomerAudit table (required by Customer trigger)
 		`IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='CustomerAudit' AND xtype='U')
