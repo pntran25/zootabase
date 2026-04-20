@@ -9,7 +9,7 @@ const updateStaffFirebaseUid = `
 `;
 
 const insertStaffLoginAudit = `
-  INSERT INTO StaffLoginAudit (StaffID, LoginTime) VALUES (@StaffID, SYSUTCDATETIME())
+  INSERT INTO StaffLoginAudit (StaffID, LoginTime) VALUES (@StaffID, SYSDATETIME())
 `;
 
 const findCustomer = `
@@ -25,11 +25,11 @@ const insertCustomer = `
 `;
 
 const updateCustomerLastLogin = `
-  UPDATE Customer SET LastLoginAt = SYSUTCDATETIME() WHERE CustomerID = @CustomerID
+  UPDATE Customer SET LastLoginAt = SYSDATETIME() WHERE CustomerID = @CustomerID
 `;
 
 const insertCustomerLoginAudit = `
-  INSERT INTO CustomerLoginAudit (CustomerID, LoginTime) VALUES (@CustomerID, SYSUTCDATETIME())
+  INSERT INTO CustomerLoginAudit (CustomerID, LoginTime) VALUES (@CustomerID, SYSDATETIME())
 `;
 
 module.exports = {

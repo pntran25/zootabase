@@ -325,14 +325,14 @@ router.get('/api/event-bookings', async (req, res) => {
 
         let conditions = '';
         if (search) conditions += ` AND (eb.FirstName LIKE @search OR eb.LastName LIKE @search OR eb.Email LIKE @search OR e.EventName LIKE @search)`;
-        if (dateFrom) conditions += ` AND eb.PlacedAt >= @dateFrom`;
-        if (dateTo) conditions += ` AND eb.PlacedAt <= @dateTo`;
+        if (dateFrom) conditions += ` AND CAST(eb.PlacedAt AS DATE) >= @dateFrom`;
+        if (dateTo) conditions += ` AND CAST(eb.PlacedAt AS DATE) <= @dateTo`;
 
         const mkReq = () => {
             const r = pool.request();
             if (search) r.input('search', sql.NVarChar, `%${search}%`);
-            if (dateFrom) r.input('dateFrom', sql.NVarChar, dateFrom);
-            if (dateTo) r.input('dateTo', sql.NVarChar, dateTo);
+            if (dateFrom) r.input('dateFrom', dateFrom);
+            if (dateTo) r.input('dateTo', dateTo);
             return r;
         };
 

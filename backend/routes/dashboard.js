@@ -22,7 +22,8 @@ router.get('/', async (req, res) => {
     try {
         const pool = await connectToDb();
 
-        const today      = new Date().toISOString().split('T')[0];
+        const _n = new Date();
+        const today      = `${_n.getFullYear()}-${String(_n.getMonth()+1).padStart(2,'0')}-${String(_n.getDate()).padStart(2,'0')}`;
         const monday     = getMondayStr(today);
         const sunday     = addDays(monday, 6) > today ? today : addDays(monday, 6);
         const prevMonday = addDays(monday, -7);

@@ -369,7 +369,8 @@ const AnimalReport = () => {
                 'Animal': f.AnimalName || '', 'Code': f.AnimalCode || '', 'Species': f.Species || '',
                 'Food Type': f.FoodType || '', 'Quantity': f.Quantity ?? '',
                 'Unit': f.Unit || '', 'Frequency': f.Frequency || '',
-                'Time': f.FeedingTime || '', 'Instructions': f.SpecialInstructions || '',
+                'Time': f.FeedTime ? (() => { const d = new Date(f.FeedTime); return isNaN(d) ? String(f.FeedTime).slice(0,5) : d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }); })() : '',
+                'Instructions': f.SpecialInstructions || '',
               }));
               const alertRows = (healthData.alerts || []).filter(a => inDateRange(a.CreatedAt)).map(a => ({
                 'Animal': a.AnimalName || '', 'Code': a.AnimalCode || '', 'Species': a.Species || '',
@@ -806,7 +807,7 @@ const AnimalReport = () => {
                         <td>{f.FoodType || '—'}</td>
                         <td>{f.Quantity != null ? `${f.Quantity} ${f.Unit || ''}`.trim() : '—'}</td>
                         <td>{f.Frequency || '—'}</td>
-                        <td>{f.FeedingTime || '—'}</td>
+                        <td>{f.FeedTime ? (() => { const d = new Date(f.FeedTime); return isNaN(d) ? String(f.FeedTime).slice(0,5) : d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }); })() : '—'}</td>
                         <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.SpecialInstructions || '—'}</td>
                       </tr>
                     ))

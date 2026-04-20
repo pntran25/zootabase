@@ -496,16 +496,16 @@ const TODAY = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 6
 
 const computeDateRange = (dateFilter, customStart, customEnd) => {
   const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  if (dateFilter === 'today') return { dateFrom: startOfToday.toISOString(), dateTo: null };
+  const fmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const today = fmt(now);
+  if (dateFilter === 'today') return { dateFrom: today, dateTo: today };
   if (dateFilter === 'week') {
-    const s = new Date(startOfToday); s.setDate(s.getDate() - s.getDay());
-    return { dateFrom: s.toISOString(), dateTo: null };
+    const s = new Date(now); s.setDate(s.getDate() - s.getDay());
+    return { dateFrom: fmt(s), dateTo: today };
   }
-  if (dateFilter === 'month') return { dateFrom: new Date(now.getFullYear(), now.getMonth(), 1).toISOString(), dateTo: null };
+  if (dateFilter === 'month') return { dateFrom: fmt(new Date(now.getFullYear(), now.getMonth(), 1)), dateTo: today };
   if (dateFilter === 'custom' && customStart && customEnd) {
-    const e = new Date(customEnd); e.setHours(23, 59, 59, 999);
-    return { dateFrom: new Date(customStart).toISOString(), dateTo: e.toISOString() };
+    return { dateFrom: customStart, dateTo: customEnd };
   }
   return { dateFrom: null, dateTo: null };
 };
@@ -763,7 +763,6 @@ const DataReports = () => {
         <button
           className="dr-details-btn"
           style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', fontSize: '0.82rem', fontWeight: 600, whiteSpace: 'nowrap' }}
-          disabled={orderRows.length === 0 && ticketRows.length === 0 && membershipRows.length === 0 && eventRows.length === 0}
           onClick={async () => {
             try {
               toast.info('Preparing full sales report...');

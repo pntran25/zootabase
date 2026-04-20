@@ -83,14 +83,14 @@ router.get('/', async (req, res) => {
 
         const conditions = [];
         if (search)   conditions.push(`(CONCAT(ISNULL(FirstName,''),' ',ISNULL(LastName,'')) LIKE @search OR Email LIKE @search OR CAST(TicketOrderID AS NVARCHAR) LIKE @search)`);
-        if (dateFrom) conditions.push(`PlacedAt >= @dateFrom`);
-        if (dateTo)   conditions.push(`PlacedAt <= @dateTo`);
+        if (dateFrom) conditions.push(`CAST(PlacedAt AS DATE) >= @dateFrom`);
+        if (dateTo)   conditions.push(`CAST(PlacedAt AS DATE) <= @dateTo`);
         const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
 
         const addFilters = (r) => {
             if (search)   r.input('search',   sql.NVarChar,  `%${search}%`);
-            if (dateFrom) r.input('dateFrom', sql.DateTime2, new Date(dateFrom));
-            if (dateTo)   r.input('dateTo',   sql.DateTime2, new Date(dateTo));
+            if (dateFrom) r.input('dateFrom', dateFrom);
+            if (dateTo)   r.input('dateTo',   dateTo);
             return r;
         };
 

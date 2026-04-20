@@ -126,7 +126,7 @@ const AnimalReportTables = ({ activeTab, dateFrom, dateTo }) => {
                   <tr key={f.ScheduleID}>
                     <td style={{ fontWeight: 600 }}>{f.AnimalName}</td>
                     <td style={{ color: 'var(--adm-text-secondary)' }}>{f.Species}</td>
-                    <td>{f.FeedTime ? new Date(f.FeedTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '—'}</td>
+                    <td>{f.FeedTime ? (() => { const d = new Date(f.FeedTime); return isNaN(d) ? String(f.FeedTime).slice(0,5) : d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }); })() : '—'}</td>
                     <td>{f.FoodType || '—'}</td>
                     <td style={{ color: 'var(--adm-text-secondary)' }}>{f.StaffName || '—'}</td>
                   </tr>

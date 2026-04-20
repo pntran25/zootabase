@@ -9,7 +9,8 @@ router.get('/logins', verifyToken, requireRole(['Super Admin', 'Zoo Manager']), 
     try {
         const pool = await connectToDb();
 
-        const today = new Date().toISOString().split('T')[0];
+        const now = new Date();
+        const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
         const start = req.query.startDate || today;
         const rawEnd = req.query.endDate  || today;
         const end    = rawEnd > today ? today : rawEnd;
@@ -37,11 +38,12 @@ router.get('/overview', async (req, res) => {
         const pool = await connectToDb();
 
         // Parse date range — default to last 30 days
-        const today = new Date().toISOString().split('T')[0];
+        const now2 = new Date();
+        const today = `${now2.getFullYear()}-${String(now2.getMonth()+1).padStart(2,'0')}-${String(now2.getDate()).padStart(2,'0')}`;
         const rawEnd = req.query.endDate || today;
         const end    = rawEnd > today ? today : rawEnd;
         const thirtyAgo = new Date(); thirtyAgo.setDate(thirtyAgo.getDate() - 30);
-        const start = req.query.startDate || thirtyAgo.toISOString().split('T')[0];
+        const start = req.query.startDate || `${thirtyAgo.getFullYear()}-${String(thirtyAgo.getMonth()+1).padStart(2,'0')}-${String(thirtyAgo.getDate()).padStart(2,'0')}`;
 
         const mkReq = () => pool.request()
             .input('start', start)
